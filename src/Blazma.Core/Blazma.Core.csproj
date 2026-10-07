@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The domain: models, enums and interfaces only. No I/O, no UI, no third-party
+    dependencies. Every other project depends on this one; it depends on nothing.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Blazma.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Blazma.Analysis/Blazma.Analysis.csproj" />
+    <Project Path="src/Blazma.Contracts/Blazma.Contracts.csproj" />
+    <Project Path="src/Blazma.Core/Blazma.Core.csproj" />
+    <Project Path="src/Blazma.Intelligence/Blazma.Intelligence.csproj" />
+    <Project Path="src/Blazma.Reporting/Blazma.Reporting.csproj" />
+    <Project Path="src/Blazma.Sandbox/Blazma.Sandbox.csproj" />
+    <Project Path="src/Blazma.Storage/Blazma.Storage.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Blazma.Analysis.Tests/Blazma.Analysis.Tests.csproj" />
+    <Project Path="tests/Blazma.Integration.Tests/Blazma.Integration.Tests.csproj" />
+    <Project Path="tests/Blazma.Sandbox.Tests/Blazma.Sandbox.Tests.csproj" />
+  </Folder>
+</Solution>

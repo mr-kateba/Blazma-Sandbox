@@ -1,0 +1,15 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+artifacts/
+publish/
+
+# Local runtime data (never commit samples or analysis output)
+*.blzdb
+work/
+samples/

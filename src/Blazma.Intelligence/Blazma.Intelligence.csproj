@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Explanations and questions over a finished analysis. Works only on the structured
+    result, never on the sample. No AI model ships in this version: Ask Blazma answers
+    from the data and the rules, and says so. IAiProvider is the extension point.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Blazma.Intelligence</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Blazma.Core\Blazma.Core.csproj" />
+    <ProjectReference Include="..\Blazma.Analysis\Blazma.Analysis.csproj" />
+  </ItemGroup>
+</Project>

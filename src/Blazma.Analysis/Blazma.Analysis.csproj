@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The analysis engine: static analysis, normalisation, correlation, persistence,
+    rules, risk scoring, snapshot diffing, comparison and the pipeline that drives a
+    sandbox provider through the analysis state machine. Pure logic; the only I/O is
+    reading the sample for static analysis and loading user rule packs.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Blazma.Analysis</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Blazma.Core\Blazma.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Blazma.Analysis.Tests" />
+  </ItemGroup>
+</Project>

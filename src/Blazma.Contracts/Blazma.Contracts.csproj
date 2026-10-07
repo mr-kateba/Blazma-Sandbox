@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The wire protocol between the host and the in-sandbox agent. This is the ONLY
+    assembly the agent shares with the host: the agent never sees host code, and the
+    host treats everything parsed with these types as untrusted input.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Blazma.Contracts</RootNamespace>
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Sandbox providers: everything that crosses the host/sandbox boundary lives here.
+    The Windows Sandbox provider, the file channel that reads agent output as untrusted
+    input, and the clearly-labelled demo provider.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Blazma.Sandbox</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Blazma.Core\Blazma.Core.csproj" />
+    <ProjectReference Include="..\Blazma.Contracts\Blazma.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Blazma.Sandbox.Tests" />
+  </ItemGroup>
+</Project>
