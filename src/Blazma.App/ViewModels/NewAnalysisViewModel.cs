@@ -86,7 +86,7 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     partial void OnIsLoadingChanged(bool value) => Notify();
     partial void OnErrorChanged(string? value) => OnPropertyChanged(nameof(HasError));
     partial void OnDurationSecondsChanged(double value) => OnPropertyChanged(nameof(DurationText));
-    partial void OnNetworkEnabledChanged(bool value) { if (!value) { NetworkConsent = false; CapturePcap = false; } Notify(); NotifyNetwork(); }
+    partial void OnNetworkEnabledChanged(bool value) { if (!value) { NetworkConsent = false; CapturePcap = false; } Notify(); NotifyNetwork(); _ = CheckProviderAsync(); }
     partial void OnNetworkSimulatedChanged(bool value) => NotifyNetwork();
     partial void OnInteractiveChanged(bool value) { if (value) SimulateUser = false; }
     private void NotifyNetwork()
@@ -129,6 +129,8 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         SelectedProfile ??= Profiles.FirstOrDefault(p => p.Profile.Id == settings.Current.Analysis.DefaultProfileId) ?? Profiles.FirstOrDefault();
         Providers.Clear();
         Providers.Add(new ProviderOption(WindowsSandboxProvider.ProviderId, "Windows Sandbox"));
+        Providers.Add(new ProviderOption("virtualbox", Loc.T("ProviderVirtualBox")));
+        Providers.Add(new ProviderOption("hyperv", Loc.T("ProviderHyperV")));
         Providers.Add(new ProviderOption(DemoSandboxProvider.ProviderId, Loc.T("ProviderDemo")));
         var wanted = IsDemoSample ? DemoSandboxProvider.ProviderId : settings.Current.Analysis.ProviderId;
         SelectedProvider = Providers.FirstOrDefault(p => p.Id == wanted) ?? Providers[0];
@@ -251,7 +253,8 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         CheckingProvider = true;
         try
         {
-            var availability = await coordinator.Provider(SelectedProvider.Id).CheckAvailabilityAsync(CancellationToken.None);
+            var network = NetworkEnabled ? NetworkPolicy.Enabled : NetworkSimulated ? NetworkPolicy.Simulated : NetworkPolicy.Disabled;
+            var availability = await coordinator.Provider(SelectedProvider.Id).CheckAvailabilityAsync(network, CancellationToken.None);
             ProviderChecks.Clear();
             foreach (var c in availability.Checks) ProviderChecks.Add(new CheckRow(c.Label.Get(Loc.Instance.Code), c.Detail.Get(Loc.Instance.Code), c.Passed));
             ProviderReady = availability.IsReady;

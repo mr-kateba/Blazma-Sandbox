@@ -10,6 +10,8 @@ using Blazma.Core.Analysis;
 using Blazma.Core.Events;
 using Blazma.Core.Samples;
 using Blazma.Sandbox.Providers.Demo;
+using Blazma.Sandbox.Providers.VirtualMachine.HyperV;
+using Blazma.Sandbox.Providers.VirtualMachine.VirtualBox;
 using Blazma.Sandbox.Providers.WindowsSandbox;
 using Blazma.Storage;
 using Microsoft.Extensions.Logging;
@@ -41,7 +43,8 @@ public sealed class AnalysisCoordinator(
     SettingsService settings,
     IAnalysisRepository repository,
     BlazmaPaths paths,
-    ILoggerFactory loggers)
+    ILoggerFactory loggers,
+    ISecretProtector secrets)
 {
     public ActiveAnalysis? Active { get; private set; }
     public IReadOnlyList<string> RulePackErrors { get; private set; } = [];
@@ -64,13 +67,24 @@ public sealed class AnalysisCoordinator(
         return new RuleEngine(rules, loggers.CreateLogger<RuleEngine>());
     }
 
+    private static string AgentFolder => Path.Combine(AppContext.BaseDirectory, "agent");
+
     public ISandboxProvider Provider(string? id = null) => (id ?? settings.Current.Analysis.ProviderId) switch
     {
         DemoSandboxProvider.ProviderId => new DemoSandboxProvider(TimeProvider.System, settings.Current.Advanced.DemoSpeed),
+        VirtualBoxProvider.ProviderId => new VirtualBoxProvider(
+            VirtualBoxOptions.FromSettings(settings.Current.VirtualMachines, settings.Current.Advanced, paths.Work, AgentFolder, settings.Current.Analysis.StopWhenTreeExits), secrets, loggers: loggers),
+        HyperVProvider.ProviderId => new HyperVProvider(
+            HyperVOptions.FromSettings(settings.Current.VirtualMachines, settings.Current.Advanced, paths.Work, AgentFolder, settings.Current.Analysis.StopWhenTreeExits), secrets, loggers: loggers),
         _ => new WindowsSandboxProvider(new WindowsSandboxOptions
         {
             WorkRoot = paths.Work,
-            AgentFolder = Path.Combine(AppContext.BaseDirectory, "agent"),
+            AgentFolder = AgentFolder,
+            AgentLimits = new Blazma.Sandbox.Channel.AgentLimits(
+                settings.Current.Analysis.MaxDroppedFiles,
+                settings.Current.Analysis.MaxDroppedFileMb * 1024L * 1024,
+                settings.Current.Analysis.MaxMemoryDumpMb * 1024L * 1024,
+                Blazma.Sandbox.Channel.AgentLimits.Default.MaxScreenshots),
             MemoryMb = settings.Current.Advanced.SandboxMemoryMb,
             OutboxQuotaBytes = settings.Current.Advanced.OutboxQuotaBytes,
             HeartbeatTimeout = TimeSpan.FromSeconds(settings.Current.Advanced.AgentHeartbeatTimeoutSeconds),

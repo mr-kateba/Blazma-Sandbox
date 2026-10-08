@@ -80,6 +80,13 @@ public interface ISandboxProvider
 
     Task<ProviderAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Readiness for a run with this network policy. Providers whose checks depend on it (a VM
+    /// with a connected adapter is acceptable only when the analysis enables the network)
+    /// override this; the rest answer the same as the overload without a policy.
+    /// </summary>
+    Task<ProviderAvailability> CheckAvailabilityAsync(NetworkPolicy network, CancellationToken cancellationToken) => CheckAvailabilityAsync(cancellationToken);
+
     Task<ISandboxSession> CreateSessionAsync(SandboxSessionRequest request, CancellationToken cancellationToken);
 }
 

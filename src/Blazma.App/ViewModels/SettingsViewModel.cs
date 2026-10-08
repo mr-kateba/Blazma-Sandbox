@@ -142,7 +142,34 @@ public sealed partial class SettingsViewModel : PageViewModel
     public ObservableCollection<ProfileOption> Profiles { get; } = [];
     public ProfileOption? DefaultProfile { get => Profiles.FirstOrDefault(p => p.Profile.Id == S.Analysis.DefaultProfileId); set { if (value is null) return; S.Analysis.DefaultProfileId = value.Profile.Id; Changed(); } }
     public bool StopWhenTreeExits { get => S.Analysis.StopWhenTreeExits; set { S.Analysis.StopWhenTreeExits = value; Changed(); } }
-    public bool UseDemoProvider { get => S.Analysis.ProviderId == "demo"; set { S.Analysis.ProviderId = value ? "demo" : "windows-sandbox"; Changed(); } }
+    public IReadOnlyList<ProviderOption> Environments => [new("windows-sandbox", "Windows Sandbox"), new("virtualbox", Loc.T("ProviderVirtualBox")), new("hyperv", Loc.T("ProviderHyperV")), new("demo", Loc.T("ProviderDemo"))];
+    public ProviderOption? DefaultEnvironment
+    {
+        get => Environments.FirstOrDefault(e => e.Id == S.Analysis.ProviderId) ?? Environments[0];
+        set { if (value is null) return; S.Analysis.ProviderId = value.Id; Changed(); }
+    }
+
+    // Virtual machines
+    public string VBoxManagePath { get => S.VirtualMachines.VBoxManagePath ?? string.Empty; set { S.VirtualMachines.VBoxManagePath = string.IsNullOrWhiteSpace(value) ? null : value.Trim(); Changed(); } }
+    public string VirtualBoxVm { get => S.VirtualMachines.VirtualBoxVm; set { S.VirtualMachines.VirtualBoxVm = value.Trim(); Changed(); } }
+    public string VirtualBoxSnapshot { get => S.VirtualMachines.VirtualBoxSnapshot; set { S.VirtualMachines.VirtualBoxSnapshot = value.Trim(); Changed(); } }
+    public bool VirtualBoxHeadless { get => S.VirtualMachines.VirtualBoxDisplay == VmDisplay.Headless; set { S.VirtualMachines.VirtualBoxDisplay = value ? VmDisplay.Headless : VmDisplay.Window; Changed(); } }
+    public string HyperVVm { get => S.VirtualMachines.HyperVVm; set { S.VirtualMachines.HyperVVm = value.Trim(); Changed(); } }
+    public string HyperVCheckpoint { get => S.VirtualMachines.HyperVCheckpoint; set { S.VirtualMachines.HyperVCheckpoint = value.Trim(); Changed(); } }
+    public string GuestUser { get => S.VirtualMachines.GuestUser; set { S.VirtualMachines.GuestUser = value.Trim(); Changed(); } }
+    public string GuestWorkFolder { get => S.VirtualMachines.GuestWorkFolder; set { S.VirtualMachines.GuestWorkFolder = value.Trim(); Changed(); } }
+    public bool RequireDisconnected { get => S.VirtualMachines.RequireDisconnectedNetwork; set { S.VirtualMachines.RequireDisconnectedNetwork = value; Changed(); } }
+    public bool HasGuestPassword => !string.IsNullOrEmpty(S.VirtualMachines.GuestPassword);
+    [ObservableProperty] private string _guestPasswordInput = string.Empty;
+
+    [RelayCommand]
+    private void SaveGuestPassword()
+    {
+        if (GuestPasswordInput.Length == 0) return;
+        S.VirtualMachines.GuestPassword = _secrets.Protect(GuestPasswordInput);
+        GuestPasswordInput = string.Empty;
+        Changed(nameof(HasGuestPassword));
+    }
     [RelayCommand]
     private void DeleteProfile(ProfileOption? p)
     {
