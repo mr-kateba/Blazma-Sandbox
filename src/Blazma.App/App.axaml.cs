@@ -10,7 +10,12 @@ using Blazma.App.ViewModels;
 using Blazma.App.Views;
 using Blazma.Core.Abstractions;
 using Blazma.Core.Settings;
+using Blazma.Intelligence;
+using Blazma.Intelligence.Ai;
+using Blazma.Intelligence.Net;
+using Blazma.Intelligence.Reputation;
 using Blazma.Storage;
+using Blazma.Storage.Secrets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -56,6 +61,26 @@ public partial class App : Application
         services.AddSingleton<ExportService>();
         services.AddSingleton<IAnalysisRepository>(sp => new SqliteAnalysisRepository(paths.Database, sp.GetRequiredService<ILogger<SqliteAnalysisRepository>>()) { ArtifactsRoot = paths.Artifacts });
         services.AddSingleton<AnalysisCoordinator>();
+
+        // Online lookups (opt-in, hash only) and local AI (loopback only by default). Settings are read on every call.
+        services.AddSingleton<ISecretProtector>(_ => SecretProtector.CreateDefault());
+        services.AddSingleton(sp =>
+        {
+            var current = sp.GetRequiredService<SettingsService>();
+            var secrets = sp.GetRequiredService<ISecretProtector>();
+            var http = IntegrationHttp.CreateClient();
+            return new ReputationService(
+            [
+                new LocalHistoryReputationProvider(sp.GetRequiredService<IAnalysisRepository>()),
+                new VirusTotalReputationProvider(http, () => current.Current.Integrations, secrets),
+                new MalwareBazaarReputationProvider(http, () => current.Current.Integrations, secrets),
+            ]);
+        });
+        services.AddSingleton(sp =>
+        {
+            var current = sp.GetRequiredService<SettingsService>();
+            return new LocalAiProvider(IntegrationHttp.CreateClient(useProxy: false), () => current.Current.Ai);
+        });
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();
     }

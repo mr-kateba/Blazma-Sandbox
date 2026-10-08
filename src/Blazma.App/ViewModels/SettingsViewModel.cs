@@ -80,11 +80,14 @@ public sealed partial class SettingsViewModel : PageViewModel
     private readonly AnalysisCoordinator _coordinator;
     private readonly IAnalysisRepository _repository;
     private readonly BlazmaPaths _paths;
+    private readonly ISecretProtector _secrets;
+    private readonly Blazma.Intelligence.Ai.LocalAiProvider _ai;
 
-    public SettingsViewModel(MainViewModel main, SettingsService settings, ThemeService theme, AnalysisCoordinator coordinator, IAnalysisRepository repository, BlazmaPaths paths)
+    public SettingsViewModel(MainViewModel main, SettingsService settings, ThemeService theme, AnalysisCoordinator coordinator, IAnalysisRepository repository, BlazmaPaths paths,
+        ISecretProtector secrets, Blazma.Intelligence.Ai.LocalAiProvider ai)
     {
-        _main = main; _settings = settings; _theme = theme; _coordinator = coordinator; _repository = repository; _paths = paths;
-        Sections = new(new[] { "General", "Appearance", "Dashboard", "Analysis", "Detection", "Sandbox", "Network", "Privacy", "Reports", "Notifications", "Shortcuts", "AI", "Storage", "Language", "Advanced", "About" }.Select(k => new SettingsSection(k)));
+        _main = main; _settings = settings; _theme = theme; _coordinator = coordinator; _repository = repository; _paths = paths; _secrets = secrets; _ai = ai;
+        Sections = new(new[] { "General", "Appearance", "Dashboard", "Analysis", "Detection", "Sandbox", "Network", "Integrations", "Privacy", "Reports", "Notifications", "Shortcuts", "AI", "Storage", "Language", "Advanced", "About" }.Select(k => new SettingsSection(k)));
         _selectedSection = Sections[0];
     }
 
@@ -104,6 +107,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     public bool ShowAnalysis => Is("Analysis"); public bool ShowDetection => Is("Detection"); public bool ShowSandbox => Is("Sandbox");
     public bool ShowNetwork => Is("Network"); public bool ShowPrivacy => Is("Privacy"); public bool ShowReports => Is("Reports");
     public bool ShowNotifications => Is("Notifications"); public bool ShowShortcuts => Is("Shortcuts"); public bool ShowAI => Is("AI");
+    public bool ShowIntegrations => Is("Integrations");
     public bool ShowStorage => Is("Storage"); public bool ShowLanguage => Is("Language"); public bool ShowAdvanced => Is("Advanced"); public bool ShowAbout => Is("About");
 
     // General
@@ -172,6 +176,75 @@ public sealed partial class SettingsViewModel : PageViewModel
     public decimal HeartbeatTimeout { get => S.Advanced.AgentHeartbeatTimeoutSeconds; set { S.Advanced.AgentHeartbeatTimeoutSeconds = (int)Math.Clamp(value, 5, 120); Changed(); } }
     public decimal OutboxQuotaMb { get => S.Advanced.OutboxQuotaBytes / (1024 * 1024); set { S.Advanced.OutboxQuotaBytes = (long)Math.Clamp(value, 16, 4096) * 1024 * 1024; Changed(); } }
     [RelayCommand] private void OpenSecurityCenter() => _main.Navigate("Sandbox");
+
+    // Online lookups: hash only, opt-in, keys encrypted at rest
+    public bool VirusTotalEnabled { get => S.Integrations.VirusTotalEnabled; set { S.Integrations.VirusTotalEnabled = value; Changed(); } }
+    public bool MalwareBazaarEnabled { get => S.Integrations.MalwareBazaarEnabled; set { S.Integrations.MalwareBazaarEnabled = value; Changed(); } }
+    public bool LookupAutomatically { get => S.Integrations.LookupAutomatically; set { S.Integrations.LookupAutomatically = value; Changed(); } }
+    public bool HasVirusTotalKey => !string.IsNullOrEmpty(S.Integrations.VirusTotalApiKey);
+    public bool HasMalwareBazaarKey => !string.IsNullOrEmpty(S.Integrations.MalwareBazaarApiKey);
+    public bool SecretsAreWeak => !_secrets.IsStrong;
+    [ObservableProperty] private string _virusTotalKeyInput = string.Empty;
+    [ObservableProperty] private string _malwareBazaarKeyInput = string.Empty;
+
+    [RelayCommand]
+    private void SaveVirusTotalKey()
+    {
+        if (VirusTotalKeyInput.Trim() is not { Length: > 0 } key) return;
+        S.Integrations.VirusTotalApiKey = _secrets.Protect(key);
+        VirusTotalKeyInput = string.Empty;
+        Changed(nameof(HasVirusTotalKey));
+    }
+
+    [RelayCommand]
+    private void SaveMalwareBazaarKey()
+    {
+        if (MalwareBazaarKeyInput.Trim() is not { Length: > 0 } key) return;
+        S.Integrations.MalwareBazaarApiKey = _secrets.Protect(key);
+        MalwareBazaarKeyInput = string.Empty;
+        Changed(nameof(HasMalwareBazaarKey));
+    }
+
+    [RelayCommand] private void ForgetVirusTotalKey() { S.Integrations.VirusTotalApiKey = null; Changed(nameof(HasVirusTotalKey)); }
+    [RelayCommand] private void ForgetMalwareBazaarKey() { S.Integrations.MalwareBazaarApiKey = null; Changed(nameof(HasMalwareBazaarKey)); }
+
+    // Local AI
+    public IReadOnlyList<EnumOption<AiProviderKind>> AiKinds { get; } = [new(AiProviderKind.Ollama, "AiOllama"), new(AiProviderKind.OpenAiCompatible, "AiOpenAiCompatible")];
+    public bool AiEnabled { get => S.Ai.Enabled; set { S.Ai.Enabled = value; Changed(); } }
+    public EnumOption<AiProviderKind> AiKind
+    {
+        get => AiKinds.First(k => k.Value == S.Ai.Provider);
+        set
+        {
+            if (value is null || value.Value == S.Ai.Provider) return;
+            S.Ai.Provider = value.Value;
+            // Each kind has its usual local port; switch only if the user kept the other default.
+            if (S.Ai.LocalEndpoint is "http://127.0.0.1:11434" or "http://127.0.0.1:1234")
+                S.Ai.LocalEndpoint = value.Value == AiProviderKind.Ollama ? "http://127.0.0.1:11434" : "http://127.0.0.1:1234";
+            Changed(); OnPropertyChanged(nameof(AiEndpoint));
+        }
+    }
+    public string AiEndpoint { get => S.Ai.LocalEndpoint; set { S.Ai.LocalEndpoint = value.Trim(); Changed(); } }
+    public string AiModel { get => S.Ai.Model; set { S.Ai.Model = value.Trim(); Changed(); } }
+    public bool AiAllowRemote { get => S.Ai.AllowRemoteEndpoint; set { S.Ai.AllowRemoteEndpoint = value; Changed(); } }
+    [ObservableProperty] private string? _aiTestResult;
+    [ObservableProperty] private bool _aiTesting;
+    public ObservableCollection<string> AiModels { get; } = [];
+
+    [RelayCommand]
+    private async Task TestAi()
+    {
+        AiTesting = true;
+        AiTestResult = null;
+        try
+        {
+            var result = await _ai.TestConnectionAsync();
+            AiModels.Clear();
+            foreach (var m in result.Models.Take(50)) AiModels.Add(m);
+            AiTestResult = result.Success ? Loc.F("AiConnected", result.Models.Count) : result.Error?.Get(Loc.Instance.Code) ?? Loc.T("AiNotConnected");
+        }
+        finally { AiTesting = false; }
+    }
 
     // Privacy
     public bool RedactExports { get => S.Privacy.RedactExports; set { S.Privacy.RedactExports = value; Changed(); } }

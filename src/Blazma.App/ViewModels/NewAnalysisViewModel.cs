@@ -23,8 +23,11 @@ public sealed record ProfileOption(AnalysisProfile Profile)
 
 public sealed record ProviderOption(string Id, string Name);
 
+/// <summary>One hash-reputation answer, shown before the run.</summary>
+public sealed record ReputationRow(string Provider, string Verdict, string Detail, bool Bad, string? Link);
+
 /// <summary>Preparation: show what the file is, choose how to analyze it, then start. Nothing runs before Start.</summary>
-public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoordinator coordinator, SettingsService settings) : PageViewModel
+public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoordinator coordinator, SettingsService settings, Blazma.Intelligence.Reputation.ReputationService reputation) : PageViewModel
 {
     public override string NavKey => "NewAnalysis";
 
@@ -37,7 +40,16 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     [ObservableProperty] private ProfileOption? _selectedProfile;
     [ObservableProperty] private double _durationSeconds = 120;
     [ObservableProperty] private bool _networkEnabled;
+    [ObservableProperty] private bool _networkSimulated = true;
     [ObservableProperty] private bool _networkConsent;
+    [ObservableProperty] private bool _interactive;
+    [ObservableProperty] private bool _simulateUser = true;
+    [ObservableProperty] private bool _captureScreenshots = true;
+    [ObservableProperty] private bool _collectDropped = true;
+    [ObservableProperty] private bool _dumpMemory = true;
+    [ObservableProperty] private bool _capturePcap;
+    [ObservableProperty] private bool _checkingReputation;
+    private IReadOnlyList<ReputationResult> _reputation = [];
     [ObservableProperty] private bool _captureProcesses = true;
     [ObservableProperty] private bool _captureFiles = true;
     [ObservableProperty] private bool _captureRegistry = true;
@@ -54,6 +66,13 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     public ObservableCollection<CheckRow> ProviderChecks { get; } = [];
     public ObservableCollection<ProfileOption> Profiles { get; } = [];
     public ObservableCollection<ProviderOption> Providers { get; } = [];
+    public ObservableCollection<ReputationRow> ReputationRows { get; } = [];
+
+    public bool NetworkOffMode { get => !NetworkEnabled && !NetworkSimulated; set { if (value) { NetworkEnabled = false; NetworkSimulated = false; } } }
+    public bool NetworkSimulatedMode { get => NetworkSimulated && !NetworkEnabled; set { if (value) { NetworkEnabled = false; NetworkSimulated = true; } } }
+    public bool NetworkRealMode { get => NetworkEnabled; set { if (value) { NetworkSimulated = false; NetworkEnabled = true; } } }
+    public bool CanLookupOnline => HasReport && !IsDemoSample && reputation.Providers.Any(p => p.IsRemote && p.IsConfigured);
+    public bool HasReputation => ReputationRows.Count > 0;
 
     public bool HasReport => Report is not null;
     public bool HasNoReport => Report is null && !IsLoading;
@@ -67,7 +86,13 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     partial void OnIsLoadingChanged(bool value) => Notify();
     partial void OnErrorChanged(string? value) => OnPropertyChanged(nameof(HasError));
     partial void OnDurationSecondsChanged(double value) => OnPropertyChanged(nameof(DurationText));
-    partial void OnNetworkEnabledChanged(bool value) { if (!value) NetworkConsent = false; Notify(); }
+    partial void OnNetworkEnabledChanged(bool value) { if (!value) { NetworkConsent = false; CapturePcap = false; } Notify(); NotifyNetwork(); }
+    partial void OnNetworkSimulatedChanged(bool value) => NotifyNetwork();
+    partial void OnInteractiveChanged(bool value) { if (value) SimulateUser = false; }
+    private void NotifyNetwork()
+    {
+        OnPropertyChanged(nameof(NetworkOffMode)); OnPropertyChanged(nameof(NetworkSimulatedMode)); OnPropertyChanged(nameof(NetworkRealMode));
+    }
     partial void OnNetworkConsentChanged(bool value) => Notify();
     partial void OnProviderReadyChanged(bool value) => Notify();
     partial void OnSelectedProviderChanged(ProviderOption? value) => _ = CheckProviderAsync();
@@ -81,12 +106,20 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         CaptureRegistry = o.CaptureRegistry;
         CaptureNetwork = o.CaptureNetwork;
         TakeSnapshots = o.TakeSnapshots;
+        // A profile never switches the real network on by itself; that always needs consent here.
+        NetworkEnabled = false;
+        NetworkSimulated = o.Network == NetworkPolicy.Simulated;
+        Interactive = o.Interactive;
+        SimulateUser = o.SimulateUser;
+        CaptureScreenshots = o.CaptureScreenshots;
+        CollectDropped = o.CollectDroppedFiles;
+        DumpMemory = o.DumpMemory;
     }
 
     private void Notify()
     {
         OnPropertyChanged(nameof(HasReport)); OnPropertyChanged(nameof(HasNoReport)); OnPropertyChanged(nameof(IsRunnable));
-        OnPropertyChanged(nameof(CanStart)); OnPropertyChanged(nameof(ShowNetworkWarning));
+        OnPropertyChanged(nameof(CanStart)); OnPropertyChanged(nameof(ShowNetworkWarning)); OnPropertyChanged(nameof(CanLookupOnline));
     }
 
     public override async Task OnShownAsync()
@@ -119,10 +152,12 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         Report = null;
         Error = null;
         IsLoading = true;
+        ClearReputation();
         try
         {
             Report = await coordinator.AnalyzeStaticAsync(path, CancellationToken.None);
             if (!Report.Sample.IsExecutableKind) Error = Loc.T("NotRunnable");
+            await LookupAsync(includeRemote: settings.Current.Integrations.LookupAutomatically);
         }
         catch (Exception ex)
         {
@@ -136,8 +171,45 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         IsDemoSample = true;
         SamplePath = null;
         Error = null;
+        ClearReputation();
         Report = AnalysisCoordinator.DemoSample();
     }
+
+    private void ClearReputation()
+    {
+        _reputation = [];
+        ReputationRows.Clear();
+        OnPropertyChanged(nameof(HasReputation));
+    }
+
+    /// <summary>Hash-only lookups. Remote services are asked only when the user enabled them, and never for the demo.</summary>
+    private async Task LookupAsync(bool includeRemote)
+    {
+        if (Report is null || IsDemoSample) return;
+        CheckingReputation = true;
+        try
+        {
+            _reputation = (await reputation.LookupAsync(Report.Sample.Sha256, includeRemote, CancellationToken.None))
+                .Where(r => r.Verdict != ReputationVerdict.NotFound || r.ProviderId != "local-history").ToList();
+            ReputationRows.Clear();
+            foreach (var r in _reputation)
+            {
+                var detail = r.Error ?? string.Join(" · ", new[]
+                {
+                    r.Detections is { } d ? Loc.F("RepDetections", d, r.Engines ?? 0) : null,
+                    r.Family is { Length: > 0 } f ? Loc.F("RepFamily", f) : null,
+                    r.Tags.Count > 0 ? string.Join(", ", r.Tags.Take(4)) : null,
+                }.Where(x => x is not null));
+                ReputationRows.Add(new ReputationRow(r.ProviderName, Loc.T("Rep" + r.Verdict), detail,
+                    r.Verdict is ReputationVerdict.Malicious or ReputationVerdict.Suspicious, r.Link));
+            }
+            OnPropertyChanged(nameof(HasReputation));
+        }
+        finally { CheckingReputation = false; }
+    }
+
+    [RelayCommand] private Task LookupOnline() => LookupAsync(includeRemote: true);
+    [RelayCommand] private void OpenLink(string? url) => main.OpenUrl(url);
 
     private void BuildRows()
     {
@@ -190,7 +262,13 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     private AnalysisOptions BuildOptions() => new()
     {
         Duration = TimeSpan.FromSeconds(DurationSeconds),
-        Network = NetworkEnabled && NetworkConsent ? NetworkPolicy.Enabled : NetworkPolicy.Disabled,
+        Network = NetworkEnabled && NetworkConsent ? NetworkPolicy.Enabled : NetworkSimulated ? NetworkPolicy.Simulated : NetworkPolicy.Disabled,
+        Interactive = Interactive,
+        SimulateUser = SimulateUser && !Interactive,
+        CaptureScreenshots = CaptureScreenshots,
+        CollectDroppedFiles = CollectDropped,
+        DumpMemory = DumpMemory,
+        CapturePcap = CapturePcap && NetworkEnabled,
         CaptureProcesses = CaptureProcesses,
         CaptureFiles = CaptureFiles,
         CaptureRegistry = CaptureRegistry,
@@ -221,6 +299,6 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     {
         if (Report is null || SelectedProvider is null || !CanStart) return;
         var provider = coordinator.Provider(SelectedProvider.Id);
-        await main.StartAnalysisAsync(SamplePath ?? Report.Sample.FileName, Report, BuildOptions(), provider);
+        await main.StartAnalysisAsync(SamplePath ?? Report.Sample.FileName, Report, BuildOptions(), provider, _reputation);
     }
 }

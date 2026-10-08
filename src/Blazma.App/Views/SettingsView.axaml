@@ -218,17 +218,60 @@
           <Button Content="{l:T ResetDefaults}" Command="{Binding ResetShortcutsCommand}" HorizontalAlignment="Left" />
         </StackPanel>
 
-        <!-- AI -->
-        <Border Classes="card" IsVisible="{Binding ShowAI}">
-          <StackPanel Spacing="8">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="{l:T LocalAiTitle}" FontWeight="SemiBold" />
-              <Border Classes="badge" Padding="6,0"><TextBlock Text="{l:T Planned}" Foreground="{DynamicResource MutedBrush}" FontSize="10" /></Border>
+        <!-- Online lookups -->
+        <StackPanel Spacing="10" IsVisible="{Binding ShowIntegrations}">
+          <Border Classes="banner">
+            <TextBlock Text="{l:T SetLookupPrivacy}" TextWrapping="Wrap" />
+          </Border>
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="VirusTotal" FontWeight="SemiBold" /><TextBlock Classes="caption" Text="{l:T SetVirusTotalHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding VirusTotalEnabled}" OnContent="" OffContent="" /></Grid>
+              <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBox Text="{Binding VirusTotalKeyInput}" PasswordChar="•" PlaceholderText="{l:T ApiKeyPlaceholder}" FlowDirection="LeftToRight" />
+                <Button Grid.Column="1" Content="{l:T SaveKey}" Command="{Binding SaveVirusTotalKeyCommand}" Margin="8,0,0,0" />
+                <Button Grid.Column="2" Classes="link" Content="{l:T ForgetKey}" Command="{Binding ForgetVirusTotalKeyCommand}" IsVisible="{Binding HasVirusTotalKey}" Margin="8,0,0,0" />
+              </Grid>
+              <TextBlock Classes="caption" Text="{l:T KeySaved}" Foreground="{DynamicResource OkBrush}" IsVisible="{Binding HasVirusTotalKey}" />
             </StackPanel>
-            <TextBlock Classes="body" Text="{l:T SetAiBody}" />
-            <ToggleSwitch IsEnabled="False" OnContent="{l:T Planned}" OffContent="{l:T Planned}" />
-          </StackPanel>
-        </Border>
+          </Border>
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="MalwareBazaar (abuse.ch)" FontWeight="SemiBold" /><TextBlock Classes="caption" Text="{l:T SetMalwareBazaarHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding MalwareBazaarEnabled}" OnContent="" OffContent="" /></Grid>
+              <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBox Text="{Binding MalwareBazaarKeyInput}" PasswordChar="•" PlaceholderText="{l:T ApiKeyPlaceholder}" FlowDirection="LeftToRight" />
+                <Button Grid.Column="1" Content="{l:T SaveKey}" Command="{Binding SaveMalwareBazaarKeyCommand}" Margin="8,0,0,0" />
+                <Button Grid.Column="2" Classes="link" Content="{l:T ForgetKey}" Command="{Binding ForgetMalwareBazaarKeyCommand}" IsVisible="{Binding HasMalwareBazaarKey}" Margin="8,0,0,0" />
+              </Grid>
+              <TextBlock Classes="caption" Text="{l:T KeySaved}" Foreground="{DynamicResource OkBrush}" IsVisible="{Binding HasMalwareBazaarKey}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card">
+            <StackPanel>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetLookupAuto}" /><TextBlock Classes="caption" Text="{l:T SetLookupAutoHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding LookupAutomatically}" OnContent="" OffContent="" /></Grid>
+              <TextBlock Classes="caption" Text="{l:T SecretsWeak}" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding SecretsAreWeak}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- AI -->
+        <StackPanel Spacing="10" IsVisible="{Binding ShowAI}">
+          <Border Classes="banner">
+            <TextBlock Text="{l:T SetAiBody}" TextWrapping="Wrap" />
+          </Border>
+          <Border Classes="card">
+            <StackPanel>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T LocalAiTitle}" FontWeight="SemiBold" /><TextBlock Classes="caption" Text="{l:T SetAiEnableHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding AiEnabled}" OnContent="" OffContent="" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,260"><TextBlock Text="{l:T SetAiKind}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" ItemsSource="{Binding AiKinds}" SelectedItem="{Binding AiKind}" HorizontalAlignment="Stretch" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,260"><TextBlock Text="{l:T SetAiEndpoint}" VerticalAlignment="Center" /><TextBox Grid.Column="1" Text="{Binding AiEndpoint}" FontFamily="{DynamicResource MonoFont}" FlowDirection="LeftToRight" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,260"><TextBlock Text="{l:T SetAiModel}" VerticalAlignment="Center" /><AutoCompleteBox Grid.Column="1" Text="{Binding AiModel}" ItemsSource="{Binding AiModels}" FilterMode="Contains" FlowDirection="LeftToRight" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetAiRemote}" /><TextBlock Classes="caption" Text="{l:T SetAiRemoteHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding AiAllowRemote}" OnContent="" OffContent="" /></Grid>
+              <Grid ColumnDefinitions="Auto,*" Margin="0,8,0,0">
+                <Button Content="{l:T TestConnection}" Command="{Binding TestAiCommand}" IsEnabled="{Binding !AiTesting}" />
+                <TextBlock Grid.Column="1" Classes="caption" Text="{Binding AiTestResult}" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap" />
+              </Grid>
+            </StackPanel>
+          </Border>
+        </StackPanel>
 
         <!-- Storage -->
         <Border Classes="card" IsVisible="{Binding ShowStorage}">
