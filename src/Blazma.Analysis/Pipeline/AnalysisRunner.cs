@@ -18,6 +18,37 @@ public sealed record AnalysisRequest
     public required AnalysisOptions Options { get; init; }
     public required EngineSettings EngineSettings { get; init; }
     public int MaxEvents { get; init; } = 250_000;
+
+    /// <summary>Where screenshots, dropped files, memory and captures are kept. Null: artifacts are not collected.</summary>
+    public string? ArtifactsFolder { get; init; }
+
+    /// <summary>Analyzes dropped files and memory regions (out of process in the app). Null: they are stored but not analyzed.</summary>
+    public IArtifactInspector? Inspector { get; init; }
+
+    /// <summary>Hash reputation gathered before the run (only from providers the user enabled).</summary>
+    public IReadOnlyList<ReputationResult> Reputation { get; init; } = [];
+
+    /// <summary>Lets the UI extend or finish the run while it is analyzing.</summary>
+    public AnalysisControl? Control { get; init; }
+}
+
+/// <summary>
+/// The live controls of one run, handed to the UI before the run starts. Calls are ignored
+/// when the provider cannot extend or finish early, or when no run is active.
+/// </summary>
+public sealed class AnalysisControl
+{
+    private IInteractiveSession? _session;
+
+    public bool IsAvailable => Volatile.Read(ref _session) is not null;
+
+    internal void Attach(IInteractiveSession? session) => Volatile.Write(ref _session, session);
+
+    public Task ExtendAsync(TimeSpan extra, CancellationToken cancellationToken = default) =>
+        Volatile.Read(ref _session)?.ExtendAsync(extra, cancellationToken) ?? Task.CompletedTask;
+
+    public Task FinishNowAsync(CancellationToken cancellationToken = default) =>
+        Volatile.Read(ref _session)?.FinishNowAsync(cancellationToken) ?? Task.CompletedTask;
 }
 
 /// <summary>A progress update for the live screen. Sent on every stage change and periodically while analyzing.</summary>
@@ -33,6 +64,11 @@ public sealed record AnalysisProgress
     public Verdict? LiveVerdict { get; init; }
     public string? Message { get; init; }
     public bool MonitoringInterrupted { get; init; }
+
+    /// <summary>The newest screenshot of the sandbox desktop (a PNG written by the host), if any.</summary>
+    public string? LatestScreenshot { get; init; }
+
+    public bool CanControl { get; init; }
 }
 
 /// <summary>Raised when an analysis cannot continue. Carries a user-facing reason and diagnostics.</summary>
@@ -78,6 +114,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
         Verdict? liveVerdict = null;
         SystemSnapshot? baseline = null, after = null;
         ISandboxSession? session = null;
+        var screenshots = new List<CollectedScreenshot>();
 
         void Report(string? message = null) => progress?.Report(new AnalysisProgress
         {
@@ -91,6 +128,8 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
             LiveVerdict = liveVerdict,
             Message = message,
             MonitoringInterrupted = result.MonitoringInterrupted,
+            LatestScreenshot = screenshots.Count > 0 ? screenshots[^1].Path : null,
+            CanControl = request.Control?.IsAvailable == true,
         });
 
         void MoveTo(AnalysisStage next)
@@ -115,7 +154,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
             }
 
             MoveTo(AnalysisStage.CreatingSandbox);
-            session = await provider.CreateSessionAsync(new SandboxSessionRequest(result.AnalysisId, request.SamplePath, result.Sample, options), cancellationToken).ConfigureAwait(false);
+            session = await provider.CreateSessionAsync(new SandboxSessionRequest(result.AnalysisId, request.SamplePath, result.Sample, options, request.ArtifactsFolder), cancellationToken).ConfigureAwait(false);
             await session.CreateEnvironmentAsync(cancellationToken).ConfigureAwait(false);
 
             MoveTo(AnalysisStage.Booting);
@@ -129,6 +168,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
             await session.TransferSampleAsync(cancellationToken).ConfigureAwait(false);
 
             MoveTo(AnalysisStage.Analyzing);
+            request.Control?.Attach(session as IInteractiveSession);
             await foreach (var signal in session.ExecuteAsync(cancellationToken).ConfigureAwait(false))
             {
                 switch (signal)
@@ -140,6 +180,9 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
                             events.Add(e);
                             liveEvents?.TryWrite(e);
                         }
+                        break;
+                    case ScreenshotSignal shot:
+                        screenshots.Add(shot.Screenshot);
                         break;
                     case MonitoringInterruptedSignal mi:
                         result.MonitoringInterrupted = true;
@@ -156,8 +199,10 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
                 Report();
             }
 
+            request.Control?.Attach(null);
             MoveTo(AnalysisStage.CollectingEvents);
             var collected = await session.CollectAsync(cancellationToken).ConfigureAwait(false);
+            screenshots.AddRange(collected.Screenshots.Where(s => screenshots.All(x => x.Path != s.Path)));
             foreach (var e in collected.RemainingEvents)
             {
                 if (events.Count >= request.MaxEvents) { droppedForCap++; continue; }
@@ -195,6 +240,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
                 });
             }
 
+            await AttachArtifactsAsync(result, request, screenshots, collected, cancellationToken).ConfigureAwait(false);
             engine.Process(result, events, baseline, after, request.EngineSettings);
             result.CompletedAt = time.GetUtcNow();
             result.FinalStage = AnalysisStage.Completed;
@@ -221,6 +267,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
         }
         finally
         {
+            request.Control?.Attach(null);
             liveEvents?.TryComplete();
             if (session is not null)
             {
@@ -234,6 +281,92 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
                     _logger.LogError(ex, "Analysis {AnalysisId}: environment cleanup failed", result.AnalysisId);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Adds what the session collected besides events. Dropped files and memory regions are
+    /// inspected through <see cref="AnalysisRequest.Inspector"/>; a failure there is noted, never fatal.
+    /// </summary>
+    private async Task AttachArtifactsAsync(AnalysisResult result, AnalysisRequest request, List<CollectedScreenshot> screenshots, CollectedArtifacts collected, CancellationToken ct)
+    {
+        string Relative(string path) => request.ArtifactsFolder is { } root ? Path.GetRelativePath(root, path) : path;
+
+        result.Reputation = request.Reputation;
+        result.Screenshots = screenshots.OrderBy(s => s.RelativeTime).Select(s => new ScreenshotInfo(s.RelativeTime, Relative(s.Path), s.Width, s.Height)).ToList();
+        result.PcapFile = collected.PcapPath is { } pcap ? Relative(pcap) : null;
+
+        var dropped = new List<DroppedFileInfo>();
+        foreach (var d in collected.DroppedFiles)
+        {
+            var report = await InspectAsync(request, d.StoredPath, Path.GetFileName(d.OriginalPath.Replace('\\', '/')), ct).ConfigureAwait(false);
+            dropped.Add(new DroppedFileInfo
+            {
+                OriginalPath = d.OriginalPath,
+                ProcessName = d.ProcessName,
+                Sha256 = d.Sha256,
+                Size = d.Size,
+                StoredName = Relative(d.StoredPath),
+                Static = report is null ? null : Retarget(report, $"dropped:{d.OriginalPath}"),
+            });
+        }
+        result.DroppedFiles = dropped;
+
+        var memory = new List<MemoryArtifact>();
+        foreach (var m in collected.MemoryRegions)
+        {
+            var where = $"memory:{m.ProcessName}@0x{m.BaseAddress:X}";
+            var report = await InspectAsync(request, m.StoredPath, where, ct).ConfigureAwait(false);
+            memory.Add(new MemoryArtifact
+            {
+                ProcessId = m.ProcessId,
+                ProcessName = m.ProcessName,
+                BaseAddress = m.BaseAddress,
+                Size = m.Size,
+                Protection = m.Protection,
+                Kind = m.Kind,
+                Sha256 = m.Sha256,
+                HasPeHeader = StartsWithMz(m.StoredPath),
+                StoredName = Relative(m.StoredPath),
+                Pe = report?.Pe,
+                YaraMatches = report?.YaraMatches.Select(y => y with { Target = where }).ToList() ?? [],
+                Artifacts = report?.Artifacts.Select(a => a with { Source = where }).ToList() ?? [],
+            });
+        }
+        result.MemoryArtifacts = memory;
+    }
+
+    private async Task<StaticReport?> InspectAsync(AnalysisRequest request, string path, string name, CancellationToken ct)
+    {
+        if (request.Inspector is null) return null;
+        try
+        {
+            return await request.Inspector.InspectAsync(path, name, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Could not inspect artifact {Name}", name);
+            return null;
+        }
+    }
+
+    /// <summary>Static results of an artifact name where they came from, so the report can say "found in the dropped file X".</summary>
+    private static StaticReport Retarget(StaticReport report, string where) => report with
+    {
+        YaraMatches = report.YaraMatches.Select(y => y with { Target = where }).ToList(),
+        Artifacts = report.Artifacts.Select(a => a with { Source = where }).ToList(),
+    };
+
+    private static bool StartsWithMz(string path)
+    {
+        try
+        {
+            using var s = File.OpenRead(path);
+            return s.ReadByte() == 'M' && s.ReadByte() == 'Z';
+        }
+        catch (IOException)
+        {
+            return false;
         }
     }
 

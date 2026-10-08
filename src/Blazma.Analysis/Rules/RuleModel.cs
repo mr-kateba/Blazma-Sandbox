@@ -41,6 +41,15 @@ public sealed class RuleContext
     public IReadOnlyList<WatchlistEntry> Watchlist { get; init; } = [];
     public IReadOnlyList<string> TrustedPublishers { get; init; } = [];
 
+    public IReadOnlyList<DroppedFileInfo> DroppedFiles { get; init; } = [];
+    public IReadOnlyList<MemoryArtifact> MemoryArtifacts { get; init; } = [];
+    public IReadOnlyList<ReputationResult> Reputation { get; init; } = [];
+
+    /// <summary>Configuration-like values found anywhere in the analysis.</summary>
+    public IReadOnlyList<ExtractedArtifact> Artifacts { get; init; } = [];
+
+    public bool UseCapabilities { get; init; } = true;
+
     public IEnumerable<AnalysisEvent> TreeEvents => Events.Where(Graph.InAnalyzedTree);
 
     public ProcessNode? NodeOf(AnalysisEvent e) => Graph.Resolve(e);
