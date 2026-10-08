@@ -43,6 +43,11 @@ security research. Do not use it to analyze files you are not allowed to handle.
 - **Evasion.** Some programs detect virtual machines or wait longer than the analysis and behave
   differently. A quiet report is not proof of safety.
 - **Windows Sandbox escapes** are outside Blazma's control; keep Windows updated.
+- **Virtual machine providers (VirtualBox, Hyper-V)** are only as isolated as the VM you prepared,
+  the guest `in` folder is writable by an elevated sample, and the providers have not yet been
+  validated on real hypervisors. The VM must have no connected network adapter unless an analysis
+  enables the network, and its snapshot is restored before and after every run. See
+  [docs/VIRTUAL-MACHINES.md](docs/VIRTUAL-MACHINES.md).
 - **Enabling network access** lets the sample reach the internet from the sandbox. It is off by
   default and requires explicit consent per analysis.
 - **Kernel registry events carry no value data**; the agent reads the value right after the event,
