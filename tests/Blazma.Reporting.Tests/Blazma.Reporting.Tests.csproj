@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1707;CA2201;CA1063;CA1816</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Blazma.Core\Blazma.Core.csproj" />
+    <ProjectReference Include="..\..\src\Blazma.Analysis\Blazma.Analysis.csproj" />
+    <ProjectReference Include="..\..\src\Blazma.Sandbox\Blazma.Sandbox.csproj" />
+    <ProjectReference Include="..\..\src\Blazma.Storage\Blazma.Storage.csproj" />
+    <ProjectReference Include="..\..\src\Blazma.Reporting\Blazma.Reporting.csproj" />
+  </ItemGroup>
+</Project>
