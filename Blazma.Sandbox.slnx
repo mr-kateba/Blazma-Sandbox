@@ -13,6 +13,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Blazma.Analysis.Tests/Blazma.Analysis.Tests.csproj" />
     <Project Path="tests/Blazma.App.Tests/Blazma.App.Tests.csproj" />
+    <Project Path="tests/Blazma.Intelligence.Tests/Blazma.Intelligence.Tests.csproj" />
     <Project Path="tests/Blazma.Integration.Tests/Blazma.Integration.Tests.csproj" />
     <Project Path="tests/Blazma.Sandbox.Tests/Blazma.Sandbox.Tests.csproj" />
   </Folder>
