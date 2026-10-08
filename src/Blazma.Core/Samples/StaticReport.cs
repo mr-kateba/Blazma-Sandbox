@@ -58,4 +58,13 @@ public sealed record StaticReport
     public double Entropy { get; init; }
     public IReadOnlyList<InterestingString> Strings { get; init; } = [];
     public IReadOnlyList<string> Warnings { get; init; } = [];
+
+    /// <summary>Import hash, compatible with pefile/VirusTotal. Groups builds of the same program.</summary>
+    public string? ImpHash { get; init; }
+
+    public IReadOnlyList<Capability> Capabilities { get; init; } = [];
+    public IReadOnlyList<YaraMatch> YaraMatches { get; init; } = [];
+    public IReadOnlyList<ExtractedArtifact> Artifacts { get; init; } = [];
+    public UrlReport? Url { get; init; }
+    public ArchiveInfo? Archive { get; init; }
 }

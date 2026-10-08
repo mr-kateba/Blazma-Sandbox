@@ -18,9 +18,15 @@ public sealed class BlazmaPaths
     public string Rules => Path.Combine(Root, "rules");
     public string Work => Path.Combine(Root, "work");
     public string Exports => Path.Combine(Root, "exports");
+    public string Yara => Path.Combine(Root, "yara");
+
+    /// <summary>Per-analysis artifacts (screenshots, dropped files, memory, capture). Deleted with the analysis.</summary>
+    public string Artifacts => Path.Combine(Root, "artifacts");
+
+    public string ArtifactsFor(Guid analysisId) => Path.Combine(Artifacts, analysisId.ToString("N"));
 
     public void EnsureCreated()
     {
-        foreach (var dir in new[] { Root, Logs, Rules, Work, Exports }) Directory.CreateDirectory(dir);
+        foreach (var dir in new[] { Root, Logs, Rules, Work, Exports, Yara, Artifacts }) Directory.CreateDirectory(dir);
     }
 }

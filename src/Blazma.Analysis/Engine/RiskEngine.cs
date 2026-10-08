@@ -22,6 +22,9 @@ public static class RiskEngine
         [FindingCategory.Monitoring] = 10,
         [FindingCategory.Watchlist] = 30,
         [FindingCategory.Sequence] = 20,
+        [FindingCategory.Signature] = 40,
+        [FindingCategory.Reputation] = 30,
+        [FindingCategory.Memory] = 30,
     };
 
     public static RiskAssessment Assess(IReadOnlyList<Finding> findings, RiskThresholds thresholds)

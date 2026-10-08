@@ -23,6 +23,8 @@ public sealed class BlazmaSettings
     public StorageSettings Storage { get; set; } = new();
     public ShortcutSettings Shortcuts { get; set; } = new();
     public AiSettings Ai { get; set; } = new();
+    public IntegrationSettings Integrations { get; set; } = new();
+    public VirtualMachineSettings VirtualMachines { get; set; } = new();
     public AdvancedSettings Advanced { get; set; } = new();
 }
 
@@ -38,6 +40,9 @@ public sealed class GeneralSettings
     public bool Use24HourClock { get; set; } = true;
     public bool ConfirmBeforeDelete { get; set; } = true;
     public bool OnboardingCompleted { get; set; }
+
+    /// <summary>Adds "Analyze with Blazma Sandbox" to the Explorer right-click menu (current user only).</summary>
+    public bool ExplorerContextMenu { get; set; }
 }
 
 /// <summary>Theme variants follow the Blazma family: Dark (default), Midnight, Light.</summary>
@@ -83,11 +88,23 @@ public sealed class AnalysisSettings
     public string DefaultProfileId { get; set; } = AnalysisProfile.StandardId;
     public List<AnalysisProfile> CustomProfiles { get; set; } = [];
 
-    /// <summary>The provider used for new analyses. "windows-sandbox" or "demo".</summary>
+    /// <summary>The provider used for new analyses: "windows-sandbox", "virtualbox", "hyperv" or "demo".</summary>
     public string ProviderId { get; set; } = "windows-sandbox";
 
     /// <summary>Stop the sample early once it and all its children have exited.</summary>
     public bool StopWhenTreeExits { get; set; } = true;
+
+    /// <summary>Password tried first for encrypted archives. "infected" is the convention for sharing samples.</summary>
+    public string DefaultArchivePassword { get; set; } = "infected";
+
+    /// <summary>Largest dropped file copied out of the sandbox, in MB.</summary>
+    public int MaxDroppedFileMb { get; set; } = 32;
+
+    /// <summary>Most dropped files copied out per analysis.</summary>
+    public int MaxDroppedFiles { get; set; } = 25;
+
+    /// <summary>Total memory dumped per analysis, in MB.</summary>
+    public int MaxMemoryDumpMb { get; set; } = 128;
 
     public IEnumerable<AnalysisProfile> AllProfiles => AnalysisProfile.BuiltIns.Concat(CustomProfiles);
 
@@ -127,6 +144,12 @@ public sealed class DetectionSettings
 
     /// <summary>Publishers whose signed child processes are treated as lower-risk context.</summary>
     public List<string> TrustedPublishers { get; set; } = [];
+
+    /// <summary>Scan the sample, dropped files and memory with the YARA rules in the user's yara folder.</summary>
+    public bool EnableYara { get; set; } = true;
+
+    /// <summary>Show capabilities found in the code (imports and strings) and let them add a few points.</summary>
+    public bool EnableCapabilities { get; set; } = true;
 }
 
 public sealed class PrivacySettings
@@ -192,12 +215,65 @@ public sealed class ShortcutSettings
         Bindings.TryGetValue(command, out var g) && !string.IsNullOrWhiteSpace(g) ? g : Defaults.GetValueOrDefault(command, string.Empty);
 }
 
+public enum AiProviderKind { Ollama, OpenAiCompatible }
+
+/// <summary>
+/// Optional AI explanations from a model running on this computer (Ollama, LM Studio,
+/// llama.cpp). Only loopback endpoints are accepted unless the user explicitly allows others.
+/// </summary>
 public sealed class AiSettings
 {
-    /// <summary>Planned. No AI provider ships in this version; Ask Blazma answers from rules and data only.</summary>
     public bool Enabled { get; set; }
+    public AiProviderKind Provider { get; set; } = AiProviderKind.Ollama;
+    public string LocalEndpoint { get; set; } = "http://127.0.0.1:11434";
+    public string Model { get; set; } = "llama3.1";
 
-    public string? LocalEndpoint { get; set; }
+    /// <summary>Off: requests to anything but 127.0.0.1/localhost/::1 are refused.</summary>
+    public bool AllowRemoteEndpoint { get; set; }
+
+    public int TimeoutSeconds { get; set; } = 120;
+}
+
+/// <summary>
+/// Online lookups. All off by default. Only the SHA-256 is sent, never the file, and each
+/// provider needs the user's own API key. Keys are stored encrypted (DPAPI on Windows).
+/// </summary>
+public sealed class IntegrationSettings
+{
+    public bool VirusTotalEnabled { get; set; }
+    public string? VirusTotalApiKey { get; set; }
+
+    public bool MalwareBazaarEnabled { get; set; }
+    public string? MalwareBazaarApiKey { get; set; }
+
+    /// <summary>Look the hash up automatically when a file is opened. Off: only when the user presses the button.</summary>
+    public bool LookupAutomatically { get; set; }
+}
+
+public enum VmDisplay { Window, Headless }
+
+/// <summary>Analysis in a user-prepared virtual machine (works on Windows Home with VirtualBox).</summary>
+public sealed class VirtualMachineSettings
+{
+    public string? VBoxManagePath { get; set; }
+    public string VirtualBoxVm { get; set; } = string.Empty;
+    public string VirtualBoxSnapshot { get; set; } = "clean";
+    public VmDisplay VirtualBoxDisplay { get; set; } = VmDisplay.Window;
+
+    public string HyperVVm { get; set; } = string.Empty;
+    public string HyperVCheckpoint { get; set; } = "clean";
+
+    /// <summary>An administrator account inside the analysis VM (not on this computer).</summary>
+    public string GuestUser { get; set; } = string.Empty;
+
+    /// <summary>Stored encrypted.</summary>
+    public string? GuestPassword { get; set; }
+
+    /// <summary>Working folder inside the guest.</summary>
+    public string GuestWorkFolder { get; set; } = @"C:\Blazma";
+
+    /// <summary>Refuse to start when the VM has a connected network adapter, unless the analysis enables the network.</summary>
+    public bool RequireDisconnectedNetwork { get; set; } = true;
 }
 
 public enum LogLevelSetting { Debug, Information, Warning, Error }

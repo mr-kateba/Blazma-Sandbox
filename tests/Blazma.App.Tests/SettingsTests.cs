@@ -70,7 +70,14 @@ public sealed class SettingsTests : IDisposable
         Assert.False(s.Ai.Enabled);
         Assert.Equal(AccentColor.BlazmaOrange, s.Appearance.Accent);
         Assert.Equal(Core.Analysis.NetworkPolicy.Disabled, new Core.Analysis.AnalysisOptions().Network);
-        Assert.False(new Core.Analysis.AnalysisOptions().CaptureScreenshots);
+        // No built-in profile reaches the real network; the simulated internet keeps the sandbox offline.
+        Assert.All(Core.Analysis.AnalysisProfile.BuiltIns, p => Assert.NotEqual(Core.Analysis.NetworkPolicy.Enabled, p.Options.Network));
+        Assert.All(Core.Analysis.AnalysisProfile.BuiltIns, p => Assert.False(p.Options.Normalized().CapturePcap));
+        Assert.False(s.Integrations.VirusTotalEnabled);
+        Assert.False(s.Integrations.MalwareBazaarEnabled);
+        Assert.False(s.Ai.AllowRemoteEndpoint);
+        Assert.False(s.General.ExplorerContextMenu);
+        Assert.True(s.VirtualMachines.RequireDisconnectedNetwork);
     }
 
     [Fact]

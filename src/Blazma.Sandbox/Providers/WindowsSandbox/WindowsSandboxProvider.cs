@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Blazma.Core.Abstractions;
+using Blazma.Sandbox.Channel;
 using Blazma.Core.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,6 +20,7 @@ public sealed record WindowsSandboxOptions
     public TimeSpan HeartbeatTimeout { get; init; } = TimeSpan.FromSeconds(15);
     public TimeSpan AgentHelloTimeout { get; init; } = TimeSpan.FromMinutes(3);
     public bool StopWhenTreeExits { get; init; } = true;
+    public AgentLimits AgentLimits { get; init; } = AgentLimits.Default;
 }
 
 /// <summary>

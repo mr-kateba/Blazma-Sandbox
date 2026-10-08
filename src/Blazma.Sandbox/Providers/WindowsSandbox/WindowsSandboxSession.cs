@@ -36,18 +36,7 @@ internal sealed class WindowsSandboxSession(SandboxSessionRequest request, Windo
         foreach (var file in Directory.EnumerateFiles(options.AgentFolder))
             File.Copy(file, Path.Combine(In, Protocol.AgentFolder, Path.GetFileName(file)), overwrite: true);
 
-        var config = new SessionConfigDto
-        {
-            AnalysisId = request.AnalysisId,
-            DurationSeconds = (int)request.Options.Duration.TotalSeconds,
-            CaptureProcesses = request.Options.CaptureProcesses,
-            CaptureFiles = request.Options.CaptureFiles,
-            CaptureRegistry = request.Options.CaptureRegistry,
-            CaptureNetwork = request.Options.CaptureNetwork,
-            TakeSnapshots = request.Options.TakeSnapshots,
-            StopWhenTreeExits = options.StopWhenTreeExits,
-            ChannelKey = Convert.ToBase64String(_key),
-        };
+        var config = ChannelFiles.CreateConfig(request, _key, options.StopWhenTreeExits, options.AgentLimits);
         WriteAtomic(Path.Combine(In, Protocol.SessionFile), JsonSerializer.SerializeToUtf8Bytes(config, ProtocolJson.Default.SessionConfigDto));
 
         var policy = new IsolationPolicy
@@ -109,7 +98,7 @@ internal sealed class WindowsSandboxSession(SandboxSessionRequest request, Windo
                 throw new InvalidDataException("The sample changed on disk after it was analyzed. Start the analysis again.");
         }
 
-        var go = new GoDto { SampleFileName = name, Sha256 = request.Sample.Sha256, IssuedAt = DateTimeOffset.UtcNow };
+        var go = ChannelFiles.CreateGo(request, name, DateTimeOffset.UtcNow);
         WriteAtomic(Path.Combine(In, Protocol.GoFile), JsonSerializer.SerializeToUtf8Bytes(go, ProtocolJson.Default.GoDto));
         _sampleStart = DateTimeOffset.UtcNow;
     }
@@ -199,20 +188,7 @@ internal sealed class WindowsSandboxSession(SandboxSessionRequest request, Windo
         _sandbox?.Dispose();
     }
 
-    private static void WriteAtomic(string path, byte[] bytes)
-    {
-        var temp = path + Protocol.TempExtension;
-        File.WriteAllBytes(temp, bytes);
-        File.Move(temp, path, overwrite: true);
-    }
+    private static void WriteAtomic(string path, byte[] bytes) => ChannelFiles.WriteAtomic(path, bytes);
 
-    internal static string SafeFileName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars().Concat(['\\', '/', ':', '*', '?', '"', '<', '>', '|']).ToHashSet();
-        var lastSeparator = name.LastIndexOfAny(['\\', '/']);
-        var baseName = lastSeparator >= 0 ? name[(lastSeparator + 1)..] : name;
-        var cleaned = new string(baseName.Select(c => invalid.Contains(c) || char.IsControl(c) ? '_' : c).ToArray()).Trim(' ', '.');
-        if (cleaned.Length == 0) cleaned = "sample.bin";
-        return cleaned.Length > 120 ? cleaned[..100] + Path.GetExtension(cleaned) : cleaned;
-    }
+    internal static string SafeFileName(string name) => ChannelFiles.SafeFileName(name);
 }

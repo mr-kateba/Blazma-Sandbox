@@ -10,7 +10,7 @@ namespace Blazma.Core.Analysis;
 /// <summary>Everything produced by one analysis. This is what reports, storage and Ask Blazma read.</summary>
 public sealed class AnalysisResult
 {
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
 
     public required Guid AnalysisId { get; init; }
     public required SampleInfo Sample { get; init; }
@@ -32,6 +32,21 @@ public sealed class AnalysisResult
     public IReadOnlyList<PersistenceDetection> Persistence { get; set; } = [];
     public IReadOnlyList<Indicator> Indicators { get; set; } = [];
     public SnapshotDiff? SystemChanges { get; set; }
+
+    public IReadOnlyList<ScreenshotInfo> Screenshots { get; set; } = [];
+    public IReadOnlyList<DroppedFileInfo> DroppedFiles { get; set; } = [];
+    public IReadOnlyList<MemoryArtifact> MemoryArtifacts { get; set; } = [];
+    public IReadOnlyList<ReputationResult> Reputation { get; set; } = [];
+
+    /// <summary>Configuration-like values found anywhere in this analysis (sample, dropped files, memory).</summary>
+    public IReadOnlyList<ExtractedArtifact> Artifacts { get; set; } = [];
+
+    /// <summary>Network capture (pcapng), relative to the artifact folder. Only when the real network was enabled.</summary>
+    public string? PcapFile { get; set; }
+
+    /// <summary>All YARA matches: the sample, dropped files and memory.</summary>
+    public IEnumerable<YaraMatch> AllYaraMatches =>
+        (Static?.YaraMatches ?? []).Concat(DroppedFiles.SelectMany(d => d.Static?.YaraMatches ?? [])).Concat(MemoryArtifacts.SelectMany(m => m.YaraMatches));
 
     /// <summary>The agent stopped reporting before the analysis ended. Data may be incomplete.</summary>
     public bool MonitoringInterrupted { get; set; }

@@ -32,6 +32,12 @@ public enum EventAction
 
     DnsQuery,
 
+    /// <summary>An HTTP request received by the simulated internet.</summary>
+    HttpRequest,
+
+    /// <summary>A TLS connection to the simulated internet; carries the requested server name.</summary>
+    TlsHandshake,
+
     ServiceInstall,
     ScheduledTaskCreate,
 
@@ -64,6 +70,7 @@ public static class EventActionExtensions
         EventAction.RegistryKeyCreate or EventAction.RegistryValueSet or EventAction.RegistryValueDelete or EventAction.RegistryKeyDelete => EventCategory.Registry,
         EventAction.NetworkConnect or EventAction.NetworkListen or EventAction.NetworkSend => EventCategory.Network,
         EventAction.DnsQuery => EventCategory.Dns,
+        EventAction.HttpRequest or EventAction.TlsHandshake => EventCategory.Network,
         EventAction.ServiceInstall or EventAction.ScheduledTaskCreate => EventCategory.Persistence,
         _ => EventCategory.System,
     };

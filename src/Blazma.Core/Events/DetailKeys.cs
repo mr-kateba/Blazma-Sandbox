@@ -29,4 +29,13 @@ public static class DetailKeys
     public const string TaskName = "TaskName";
     public const string Reason = "Reason";
     public const string Signer = "Signer";
+    public const string HttpMethod = "HttpMethod";
+    public const string HttpPath = "HttpPath";
+    public const string HttpHost = "HttpHost";
+    public const string UserAgent = "UserAgent";
+    public const string ServerName = "ServerName";
+    public const string BodyPreview = "BodyPreview";
+
+    /// <summary>"true" when the event was answered by the simulated internet, not a real server.</summary>
+    public const string Simulated = "Simulated";
 }

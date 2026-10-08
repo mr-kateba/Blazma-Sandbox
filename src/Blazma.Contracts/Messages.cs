@@ -16,6 +16,20 @@ public sealed class SessionConfigDto
     public bool StopWhenTreeExits { get; set; } = true;
     public int HeartbeatSeconds { get; set; } = 2;
 
+    /// <summary>"off", "simulated" or "on". With "simulated" the agent answers DNS/HTTP/TLS locally; there is still no real network.</summary>
+    public string NetworkMode { get; set; } = "off";
+
+    public bool Interactive { get; set; }
+    public bool SimulateUser { get; set; }
+    public int ScreenshotIntervalSeconds { get; set; }
+    public int MaxScreenshots { get; set; } = 120;
+    public bool CapturePcap { get; set; }
+    public bool CollectDroppedFiles { get; set; }
+    public int MaxDroppedFiles { get; set; } = 25;
+    public long MaxDroppedFileBytes { get; set; } = 32L * 1024 * 1024;
+    public bool DumpMemory { get; set; }
+    public long MaxMemoryBytes { get; set; } = 128L * 1024 * 1024;
+
     /// <summary>Base64 HMAC key for <see cref="SignedFile"/>. Removed from disk by the host after the agent's hello.</summary>
     public string? ChannelKey { get; set; }
 }
@@ -26,6 +40,45 @@ public sealed class GoDto
     public string SampleFileName { get; set; } = string.Empty;
     public string Sha256 { get; set; } = string.Empty;
     public DateTimeOffset IssuedAt { get; set; }
+
+    /// <summary>For URL analyses: opened in the sandbox's browser instead of running a file.</summary>
+    public string? Url { get; set; }
+}
+
+/// <summary>Host to agent while running. The agent acts on each new <see cref="Sequence"/> once.</summary>
+public sealed class ControlDto
+{
+    public int Sequence { get; set; }
+
+    /// <summary>Total seconds the run may last from the sample start (only ever increases).</summary>
+    public int DurationSeconds { get; set; }
+
+    public bool FinishNow { get; set; }
+}
+
+/// <summary>Sidecar for a dropped file copied out of the sandbox.</summary>
+public sealed class DroppedFileDto
+{
+    public string OriginalPath { get; set; } = string.Empty;
+    public string ProcessName { get; set; } = string.Empty;
+    public int ProcessId { get; set; }
+    public long Size { get; set; }
+    public string Sha256 { get; set; } = string.Empty;
+}
+
+/// <summary>Sidecar for a dumped memory region.</summary>
+public sealed class MemoryRegionDto
+{
+    public int ProcessId { get; set; }
+    public string ProcessName { get; set; } = string.Empty;
+    public ulong BaseAddress { get; set; }
+    public long Size { get; set; }
+    public string Protection { get; set; } = string.Empty;
+
+    /// <summary>"private-exec", "rwx" or "unbacked-image".</summary>
+    public string Kind { get; set; } = string.Empty;
+
+    public string Sha256 { get; set; } = string.Empty;
 }
 
 public sealed class HelloDto
@@ -103,6 +156,9 @@ public sealed class RegistryEntryDto
     WriteIndented = false)]
 [JsonSerializable(typeof(SessionConfigDto))]
 [JsonSerializable(typeof(GoDto))]
+[JsonSerializable(typeof(ControlDto))]
+[JsonSerializable(typeof(DroppedFileDto))]
+[JsonSerializable(typeof(MemoryRegionDto))]
 [JsonSerializable(typeof(HelloDto))]
 [JsonSerializable(typeof(HeartbeatDto))]
 [JsonSerializable(typeof(DoneDto))]

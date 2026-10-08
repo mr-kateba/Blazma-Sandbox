@@ -22,7 +22,8 @@ public sealed record ProviderAvailability(ProviderReadiness Readiness, IReadOnly
     public bool IsReady => Readiness == ProviderReadiness.Ready;
 }
 
-public sealed record SandboxSessionRequest(Guid AnalysisId, string SamplePath, SampleInfo Sample, AnalysisOptions Options);
+/// <param name="ArtifactsFolder">Host folder where the session stores validated artifacts (screenshots, dropped files, memory, capture).</param>
+public sealed record SandboxSessionRequest(Guid AnalysisId, string SamplePath, SampleInfo Sample, AnalysisOptions Options, string? ArtifactsFolder = null);
 
 /// <summary>A live signal from the analysis environment.</summary>
 public abstract record SessionSignal;
@@ -32,12 +33,38 @@ public sealed record EventsSignal(IReadOnlyList<AnalysisEvent> Events) : Session
 public sealed record HeartbeatSignal(DateTimeOffset At) : SessionSignal;
 
 public sealed record MonitoringInterruptedSignal(string Reason) : SessionSignal;
+public sealed record ScreenshotSignal(CollectedScreenshot Screenshot) : SessionSignal;
+
+/// <summary>A screenshot already validated and written as PNG by the host.</summary>
+public sealed record CollectedScreenshot(TimeSpan RelativeTime, string Path, int Width, int Height);
+
+/// <summary>A dropped file copied out of the sandbox, validated, and stored defanged on the host.</summary>
+public sealed record CollectedDroppedFile(string OriginalPath, string ProcessName, string StoredPath, string Sha256, long Size);
+
+/// <summary>A memory region dumped by the agent, validated and stored on the host.</summary>
+public sealed record CollectedMemoryRegion(int ProcessId, string ProcessName, ulong BaseAddress, long Size, string Protection, MemoryRegionKind Kind, string StoredPath, string Sha256);
 
 public sealed record CollectedArtifacts(
     IReadOnlyList<AnalysisEvent> RemainingEvents,
     SystemSnapshot? Baseline,
     SystemSnapshot? After,
-    bool AgentCompleted);
+    bool AgentCompleted)
+{
+    public IReadOnlyList<CollectedScreenshot> Screenshots { get; init; } = [];
+    public IReadOnlyList<CollectedDroppedFile> DroppedFiles { get; init; } = [];
+    public IReadOnlyList<CollectedMemoryRegion> MemoryRegions { get; init; } = [];
+    public string? PcapPath { get; init; }
+}
+
+/// <summary>Live controls for a running analysis. Optional: providers that cannot support them simply do not implement it.</summary>
+public interface IInteractiveSession
+{
+    /// <summary>Adds time to the running analysis (capped by <see cref="AnalysisOptions.MaxDuration"/>).</summary>
+    Task ExtendAsync(TimeSpan extra, CancellationToken cancellationToken);
+
+    /// <summary>Ends the run now and collects what was observed so far.</summary>
+    Task FinishNowAsync(CancellationToken cancellationToken);
+}
 
 /// <summary>
 /// The isolation boundary. A provider owns everything that crosses between the host and
@@ -114,7 +141,8 @@ public interface IReportExporter
 }
 
 /// <summary>
-/// Future local AI. Takes the structured result, never the sample. Not required to run Blazma.
+/// Optional AI. Takes the structured (and redacted) result, never the sample. Only local
+/// endpoints are allowed by default. Not required to run Blazma.
 /// </summary>
 public interface IAiProvider
 {
@@ -123,10 +151,40 @@ public interface IAiProvider
     Task<string> AskAsync(AnalysisResult result, string question, string language, CancellationToken cancellationToken);
 }
 
-/// <summary>Future reputation lookups. Must be opt-in; the default implementation never leaves the machine.</summary>
+/// <summary>Hash reputation. Remote providers are opt-in and send the SHA-256 only, never the file.</summary>
 public interface IReputationProvider
 {
     string Id { get; }
+    LocalizedText DisplayName { get; }
     bool IsRemote { get; }
-    Task<string?> LookupAsync(string sha256, CancellationToken cancellationToken);
+
+    /// <summary>False until the user has enabled the provider and given it what it needs (an API key).</summary>
+    bool IsConfigured { get; }
+
+    Task<ReputationResult> LookupAsync(string sha256, CancellationToken cancellationToken);
+}
+
+/// <summary>Scans bytes with the user's YARA rules.</summary>
+public interface IYaraScanner
+{
+    int RuleCount { get; }
+    IReadOnlyList<string> LoadErrors { get; }
+    IReadOnlyList<YaraMatch> Scan(ReadOnlySpan<byte> data, string target);
+}
+
+/// <summary>
+/// Static analysis of a file the host did not choose (dropped file, memory dump). The app
+/// runs it out of process, like the main sample, because the bytes are hostile.
+/// </summary>
+public interface IArtifactInspector
+{
+    Task<StaticReport?> InspectAsync(string path, string displayName, CancellationToken cancellationToken);
+}
+
+/// <summary>Protects secrets such as API keys at rest (DPAPI on Windows).</summary>
+public interface ISecretProtector
+{
+    bool IsStrong { get; }
+    string Protect(string plaintext);
+    string? Unprotect(string stored);
 }

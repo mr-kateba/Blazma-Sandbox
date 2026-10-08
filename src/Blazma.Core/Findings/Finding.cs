@@ -27,6 +27,15 @@ public enum FindingCategory
     Monitoring,
     Watchlist,
     Sequence,
+
+    /// <summary>YARA signature matches.</summary>
+    Signature,
+
+    /// <summary>Hash reputation from an online service the user enabled.</summary>
+    Reputation,
+
+    /// <summary>Unpacked or injected code found in process memory.</summary>
+    Memory,
 }
 
 /// <summary>One piece of proof for a finding, pointing back to the events it rests on.</summary>

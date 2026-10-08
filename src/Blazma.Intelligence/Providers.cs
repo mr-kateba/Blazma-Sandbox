@@ -1,5 +1,6 @@
 using Blazma.Core.Abstractions;
 using Blazma.Core.Analysis;
+using Blazma.Core.Text;
 
 namespace Blazma.Intelligence;
 
@@ -14,15 +15,29 @@ public sealed class NullAiProvider : IAiProvider
 }
 
 /// <summary>Reputation from the user's own history only: how often this hash was analyzed here before. Never remote.</summary>
-public sealed class LocalHistoryReputationProvider(IAnalysisRepository repository) : IReputationProvider
+public sealed class LocalHistoryReputationProvider(IAnalysisRepository repository, TimeProvider? time = null) : IReputationProvider
 {
     public string Id => "local-history";
+    public LocalizedText DisplayName { get; } = new("This computer's history", "سجل هذا الجهاز");
     public bool IsRemote => false;
+    public bool IsConfigured => true;
 
-    public async Task<string?> LookupAsync(string sha256, CancellationToken cancellationToken)
+    public async Task<ReputationResult> LookupAsync(string sha256, CancellationToken cancellationToken)
     {
         var history = await repository.ListAsync(500, 0, cancellationToken).ConfigureAwait(false);
         var previous = history.Where(h => h.Sha256.Equals(sha256, StringComparison.OrdinalIgnoreCase)).ToList();
-        return previous.Count == 0 ? null : $"Analyzed {previous.Count} time(s) on this computer; highest score {previous.Max(p => p.Score)}.";
+        var now = (time ?? TimeProvider.System).GetUtcNow();
+        if (previous.Count == 0)
+            return new ReputationResult { ProviderId = Id, ProviderName = DisplayName.En, Verdict = ReputationVerdict.NotFound, CheckedAt = now };
+        var highest = previous.Max(p => p.Score);
+        return new ReputationResult
+        {
+            ProviderId = Id,
+            ProviderName = DisplayName.En,
+            Verdict = ReputationVerdict.Unknown,
+            CheckedAt = now,
+            FirstSeen = previous.Min(p => p.StartedAt),
+            Tags = [$"analyzed-{previous.Count}x", $"highest-score-{highest}"],
+        };
     }
 }
