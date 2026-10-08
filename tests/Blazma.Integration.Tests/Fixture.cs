@@ -17,7 +17,7 @@ public sealed class Fixture : IAsyncDisposable
 
     public Fixture()
     {
-        Repository = new SqliteAnalysisRepository(Path.Combine(Dir.FullName, "test.db"));
+        Repository = new SqliteAnalysisRepository(Path.Combine(Dir.FullName, "test.db")) { ArtifactsRoot = Path.Combine(Dir.FullName, "artifacts") };
         Runner = new AnalysisRunner(new AnalysisEngine(new RuleEngine(RuleEngine.BuiltInRules())), Repository, TimeProvider.System);
     }
 

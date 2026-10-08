@@ -1,3 +1,4 @@
+using Blazma.Core.Analysis;
 using Blazma.Core.Findings;
 using Blazma.Core.Indicators;
 using Blazma.Core.Processes;
@@ -17,4 +18,10 @@ internal sealed class ReportDocument
     public List<PersistenceDetection> Persistence { get; set; } = [];
     public List<Indicator> Indicators { get; set; } = [];
     public SnapshotDiff? SystemChanges { get; set; }
+    public List<ScreenshotInfo> Screenshots { get; set; } = [];
+    public List<DroppedFileInfo> DroppedFiles { get; set; } = [];
+    public List<MemoryArtifact> MemoryArtifacts { get; set; } = [];
+    public List<ReputationResult> Reputation { get; set; } = [];
+    public List<ExtractedArtifact> Artifacts { get; set; } = [];
+    public string? PcapFile { get; set; }
 }

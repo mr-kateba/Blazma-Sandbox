@@ -45,6 +45,13 @@ public sealed class RuleEngine
         new MonitoringInterruptedRule(),
         new FullChainRule(),
         new WatchlistRule(),
+        new YaraMatchRule(),
+        new InjectedCodeRule(),
+        new SimulatedContactRule(),
+        new DataUploadRule(),
+        new ReputationRule(),
+        new CapabilitiesRule(),
+        new EmbeddedSecretsRule(),
     ];
 
     /// <summary>Loads *.json rule packs from a folder. Bad packs are reported, never fatal.</summary>

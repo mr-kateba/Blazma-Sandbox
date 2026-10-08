@@ -20,6 +20,9 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
     private readonly string _connectionString;
     private readonly ILogger _logger;
 
+    /// <summary>When set, each analysis' artifact folder (<c>&lt;root&gt;/&lt;id&gt;</c>) is deleted together with the analysis.</summary>
+    public string? ArtifactsRoot { get; init; }
+
     public SqliteAnalysisRepository(string databasePath, ILogger<SqliteAnalysisRepository>? logger = null)
     {
         _connectionString = new SqliteConnectionStringBuilder
@@ -137,6 +140,12 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
             Persistence = result.Persistence.ToList(),
             Indicators = result.Indicators.ToList(),
             SystemChanges = result.SystemChanges,
+            Screenshots = result.Screenshots.ToList(),
+            DroppedFiles = result.DroppedFiles.ToList(),
+            MemoryArtifacts = result.MemoryArtifacts.ToList(),
+            Reputation = result.Reputation.ToList(),
+            Artifacts = result.Artifacts.ToList(),
+            PcapFile = result.PcapFile,
         };
         await c.ExecuteAsync("INSERT INTO report_documents(analysis_id, schema_version, document) VALUES (@Id, @V, @Doc)",
             new { Id = id, V = AnalysisResult.SchemaVersion, Doc = Compress(JsonSerializer.SerializeToUtf8Bytes(document, BlazmaJson.Options)) }, tx).ConfigureAwait(false);
@@ -242,6 +251,12 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
             Persistence = doc.Persistence,
             Indicators = doc.Indicators,
             SystemChanges = doc.SystemChanges,
+            Screenshots = doc.Screenshots,
+            DroppedFiles = doc.DroppedFiles,
+            MemoryArtifacts = doc.MemoryArtifacts,
+            Reputation = doc.Reputation,
+            Artifacts = doc.Artifacts,
+            PcapFile = doc.PcapFile,
             MonitoringInterrupted = row.MonitoringInterrupted != 0,
             SuppressedNoiseEvents = (int)row.SuppressedNoise,
         };
@@ -380,6 +395,12 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
         await DeleteRowsAsync(c, tx, id.ToString("N")).ConfigureAwait(false);
         await c.ExecuteAsync("DELETE FROM samples WHERE sha256 NOT IN (SELECT sha256 FROM analyses)", transaction: tx).ConfigureAwait(false);
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        if (ArtifactsRoot is not null)
+        {
+            var folder = Path.Combine(ArtifactsRoot, id.ToString("N"));
+            try { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _logger.LogWarning(ex, "Could not delete the artifacts of {Id}", id); }
+        }
     }
 
     public async Task<int> PurgeOlderThanAsync(DateTimeOffset cutoff, CancellationToken cancellationToken)

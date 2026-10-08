@@ -1,5 +1,6 @@
 using Blazma.Analysis.Rules;
 using Blazma.Core.Analysis;
+using Blazma.Core.Samples;
 using Blazma.Core.Events;
 using Blazma.Core.Findings;
 using Blazma.Core.Settings;
@@ -16,6 +17,7 @@ public sealed record EngineSettings
     public bool SuppressBackgroundNoise { get; init; } = true;
     public IReadOnlyList<string> NoiseAllowlist { get; init; } = [];
     public IReadOnlyList<string> TrustedPublishers { get; init; } = [];
+    public bool UseCapabilities { get; init; } = true;
 
     public static EngineSettings From(DetectionSettings d) => new()
     {
@@ -25,6 +27,7 @@ public sealed record EngineSettings
         SuppressBackgroundNoise = d.SuppressBackgroundNoise,
         NoiseAllowlist = d.NoiseAllowlist.ToList(),
         TrustedPublishers = d.TrustedPublishers.ToList(),
+        UseCapabilities = d.EnableCapabilities,
     };
 }
 
@@ -47,6 +50,7 @@ public sealed class AnalysisEngine(RuleEngine rules)
 
         var persistence = PersistenceDetector.Detect(events, graph);
         var network = NetworkMap.Build(events);
+        result.Artifacts = MergeArtifacts(result);
         var context = new RuleContext
         {
             Events = events,
@@ -58,6 +62,11 @@ public sealed class AnalysisEngine(RuleEngine rules)
             MonitoringInterrupted = result.MonitoringInterrupted,
             Watchlist = settings.Watchlist,
             TrustedPublishers = settings.TrustedPublishers,
+            DroppedFiles = result.DroppedFiles,
+            MemoryArtifacts = result.MemoryArtifacts,
+            Reputation = result.Reputation,
+            Artifacts = result.Artifacts,
+            UseCapabilities = settings.UseCapabilities,
         };
 
         var findings = rules.Evaluate(context, settings.RuleOverrides);
@@ -71,6 +80,16 @@ public sealed class AnalysisEngine(RuleEngine rules)
         result.Risk = RiskEngine.Assess(findings, settings.Thresholds);
         result.Indicators = IndicatorExtractor.Extract(result.Sample, events, graph, persistence, findings, settings.Watchlist);
         result.SystemChanges = baseline is not null && after is not null ? SnapshotDiffer.Diff(baseline, after) : null;
+    }
+
+    /// <summary>Configuration-like values from the sample, dropped files and memory, without duplicates.</summary>
+    public static IReadOnlyList<ExtractedArtifact> MergeArtifacts(AnalysisResult result)
+    {
+        var all = (result.Static?.Artifacts ?? [])
+            .Concat(result.DroppedFiles.SelectMany(d => d.Static?.Artifacts ?? []))
+            .Concat(result.MemoryArtifacts.SelectMany(m => m.Artifacts));
+        var seen = new HashSet<(ArtifactKind, string)>();
+        return all.Where(a => seen.Add((a.Kind, a.Value.ToLowerInvariant()))).Take(1000).ToList();
     }
 
     /// <summary>Stable timeline order: by relative time, then by the agent's sequence number.</summary>
