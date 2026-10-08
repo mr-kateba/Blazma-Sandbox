@@ -31,6 +31,17 @@ internal sealed class EtwMonitor(EventSink sink, SessionConfigDto config, string
 
     public ConcurrentDictionary<int, bool> Tree { get; } = new();
 
+    /// <summary>Raised for every DNS lookup seen (any process): feeds the simulated internet.</summary>
+    public event Action<string>? DnsLookup;
+
+    /// <summary>Raised when a process of the analyzed tree creates, writes or renames a file.</summary>
+    public event Action<string, int, string>? TreeFileWritten;
+
+    public (long StartMs, string Name) ProcessInfo(int pid) => Info(pid, "?");
+
+    public IReadOnlyList<(int Pid, string Name)> LiveTreeProcesses() =>
+        Tree.Keys.Where(_processes.ContainsKey).Select(pid => (pid, _processes[pid].Name)).ToList();
+
     public void Start()
     {
         var keywords = KernelTraceEventParser.Keywords.Process;
@@ -143,6 +154,7 @@ internal sealed class EtwMonitor(EventSink sink, SessionConfigDto config, string
         if (path.StartsWith(outDir, StringComparison.OrdinalIgnoreCase) || path.StartsWith(inDir, StringComparison.OrdinalIgnoreCase)) return;
         var info = Info(pid, "?");
         sink.Add(action, pid, 0, info.StartMs, info.Name, path, details, "etw.kernel.file");
+        if (action is "FileCreate" or "FileWrite" or "FileRename" && Tree.ContainsKey(pid)) TreeFileWritten?.Invoke(path, pid, info.Name);
     }
 
     private void Registry(string action, RegistryTraceData d)
@@ -176,6 +188,7 @@ internal sealed class EtwMonitor(EventSink sink, SessionConfigDto config, string
         {
             var name = d.PayloadByName("QueryName") as string;
             if (string.IsNullOrEmpty(name)) return;
+            DnsLookup?.Invoke(name);
             var details = new Dictionary<string, string> { ["QueryName"] = name };
             if (d.PayloadByName("QueryResults") is string results && results.Length > 0) details["QueryResult"] = results.Replace("::ffff:", string.Empty, StringComparison.Ordinal).Trim(';');
             sink.Add("DnsQuery", d.ProcessID, 0, info.StartMs, info.Name, name, details, "etw.dns-client");

@@ -4,6 +4,10 @@ using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text.Json;
 using Blazma.Agent;
+using Blazma.Agent.Capture;
+using Blazma.Agent.Collect;
+using Blazma.Agent.FakeNet;
+using Blazma.Agent.Simulation;
 using Blazma.Contracts;
 
 // Blazma Sandbox monitoring agent. Started by the sandbox's LogonCommand:
@@ -53,37 +57,73 @@ internal static class AgentHost
                 sink.WriteSigned(Protocol.BaselineFile, JsonSerializer.SerializeToUtf8Bytes(Snapshotter.Take(Path.GetPathRoot(outDir) + "Blazma"), ProtocolJson.Default.SnapshotDto));
 
             using var monitor = new EtwMonitor(sink, config, inDir, outDir);
+            void Note(string text) => sink.Add("AnalysisNote", 0, 0, 0, "blazma-agent", null, new() { ["Reason"] = text }, "agent");
+
+            // Simulated internet: names resolve to 127.0.0.1, where fake servers answer. There is still no real network.
+            using var dns = config.NetworkMode == "simulated" ? new DnsRedirector(HostsFile.DefaultPath, Note) : null;
+            using var fakeNet = config.NetworkMode == "simulated" ? new FakeInternet(r => RecordSimulated(sink, monitor, r)) : null;
+            if (dns is not null) monitor.DnsLookup += dns.OnLookup;
+
+            var dropped = config.CollectDroppedFiles ? new DroppedFileCollector(sink, config.MaxDroppedFiles, config.MaxDroppedFileBytes) : null;
+            if (dropped is not null) monitor.TreeFileWritten += dropped.Observe;
+            var memory = config.DumpMemory ? new MemoryDumper(sink, config.MaxMemoryBytes) : null;
+
             monitor.Start();
+            dns?.Start();
+            fakeNet?.Start(FakeInternet.DefaultHttpPorts, FakeInternet.DefaultTlsPorts, FakeInternet.DefaultRawPorts);
+            var work = Path.Combine(Path.GetTempPath(), "blazma-agent");
+            var capture = config.CapturePcap && config.NetworkMode == "on" ? new PacketCapture(sink, work, Note) : null;
+            capture?.Start();
             await Task.Delay(1500); // let the ETW sessions attach before the sample starts
 
-            var sample = PrepareSample(inDir, go);
+            var samplePath = go.Url is { Length: > 0 } ? null : PrepareSample(inDir, go);
             sink.MarkSampleStart();
-            var process = Launch(sample);
+            var process = go.Url is { Length: > 0 } url ? OpenUrl(url, go.Sha256) : Launch(samplePath!);
             done.SampleStarted = true;
-            monitor.TrackSample(process.Id);
+            if (process is not null) monitor.TrackSample(process.Id);
 
-            var duration = TimeSpan.FromSeconds(Math.Clamp(config.DurationSeconds, 15, 1800));
+            using var screens = config.ScreenshotIntervalSeconds > 0 ? new ScreenCapturer(sink, config.ScreenshotIntervalSeconds, config.MaxScreenshots) : null;
+            screens?.Start();
+            using var user = config.SimulateUser ? new UserSimulator(Note) : null;
+            user?.Start();
+
+            var control = new ControlWatcher(inDir, Math.Clamp(config.DurationSeconds, 15, 1800));
             var watch = Stopwatch.StartNew();
             var quietSince = (TimeSpan?)null;
-            while (watch.Elapsed < duration)
+            var nextMemoryScan = TimeSpan.FromSeconds(20);
+            var finishedEarly = false;
+            while (true)
             {
                 await Task.Delay(1000);
                 sink.Flush();
+                control.Poll();
+                if (control.FinishRequested) { finishedEarly = true; break; }
+                if (watch.Elapsed >= TimeSpan.FromSeconds(control.DurationSeconds)) break;
+                if (memory is not null && watch.Elapsed >= nextMemoryScan)
+                {
+                    nextMemoryScan = watch.Elapsed + TimeSpan.FromSeconds(20);
+                    memory.Scan(monitor.LiveTreeProcesses());
+                }
                 if (!config.StopWhenTreeExits) continue;
                 if (monitor.TreeAlive()) { quietSince = null; continue; }
                 quietSince ??= watch.Elapsed;
                 if (watch.Elapsed - quietSince > TimeSpan.FromSeconds(10)) break;
             }
 
-            if (process.HasExited) done.SampleExitCode = process.ExitCode;
+            screens?.CaptureOnce();
+            memory?.Scan(monitor.LiveTreeProcesses());
+            user?.Dispose();
+            if (process is { HasExited: true }) done.SampleExitCode = process.ExitCode;
             monitor.FlushTraffic();
             sink.Flush();
             monitor.Dispose();
+            capture?.StopAndSend();
+            dropped?.Collect(go.Sha256, [inDir, outDir, work, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), Path.GetFileName(go.SampleFileName))]);
             sink.Flush();
 
             if (config.TakeSnapshots)
                 sink.WriteSigned(Protocol.AfterFile, JsonSerializer.SerializeToUtf8Bytes(Snapshotter.Take(Path.GetPathRoot(outDir) + "Blazma"), ProtocolJson.Default.SnapshotDto));
-            done.Reason = watch.Elapsed >= duration ? "duration" : "tree-exited";
+            done.Reason = finishedEarly ? "finished-by-analyst" : watch.Elapsed >= TimeSpan.FromSeconds(control.DurationSeconds) ? "duration" : "tree-exited";
         }
         catch (Exception ex)
         {
@@ -120,6 +160,47 @@ internal static class AgentHost
         var hash = Convert.ToHexStringLower(SHA256.HashData(s));
         if (!hash.Equals(go.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Sample hash mismatch.");
         return target;
+    }
+
+    /// <summary>Records what the simulated internet saw, attributed to the process that connected.</summary>
+    private static void RecordSimulated(EventSink sink, EtwMonitor monitor, FakeNetRecord r)
+    {
+        var pid = ConnectionOwners.Find(r.ClientPort, r.ServerPort) ?? 0;
+        var info = monitor.ProcessInfo(pid);
+        var details = new Dictionary<string, string>(r.Details) { ["Simulated"] = "true", ["RemoteAddress"] = "127.0.0.1" };
+        switch (r.Kind)
+        {
+            case "http":
+                var host = r.Host is { Length: > 0 } h ? h : "127.0.0.1";
+                var scheme = details.GetValueOrDefault("Protocol", "http");
+                sink.Add("HttpRequest", pid, 0, info.StartMs, info.Name, $"{scheme}://{host}{details.GetValueOrDefault("HttpPath", "/")}", details, "agent.fakenet");
+                break;
+            case "tls":
+                sink.Add("TlsHandshake", pid, 0, info.StartMs, info.Name, r.Host ?? "127.0.0.1", details, "agent.fakenet");
+                break;
+            default:
+                sink.Add("NetworkSend", pid, 0, info.StartMs, info.Name, "127.0.0.1", details, "agent.fakenet");
+                break;
+        }
+    }
+
+    /// <summary>Opens a web address in the sandbox's Edge. The hash ties it to exactly what the host analyzed.</summary>
+    private static Process? OpenUrl(string url, string sha256)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) throw new InvalidDataException("The address is not a web address.");
+        var hash = Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url)));
+        if (!hash.Equals(sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Address hash mismatch.");
+        var edge = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+        }.Select(root => Path.Combine(root, "Microsoft", "Edge", "Application", "msedge.exe")).FirstOrDefault(File.Exists)
+            ?? throw new FileNotFoundException("Microsoft Edge was not found in the sandbox.");
+        var psi = new ProcessStartInfo(edge) { UseShellExecute = false };
+        psi.ArgumentList.Add("--no-first-run");
+        psi.ArgumentList.Add("--no-default-browser-check");
+        psi.ArgumentList.Add(uri.AbsoluteUri);
+        return Process.Start(psi);
     }
 
     /// <summary>Starts the sample the way Windows would when a user opens it.</summary>

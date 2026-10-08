@@ -25,10 +25,35 @@ public sealed class DemoSandboxProvider(TimeProvider time, double speed = 1.0) :
     public Task<ISandboxSession> CreateSessionAsync(SandboxSessionRequest request, CancellationToken cancellationToken) =>
         Task.FromResult<ISandboxSession>(new Session(request, time, speed));
 
-    private sealed class Session(SandboxSessionRequest request, TimeProvider time, double speed) : ISandboxSession
+    private sealed class Session(SandboxSessionRequest request, TimeProvider time, double speed) : ISandboxSession, IInteractiveSession
     {
         private DemoScenario? _scenario;
         private int _emitted;
+        private TimeSpan _cutoff = request.Options.Duration;
+        private volatile bool _finish;
+        private readonly List<CollectedScreenshot> _screens = [];
+
+        public Task ExtendAsync(TimeSpan extra, CancellationToken cancellationToken)
+        {
+            _cutoff += extra;
+            return Task.CompletedTask;
+        }
+
+        public Task FinishNowAsync(CancellationToken cancellationToken)
+        {
+            _finish = true;
+            return Task.CompletedTask;
+        }
+
+        private bool Rich => request.ArtifactsFolder is not null && _scenario?.Name == "persistent-updater";
+
+        private ScreenshotSignal? Shot(TimeSpan at, double progress)
+        {
+            if (request.ArtifactsFolder is null || !request.Options.CaptureScreenshots || _scenario?.Name == "stress") return null;
+            var shot = DemoArtifacts.Screenshot(request.ArtifactsFolder, _screens.Count + 1, at, progress);
+            _screens.Add(shot);
+            return new ScreenshotSignal(shot);
+        }
 
         private Task Pause(int ms, CancellationToken ct) =>
             speed <= 0 ? Task.CompletedTask : Task.Delay(TimeSpan.FromMilliseconds(ms / speed), time, ct);
@@ -46,12 +71,18 @@ public sealed class DemoSandboxProvider(TimeProvider time, double speed = 1.0) :
         public async IAsyncEnumerable<SessionSignal> ExecuteAsync([EnumeratorCancellation] CancellationToken ct)
         {
             var events = _scenario!.Events;
-            var cutoff = request.Options.Duration;
             var lastMs = 0.0;
             var batch = new List<AnalysisEvent>();
+            if (Shot(TimeSpan.FromMilliseconds(500), 0.1) is { } first) yield return first;
+            var shotAt = new Queue<(double Ms, double Progress)>([(2600, 0.55), (7300, 1.0)]);
             foreach (var e in events)
             {
-                if (e.RelativeTime > cutoff) break;
+                if (_finish || e.RelativeTime > _cutoff) break;
+                while (shotAt.Count > 0 && e.RelativeTime.TotalMilliseconds >= shotAt.Peek().Ms)
+                {
+                    var (ms, progress) = shotAt.Dequeue();
+                    if (Shot(TimeSpan.FromMilliseconds(ms), progress) is { } s) yield return s;
+                }
                 var wait = e.RelativeTime.TotalMilliseconds - lastMs;
                 if (speed > 0 && wait > 30 && batch.Count > 0)
                 {
@@ -76,7 +107,12 @@ public sealed class DemoSandboxProvider(TimeProvider time, double speed = 1.0) :
         {
             await Pause(500, ct).ConfigureAwait(false);
             var s = _scenario!;
-            return new CollectedArtifacts([], request.Options.TakeSnapshots ? s.Baseline : null, request.Options.TakeSnapshots ? s.After : null, AgentCompleted: true);
+            return new CollectedArtifacts([], request.Options.TakeSnapshots ? s.Baseline : null, request.Options.TakeSnapshots ? s.After : null, AgentCompleted: true)
+            {
+                Screenshots = _screens,
+                DroppedFiles = Rich && request.Options.CollectDroppedFiles ? [DemoArtifacts.DroppedUpdater(request.ArtifactsFolder!, DemoScenario.User)] : [],
+                MemoryRegions = Rich && request.Options.DumpMemory ? [DemoArtifacts.InjectedRegion(request.ArtifactsFolder!)] : [],
+            };
         }
 
         public Task ShutdownAsync(CancellationToken ct) => Task.CompletedTask;
