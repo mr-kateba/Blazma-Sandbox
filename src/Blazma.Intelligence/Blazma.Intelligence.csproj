@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     Explanations and questions over a finished analysis. Works only on the structured
-    result, never on the sample. No AI model ships in this version: Ask Blazma answers
-    from the data and the rules, and says so. IAiProvider is the extension point.
+    result, never on the sample. No AI model ships with Blazma: Ask Blazma answers from
+    the data and the rules, and can optionally use a model the user runs on this computer
+    (LocalAiProvider). Opt-in hash lookups (VirusTotal, MalwareBazaar) live here too.
   -->
   <PropertyGroup>
     <RootNamespace>Blazma.Intelligence</RootNamespace>
@@ -10,5 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Blazma.Core\Blazma.Core.csproj" />
     <ProjectReference Include="..\Blazma.Analysis\Blazma.Analysis.csproj" />
+    <!-- For Redactor: prompts get the same privacy treatment as exported reports. -->
+    <ProjectReference Include="..\Blazma.Reporting\Blazma.Reporting.csproj" />
   </ItemGroup>
 </Project>
