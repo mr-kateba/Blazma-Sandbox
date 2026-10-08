@@ -111,8 +111,8 @@
     <Setter Property="BorderThickness" Value="1" />
   </Style>
   <Style Selector="Border.banner.demo">
-    <Setter Property="Background" Value="#2A1D0D" />
-    <Setter Property="BorderBrush" Value="#6B3D0C" />
+    <Setter Property="Background" Value="{DynamicResource DemoBgBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DemoBorderBrush}" />
   </Style>
   <Style Selector="Border.banner.warn">
     <Setter Property="Background" Value="{DynamicResource WarnSoftBrush}" />

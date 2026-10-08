@@ -7,7 +7,8 @@
         WindowDecorations="None"
         Background="{DynamicResource BgBrush}"
         FontFamily="{DynamicResource BodyFont}"
-        Title="Blazma Sandbox">
+        Title="Blazma Sandbox"
+        Icon="avares://BlazmaSandbox/Assets/blazma-sandbox.ico">
   <Border BorderBrush="{DynamicResource RuleBrush}" BorderThickness="1">
     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
       <c:LogoMark Width="68" Height="68" HorizontalAlignment="Center" />

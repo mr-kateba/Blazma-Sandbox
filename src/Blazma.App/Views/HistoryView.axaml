@@ -37,7 +37,7 @@
               <Grid ColumnDefinitions="2*,1.4*,1.2*,60,1.5*,80,1.1*,1*,Auto" Background="Transparent" DoubleTapped="OnRowDoubleTapped">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FlowDirection="LeftToRight" />
-                  <Border Classes="badge banner demo" Padding="6,0" IsVisible="{Binding IsDemo}"><TextBlock Text="DEMO" FontSize="9.5" Foreground="#FFB066" /></Border>
+                  <Border Classes="badge banner demo" Padding="6,0" IsVisible="{Binding IsDemo}"><TextBlock Text="DEMO" FontSize="9.5" Foreground="{DynamicResource DemoTextBrush}" /></Border>
                 </StackPanel>
                 <TextBlock Grid.Column="1" Classes="mono faint" Text="{Binding Sha256Short}" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" Classes="mono muted" Text="{Binding Date}" VerticalAlignment="Center" />

@@ -1,0 +1,45 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security vulnerabilities** (for example a sandbox escape or channel tampering) must not be reported here — see SECURITY.md.
+        Please never attach live malware samples. Share hashes instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Blazma Sandbox version
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options: [Windows Sandbox, Demo mode, Static analysis only]
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Windows version and edition
+      placeholder: Windows 11 Pro 24H2
+  - type: dropdown
+    id: language
+    attributes:
+      label: UI language
+      options: [English, Arabic]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log excerpt
+      description: From %LocalAppData%\Blazma\Sandbox\logs — remove anything private first.
+      render: text

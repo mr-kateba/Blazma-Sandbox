@@ -9,10 +9,12 @@ namespace Blazma.Storage;
 /// Loads and saves the user's settings. Writes are atomic (temp file + rename). A corrupt
 /// file is kept as a backup and replaced with defaults instead of crashing the app.
 /// </summary>
-public sealed class SettingsStore(BlazmaPaths paths, ILogger<SettingsStore>? logger = null)
+public sealed class SettingsStore(BlazmaPaths paths, ILogger<SettingsStore>? logger = null) : IDisposable
 {
     private readonly ILogger _logger = logger ?? NullLogger<SettingsStore>.Instance;
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    public void Dispose() => _gate.Dispose();
 
     public BlazmaSettings Load()
     {

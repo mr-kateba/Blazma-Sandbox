@@ -10,7 +10,7 @@
       <StackPanel Spacing="4">
         <StackPanel Orientation="Horizontal" Spacing="10">
           <TextBlock Classes="h1" Text="{Binding FileName}" FlowDirection="LeftToRight" />
-          <Border Classes="badge banner demo" IsVisible="{Binding IsDemo}" VerticalAlignment="Center"><TextBlock Text="DEMO" Foreground="#FFB066" /></Border>
+          <Border Classes="badge banner demo" IsVisible="{Binding IsDemo}" VerticalAlignment="Center"><TextBlock Text="DEMO" Foreground="{DynamicResource DemoTextBrush}" /></Border>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="10">
           <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding IsRunning}" VerticalAlignment="Center" />

@@ -7,6 +7,7 @@
         x:Class="Blazma.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Blazma Sandbox"
+        Icon="avares://BlazmaSandbox/Assets/blazma-sandbox.ico"
         Width="1360" Height="860" MinWidth="1040" MinHeight="680"
         WindowStartupLocation="CenterScreen"
         WindowDecorations="BorderOnly"

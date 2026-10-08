@@ -55,18 +55,18 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
         }
     }
 
-    public async Task SaveAsync(AnalysisResult r, CancellationToken cancellationToken)
+    public async Task SaveAsync(AnalysisResult result, CancellationToken cancellationToken)
     {
         await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var tx = (SqliteTransaction)await c.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var id = r.AnalysisId.ToString("N");
+        var id = result.AnalysisId.ToString("N");
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         await c.ExecuteAsync("""
             INSERT INTO samples(sha256, file_name, size, kind, first_seen, last_seen, times_analyzed)
             VALUES (@Sha256, @FileName, @Size, @Kind, @Now, @Now, 1)
             ON CONFLICT(sha256) DO UPDATE SET last_seen = @Now, times_analyzed = times_analyzed + 1, file_name = @FileName
-            """, new { r.Sample.Sha256, r.Sample.FileName, r.Sample.Size, Kind = r.Sample.Kind.ToString(), Now = now }, tx).ConfigureAwait(false);
+            """, new { result.Sample.Sha256, result.Sample.FileName, result.Sample.Size, Kind = result.Sample.Kind.ToString(), Now = now }, tx).ConfigureAwait(false);
 
         // Re-saving an analysis replaces it completely.
         await DeleteRowsAsync(c, tx, id).ConfigureAwait(false);
@@ -79,27 +79,27 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
             """, new
         {
             Id = id,
-            r.Sample.Sha256,
-            r.Sample.FileName,
-            Kind = r.Sample.Kind.ToString(),
-            StartedAt = r.StartedAt.ToUnixTimeMilliseconds(),
-            CompletedAt = r.CompletedAt?.ToUnixTimeMilliseconds(),
-            Stage = r.FinalStage.ToString(),
-            r.Risk.Score,
-            Verdict = r.Risk.Verdict.ToString(),
-            Provider = r.ProviderId,
-            IsDemo = r.IsDemo ? 1 : 0,
-            EventCount = r.Events.Count,
-            FindingCount = r.Findings.Count,
-            r.FailureReason,
-            Interrupted = r.MonitoringInterrupted ? 1 : 0,
-            Suppressed = r.SuppressedNoiseEvents,
-            Options = JsonSerializer.Serialize(r.Options, BlazmaJson.Options),
+            result.Sample.Sha256,
+            result.Sample.FileName,
+            Kind = result.Sample.Kind.ToString(),
+            StartedAt = result.StartedAt.ToUnixTimeMilliseconds(),
+            CompletedAt = result.CompletedAt?.ToUnixTimeMilliseconds(),
+            Stage = result.FinalStage.ToString(),
+            result.Risk.Score,
+            Verdict = result.Risk.Verdict.ToString(),
+            Provider = result.ProviderId,
+            IsDemo = result.IsDemo ? 1 : 0,
+            EventCount = result.Events.Count,
+            FindingCount = result.Findings.Count,
+            result.FailureReason,
+            Interrupted = result.MonitoringInterrupted ? 1 : 0,
+            Suppressed = result.SuppressedNoiseEvents,
+            Options = JsonSerializer.Serialize(result.Options, BlazmaJson.Options),
         }, tx).ConfigureAwait(false);
 
-        await InsertEventsAsync(c, tx, id, r.Events, cancellationToken).ConfigureAwait(false);
+        await InsertEventsAsync(c, tx, id, result.Events, cancellationToken).ConfigureAwait(false);
 
-        foreach (var p in r.AllProcesses)
+        foreach (var p in result.AllProcesses)
         {
             await c.ExecuteAsync("""
                 INSERT OR REPLACE INTO processes(analysis_id, pkey, pid, parent_key, name, image, command_line, start_ticks, end_ticks, in_tree, is_sample)
@@ -111,7 +111,7 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
             }, tx).ConfigureAwait(false);
         }
 
-        foreach (var f in r.Findings)
+        foreach (var f in result.Findings)
         {
             await c.ExecuteAsync("""
                 INSERT OR REPLACE INTO findings(analysis_id, id, rule_id, category, severity, points, title_en, title_ar)
@@ -119,7 +119,7 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
                 """, new { Id = id, FId = f.Id, f.RuleId, Category = f.Category.ToString(), Severity = (int)f.Severity, f.Points, TitleEn = f.Title.En, TitleAr = f.Title.Ar }, tx).ConfigureAwait(false);
         }
 
-        foreach (var i in r.Indicators)
+        foreach (var i in result.Indicators)
         {
             await c.ExecuteAsync("""
                 INSERT OR REPLACE INTO indicators(analysis_id, type, value, status, source)
@@ -129,14 +129,14 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
 
         var document = new ReportDocument
         {
-            Static = r.Static,
-            ProcessRoots = r.ProcessRoots.ToList(),
-            Findings = r.Findings.ToList(),
-            Risk = r.Risk,
-            Chains = r.Chains.ToList(),
-            Persistence = r.Persistence.ToList(),
-            Indicators = r.Indicators.ToList(),
-            SystemChanges = r.SystemChanges,
+            Static = result.Static,
+            ProcessRoots = result.ProcessRoots.ToList(),
+            Findings = result.Findings.ToList(),
+            Risk = result.Risk,
+            Chains = result.Chains.ToList(),
+            Persistence = result.Persistence.ToList(),
+            Indicators = result.Indicators.ToList(),
+            SystemChanges = result.SystemChanges,
         };
         await c.ExecuteAsync("INSERT INTO report_documents(analysis_id, schema_version, document) VALUES (@Id, @V, @Doc)",
             new { Id = id, V = AnalysisResult.SchemaVersion, Doc = Compress(JsonSerializer.SerializeToUtf8Bytes(document, BlazmaJson.Options)) }, tx).ConfigureAwait(false);
@@ -262,12 +262,12 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
         return rows.Select(ToSummary).ToList();
     }
 
-    public async Task<IReadOnlyList<AnalysisEvent>> QueryEventsAsync(EventQuery q, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<AnalysisEvent>> QueryEventsAsync(EventQuery query, CancellationToken cancellationToken)
     {
         await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        var (where, args) = BuildEventFilter(q);
-        args.Add("limit", q.Limit);
-        args.Add("offset", q.Offset);
+        var (where, args) = BuildEventFilter(query);
+        args.Add("limit", query.Limit);
+        args.Add("offset", query.Offset);
         var rows = await c.QueryAsync<EventRow>($"""
             SELECT seq AS Seq, ts AS Ts, rel_ticks AS RelTicks, category AS Category, action AS Action, pid AS Pid, ppid AS Ppid,
                    pkey AS PKey, process AS Process, target AS Target, details AS Details, severity AS Severity, source AS Source, correlation AS Correlation
@@ -276,10 +276,10 @@ public sealed class SqliteAnalysisRepository : IAnalysisRepository
         return rows.Select(ToEvent).ToList();
     }
 
-    public async Task<int> CountEventsAsync(EventQuery q, CancellationToken cancellationToken)
+    public async Task<int> CountEventsAsync(EventQuery query, CancellationToken cancellationToken)
     {
         await using var c = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        var (where, args) = BuildEventFilter(q);
+        var (where, args) = BuildEventFilter(query);
         return await c.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM events WHERE {where}", args).ConfigureAwait(false);
     }
 

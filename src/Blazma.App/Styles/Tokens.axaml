@@ -34,6 +34,9 @@
   <SolidColorBrush x:Key="CriticalBrush" Color="#FF3B5C" />
   <SolidColorBrush x:Key="CriticalSoftBrush" Color="#3A1420" />
   <SolidColorBrush x:Key="InfoBrush" Color="#8C8C99" />
+  <SolidColorBrush x:Key="DemoBgBrush" Color="#2A1D0D" />
+  <SolidColorBrush x:Key="DemoBorderBrush" Color="#6B3D0C" />
+  <SolidColorBrush x:Key="DemoTextBrush" Color="#FFB066" />
 
   <LinearGradientBrush x:Key="LogoBrush" StartPoint="50%,0%" EndPoint="50%,100%">
     <GradientStop Offset="0" Color="#FFB300" />

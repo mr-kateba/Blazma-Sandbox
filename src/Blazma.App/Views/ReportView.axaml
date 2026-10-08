@@ -33,7 +33,7 @@
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Classes="h1" Text="{Binding FileName}" FlowDirection="LeftToRight" />
               <c:RiskBadge Verdict="{Binding Verdict}" Large="True" />
-              <Border Classes="badge banner demo" IsVisible="{Binding IsDemo}"><TextBlock Text="DEMO" Foreground="#FFB066" /></Border>
+              <Border Classes="badge banner demo" IsVisible="{Binding IsDemo}"><TextBlock Text="DEMO" Foreground="{DynamicResource DemoTextBrush}" /></Border>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="10">
               <SelectableTextBlock Classes="mono faint" Text="{Binding Sha256}" FlowDirection="LeftToRight" />
@@ -57,7 +57,7 @@
         </Grid>
 
         <StackPanel DockPanel.Dock="Top" Spacing="8">
-          <Border Classes="banner demo" IsVisible="{Binding IsDemo}"><TextBlock Text="{l:T DemoReportBanner}" Foreground="#FFB066" TextWrapping="Wrap" /></Border>
+          <Border Classes="banner demo" IsVisible="{Binding IsDemo}"><TextBlock Text="{l:T DemoReportBanner}" Foreground="{DynamicResource DemoTextBrush}" TextWrapping="Wrap" /></Border>
           <Border Classes="banner warn" IsVisible="{Binding MonitoringInterrupted}"><TextBlock Text="{l:T MonitoringInterruptedBanner}" TextWrapping="Wrap" /></Border>
           <Border Classes="banner danger" IsVisible="{Binding IsFailed}"><TextBlock Text="{Binding FailureReason}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" /></Border>
         </StackPanel>

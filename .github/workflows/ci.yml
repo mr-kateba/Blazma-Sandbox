@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet build Blazma.Sandbox.slnx -c Release
+      - run: dotnet test Blazma.Sandbox.slnx -c Release --no-build
+
+  package:
+    name: Package (Windows x64)
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: pwsh scripts/publish.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlazmaSandbox-win-x64
+          path: publish/BlazmaSandbox

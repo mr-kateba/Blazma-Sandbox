@@ -106,7 +106,7 @@
                     <StackPanel Orientation="Horizontal" Spacing="8">
                       <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FlowDirection="LeftToRight" />
                       <Border Classes="badge banner demo" Padding="6,0" IsVisible="{Binding IsDemo}">
-                        <TextBlock Text="DEMO" FontSize="9.5" Foreground="#FFB066" />
+                        <TextBlock Text="DEMO" FontSize="9.5" Foreground="{DynamicResource DemoTextBrush}" />
                       </Border>
                     </StackPanel>
                     <TextBlock Grid.Column="1" Classes="mono" Text="{Binding ScoreText}" FontSize="15" VerticalAlignment="Center" />

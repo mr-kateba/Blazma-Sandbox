@@ -11,7 +11,7 @@
       </StackPanel>
 
       <Border Classes="banner demo" IsVisible="{Binding IsDemoSample}">
-        <TextBlock Text="{l:T DemoSampleBanner}" Foreground="#FFB066" TextWrapping="Wrap" />
+        <TextBlock Text="{l:T DemoSampleBanner}" Foreground="{DynamicResource DemoTextBrush}" TextWrapping="Wrap" />
       </Border>
 
       <!-- Empty state -->

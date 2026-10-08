@@ -97,7 +97,7 @@ public sealed partial class MainViewModel : ViewModelBase
         var key = typeof(T).Name;
         if (!_pages.TryGetValue(key, out var page))
         {
-            page = (T)Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance(_services, typeof(T), this);
+            page = Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateInstance<T>(_services, this);
             _pages[key] = page;
         }
         return (T)page;

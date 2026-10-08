@@ -12,7 +12,10 @@
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
     <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</EnableCompressionInSingleFile>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <AllowedReferenceRelatedFileExtensions Condition="'$(Configuration)' == 'Release'">none</AllowedReferenceRelatedFileExtensions>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Blazma.Contracts\Blazma.Contracts.csproj" />

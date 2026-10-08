@@ -1,0 +1,9 @@
+License: TO BE DECIDED
+
+The owner of this repository has not chosen a license yet. Until a license is added,
+all rights are reserved by the copyright holder.
+
+Third-party components keep their own licenses:
+- IBM Plex Sans Arabic and IBM Plex Mono fonts: SIL Open Font License 1.1 (assets/fonts/OFL.txt)
+- NuGet dependencies (Avalonia, CommunityToolkit.Mvvm, Microsoft.Data.Sqlite, Dapper, Serilog,
+  Microsoft.Diagnostics.Tracing.TraceEvent): see each package's license.

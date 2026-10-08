@@ -56,6 +56,10 @@ public sealed class ThemeService
         foreach (var key in new[] { "ExpanderHeaderBorderBrush", "ExpanderContentBorderBrush", "ExpanderHeaderBorderBrushPointerOver" })
             Set(key, p.Rule);
         Set("ComboBoxDropDownBackground", p.Panel);
+        var lightTheme = settings.Theme == CoreTheme.Light;
+        Set("DemoBgBrush", lightTheme ? "#FFF1E0" : "#2A1D0D");
+        Set("DemoBorderBrush", lightTheme ? "#F2C18C" : "#6B3D0C");
+        Set("DemoTextBrush", lightTheme ? "#9A4A00" : "#FFB066");
         Set("FlyoutPresenterBackground", p.Panel);
 
         var accent = AccentOf(settings.Accent);

@@ -68,7 +68,7 @@ public partial class LocalizationTests
             .Concat(Enum.GetNames<Core.Abstractions.SearchSource>().Select(n => "Src" + n))
             .Concat(Enum.GetNames<ThemeVariant>().Select(n => "Theme" + n))
             .Concat(ShortcutSettings.Defaults.Keys.Select(n => "Cmd" + n));
-        Assert.Empty(expected.Where(k => !keys.Contains(k)));
+        Assert.All(expected, k => Assert.Contains(k, keys));
     }
 
     [Fact]

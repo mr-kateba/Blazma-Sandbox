@@ -395,7 +395,7 @@ public sealed partial class ReportViewModel : PageViewModel
     [RelayCommand]
     private void FindingProcess()
     {
-        if (SelectedFinding?.Finding.Processes.FirstOrDefault() is not { } key) return;
+        if (SelectedFinding?.Finding.Processes is not [var key, ..]) return;
         SelectedTab = 2;
         SelectedProcess = Flatten(ProcessRoots).FirstOrDefault(p => p.Node.Key == key);
     }

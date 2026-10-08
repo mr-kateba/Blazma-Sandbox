@@ -89,7 +89,7 @@ public sealed class AnalysisCoordinator(
             CreateNoWindow = true,
         };
         if (Path.GetFileNameWithoutExtension(exe).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
-            psi.ArgumentList.Add(typeof(AnalysisCoordinator).Assembly.Location);
+            psi.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "BlazmaSandbox.dll"));
         psi.ArgumentList.Add(StaticWorkerFlag);
         psi.ArgumentList.Add(path);
 
@@ -137,7 +137,9 @@ public sealed class AnalysisCoordinator(
             FileName = fileName,
             Size = 15_413_248,
             Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("blazma-demo:" + fileName))),
+#pragma warning disable CA5350 // SHA-1 is reported as an identifier, the same as real samples; it is never used for security
             Sha1 = Convert.ToHexStringLower(System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes("blazma-demo:" + fileName))),
+#pragma warning restore CA5350
             Kind = FileKind.Executable,
         },
         Pe = new PeInfo

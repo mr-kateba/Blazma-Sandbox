@@ -56,13 +56,13 @@ public sealed class SettingsTests : IDisposable
     }
 
     [Fact]
-    public void Invalid_thresholds_from_disk_are_repaired()
+    public async Task Invalid_thresholds_from_disk_are_repaired()
     {
         var paths = new BlazmaPaths(_dir.FullName);
-        var store = new SettingsStore(paths);
+        using var store = new SettingsStore(paths);
         var s = new BlazmaSettings();
         s.Detection.Thresholds = new RiskThresholds(80, 50, 20);
-        store.SaveAsync(s).GetAwaiter().GetResult();
+        await store.SaveAsync(s);
         Assert.Equal(RiskThresholds.Default, store.Load().Detection.Thresholds);
     }
 }
