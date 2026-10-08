@@ -149,7 +149,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
             if (!result.Sample.IsExecutableKind)
                 throw new AnalysisFailedException("Blazma cannot run this type of file. Supported types: EXE, DLL, MSI, PowerShell, batch and Windows script files, and shortcuts.");
 
-            var availability = await provider.CheckAvailabilityAsync(cancellationToken).ConfigureAwait(false);
+            var availability = await provider.CheckAvailabilityAsync(options.Network, cancellationToken).ConfigureAwait(false);
             if (!availability.IsReady)
             {
                 var failed = availability.Checks.Where(c => !c.Passed).Select(c => c.Detail.En);
