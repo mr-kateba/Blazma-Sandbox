@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Exporters: machine-readable JSON, a self-contained HTML report, and indicator lists. -->
+  <!-- Exporters: machine-readable JSON, a self-contained HTML report, indicator lists, and Interop/ (STIX, MISP, Sigma, YARA, sample archives). -->
   <PropertyGroup>
     <RootNamespace>Blazma.Reporting</RootNamespace>
   </PropertyGroup>
@@ -7,5 +7,8 @@
     <ProjectReference Include="..\Blazma.Core\Blazma.Core.csproj" />
     <ProjectReference Include="..\Blazma.Storage\Blazma.Storage.csproj" />
     <ProjectReference Include="..\Blazma.Analysis\Blazma.Analysis.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpZipLib" />
   </ItemGroup>
 </Project>

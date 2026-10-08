@@ -20,6 +20,9 @@
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageVersion Include="Dapper" Version="2.1.89" />
 
+    <!-- Reporting: password-protected sample archives (MIT) -->
+    <PackageVersion Include="SharpZipLib" Version="1.4.2" />
+
     <!-- Agent (runs only inside the sandbox) -->
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
 
@@ -27,5 +30,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Test-only: parses generated Sigma YAML back (MIT) -->
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 </Project>
