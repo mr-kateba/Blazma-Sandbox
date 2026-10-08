@@ -20,6 +20,9 @@
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageVersion Include="Dapper" Version="2.1.89" />
 
+    <!-- Secrets (DPAPI, Windows only) -->
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+
     <!-- Agent (runs only inside the sandbox) -->
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
 
