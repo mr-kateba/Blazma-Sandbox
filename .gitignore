@@ -13,3 +13,6 @@ publish/
 *.blzdb
 work/
 samples/
+
+# Agent worktrees
+.claude/worktrees/

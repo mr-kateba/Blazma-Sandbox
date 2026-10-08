@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Blazma.Contracts;
 using Blazma.Core.Abstractions;
+using Blazma.Core.Analysis;
 using Blazma.Core.Events;
 using Blazma.Sandbox.Channel;
 using Blazma.Sandbox.Isolation;
@@ -16,7 +17,7 @@ namespace Blazma.Sandbox.Providers.WindowsSandbox;
 /// the sandbox with a generated .wsb file, talks to the agent through files, and tears
 /// everything down. It never opens, loads or executes the sample on the host.
 /// </summary>
-internal sealed class WindowsSandboxSession(SandboxSessionRequest request, WindowsSandboxOptions options, ILogger logger) : ISandboxSession
+internal sealed class WindowsSandboxSession(SandboxSessionRequest request, WindowsSandboxOptions options, ILogger logger) : ISandboxSession, IInteractiveSession
 {
     private readonly string _work = Path.Combine(options.WorkRoot, request.AnalysisId.ToString("N"));
     private readonly byte[] _key = SignedFile.NewKey();
@@ -26,6 +27,10 @@ internal sealed class WindowsSandboxSession(SandboxSessionRequest request, Windo
     private Process? _sandbox;
     private DateTimeOffset _sampleStart;
     private bool _shutdown;
+    private TimeSpan _duration = request.Options.Duration;
+    private int _controlSequence;
+    private readonly object _controlLock = new();
+    private string ArtifactsFolder => request.ArtifactsFolder ?? Path.Combine(_work, "artifacts");
 
     public Task CreateEnvironmentAsync(CancellationToken cancellationToken)
     {
@@ -103,16 +108,43 @@ internal sealed class WindowsSandboxSession(SandboxSessionRequest request, Windo
         _sampleStart = DateTimeOffset.UtcNow;
     }
 
+    public Task ExtendAsync(TimeSpan extra, CancellationToken cancellationToken)
+    {
+        lock (_controlLock)
+        {
+            var next = _duration + extra;
+            _duration = next > AnalysisOptions.MaxDuration ? AnalysisOptions.MaxDuration : next;
+            WriteControl(finishNow: false);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task FinishNowAsync(CancellationToken cancellationToken)
+    {
+        lock (_controlLock) WriteControl(finishNow: true);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The control file lives in the read-only folder, so a sample cannot forge it.</summary>
+    private void WriteControl(bool finishNow) =>
+        WriteAtomic(Path.Combine(In, Protocol.ControlFile), ChannelFiles.Serialize(new ControlDto
+        {
+            Sequence = ++_controlSequence,
+            DurationSeconds = (int)_duration.TotalSeconds,
+            FinishNow = finishNow,
+        }));
+
     public async IAsyncEnumerable<SessionSignal> ExecuteAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var deadline = _sampleStart + request.Options.Duration + TimeSpan.FromSeconds(30);
         var lastBeat = DateTimeOffset.UtcNow;
         var interrupted = false;
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            var deadline = _sampleStart + _duration + TimeSpan.FromSeconds(30);
             var batch = _reader!.ReadNewEvents(_sampleStart);
             if (batch.Count > 0) yield return new EventsSignal(batch);
+            foreach (var shot in _reader.ReadNewScreenshots(ArtifactsFolder)) yield return new ScreenshotSignal(shot);
 
             if (_reader.ReadHeartbeat() is { } beat && beat.At > lastBeat - TimeSpan.FromHours(1))
             {
@@ -161,7 +193,17 @@ internal sealed class WindowsSandboxSession(SandboxSessionRequest request, Windo
                 Details = new Dictionary<string, string> { [DetailKeys.Reason] = problem },
             });
         }
-        return new CollectedArtifacts(remaining, _reader.ReadSnapshot(after: false), _reader.ReadSnapshot(after: true), done is not null && done.Error is null);
+        var screenshots = _reader.ReadNewScreenshots(ArtifactsFolder);
+        var dropped = _reader.ReadDroppedFiles(ArtifactsFolder, options.AgentLimits.MaxDroppedFiles);
+        var memory = _reader.ReadMemoryRegions(ArtifactsFolder, Protocol.Limits.MaxMemoryRegions);
+        var pcap = _reader.ReadPcap(ArtifactsFolder);
+        return new CollectedArtifacts(remaining, _reader.ReadSnapshot(after: false), _reader.ReadSnapshot(after: true), done is not null && done.Error is null)
+        {
+            Screenshots = screenshots,
+            DroppedFiles = dropped,
+            MemoryRegions = memory,
+            PcapPath = pcap,
+        };
     }
 
     public Task ShutdownAsync(CancellationToken cancellationToken)
