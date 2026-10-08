@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Blazma.Agent/Blazma.Agent.csproj" />
     <Project Path="src/Blazma.Analysis/Blazma.Analysis.csproj" />
     <Project Path="src/Blazma.Contracts/Blazma.Contracts.csproj" />
     <Project Path="src/Blazma.Core/Blazma.Core.csproj" />

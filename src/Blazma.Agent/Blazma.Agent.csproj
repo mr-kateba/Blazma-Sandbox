@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Runs ONLY inside the analysis sandbox. It references nothing from the host except
+    Blazma.Contracts. Published self-contained for win-x64 because the sandbox has no
+    .NET runtime:  dotnet publish src/Blazma.Agent -c Release -r win-x64
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Blazma.Agent</RootNamespace>
+    <AssemblyName>Blazma.Agent</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Blazma.Contracts\Blazma.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
+  </ItemGroup>
+</Project>

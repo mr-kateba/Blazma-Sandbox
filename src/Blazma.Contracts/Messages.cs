@@ -34,6 +34,9 @@ public sealed class HelloDto
     public string AgentVersion { get; set; } = string.Empty;
     public string OsVersion { get; set; } = string.Empty;
     public DateTimeOffset At { get; set; }
+
+    /// <summary>ETW kernel tracing needs an elevated token. Without it the agent cannot observe anything.</summary>
+    public bool Elevated { get; set; }
 }
 
 public sealed class HeartbeatDto
