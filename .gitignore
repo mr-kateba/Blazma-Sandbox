@@ -13,3 +13,5 @@ publish/
 *.blzdb
 work/
 samples/
+
+# Agent worktrees

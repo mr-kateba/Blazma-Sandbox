@@ -1,8 +1,12 @@
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Blazma.Contracts;
+using Blazma.Core.Abstractions;
+using Blazma.Core.Analysis;
 using Blazma.Core.Events;
 using Blazma.Core.Snapshots;
+using Blazma.Sandbox.Imaging;
 
 namespace Blazma.Sandbox.Channel;
 
@@ -20,6 +24,9 @@ namespace Blazma.Sandbox.Channel;
 public sealed class OutboxReader(string outFolder, byte[] channelKey, long quotaBytes)
 {
     private int _nextChunk = 1;
+    private int _nextScreenshot = 1;
+    private int _nextDropped = 1;
+    private int _nextMemory = 1;
     private long _hostSequence;
     private long _bytesRead;
     private readonly HashSet<string> _reported = new(StringComparer.OrdinalIgnoreCase);
@@ -88,6 +95,142 @@ public sealed class OutboxReader(string outFolder, byte[] channelKey, long quota
             }
         }
         return events;
+    }
+
+    /// <summary>
+    /// Reads new screenshots in order and stores them as PNG under <paramref name="artifactsFolder"/>.
+    /// Pixels are inflated into a buffer of exactly the announced size and re-encoded by the host.
+    /// </summary>
+    public IReadOnlyList<CollectedScreenshot> ReadNewScreenshots(string artifactsFolder)
+    {
+        var result = new List<CollectedScreenshot>();
+        while (!QuotaExceeded && _nextScreenshot <= Protocol.Limits.MaxScreenshots)
+        {
+            var name = Protocol.ScreenshotName(_nextScreenshot);
+            var bytes = ReadBytes(name);
+            if (bytes is null) break;
+            var index = _nextScreenshot++;
+            var content = VerifyOrReport(name, bytes);
+            if (content is null) continue;
+            if (!RawFrame.TryDecode(content, Protocol.Limits.MaxScreenshotWidth, Protocol.Limits.MaxScreenshotHeight, out var w, out var h, out var ms, out var pixels))
+            {
+                RejectedFiles++;
+                Problems.Add($"{name}: not a valid screenshot; ignored.");
+                continue;
+            }
+            var folder = Directory.CreateDirectory(Path.Combine(artifactsFolder, "screenshots")).FullName;
+            var path = Path.Combine(folder, $"{index:D4}.png");
+            File.WriteAllBytes(path, PngEncoder.EncodeBgra(w, h, pixels));
+            result.Add(new CollectedScreenshot(TimeSpan.FromMilliseconds(ms), path, w, h));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Reads files the agent copied out. Each must match its signed sidecar (size and SHA-256).
+    /// Copies are stored as <c>dropped/NNNN.bin</c>: no original name or extension on disk, so
+    /// nothing can be started by double-clicking it.
+    /// </summary>
+    public IReadOnlyList<CollectedDroppedFile> ReadDroppedFiles(string artifactsFolder, int maxFiles)
+    {
+        var result = new List<CollectedDroppedFile>();
+        var cap = Math.Min(maxFiles, Protocol.Limits.MaxDroppedFiles);
+        while (!QuotaExceeded && _nextDropped <= cap)
+        {
+            var index = _nextDropped;
+            var meta = ReadJson(Protocol.DroppedMetaName(index), ProtocolJson.Default.DroppedFileDto, signed: true);
+            if (meta is null) break;
+            _nextDropped++;
+            var dataName = Protocol.DroppedDataName(index);
+            var data = ReadBytes(dataName) is { } raw ? VerifyOrReport(dataName, raw) : null;
+            if (data is null || !MatchesHash(data, meta.Size, meta.Sha256))
+            {
+                RejectedFiles++;
+                Problems.Add($"{dataName}: missing or does not match its description; ignored.");
+                continue;
+            }
+            var folder = Directory.CreateDirectory(Path.Combine(artifactsFolder, "dropped")).FullName;
+            var path = Path.Combine(folder, $"{index:D4}.bin");
+            File.WriteAllBytes(path, data);
+            result.Add(new CollectedDroppedFile(CleanText(meta.OriginalPath, 1024), CleanText(meta.ProcessName, 260), path, meta.Sha256.ToLowerInvariant(), data.Length));
+        }
+        return result;
+    }
+
+    /// <summary>Reads dumped memory regions, validated against their signed sidecars.</summary>
+    public IReadOnlyList<CollectedMemoryRegion> ReadMemoryRegions(string artifactsFolder, int maxRegions)
+    {
+        var result = new List<CollectedMemoryRegion>();
+        var cap = Math.Min(maxRegions, Protocol.Limits.MaxMemoryRegions);
+        while (!QuotaExceeded && _nextMemory <= cap)
+        {
+            var index = _nextMemory;
+            var meta = ReadJson(Protocol.MemoryMetaName(index), ProtocolJson.Default.MemoryRegionDto, signed: true);
+            if (meta is null) break;
+            _nextMemory++;
+            var kind = meta.Kind switch
+            {
+                "private-exec" => MemoryRegionKind.PrivateExecutable,
+                "rwx" => MemoryRegionKind.ReadWriteExecute,
+                "unbacked-image" => MemoryRegionKind.UnbackedImage,
+                _ => (MemoryRegionKind?)null,
+            };
+            var dataName = Protocol.MemoryDataName(index);
+            var data = ReadBytes(dataName) is { } raw ? VerifyOrReport(dataName, raw) : null;
+            if (kind is null || meta.ProcessId < 0 || data is null || data.Length > Protocol.Limits.MaxMemoryRegionBytes || !MatchesHash(data, meta.Size, meta.Sha256))
+            {
+                RejectedFiles++;
+                Problems.Add($"{dataName}: missing, oversized or inconsistent; ignored.");
+                continue;
+            }
+            var folder = Directory.CreateDirectory(Path.Combine(artifactsFolder, "memory")).FullName;
+            var path = Path.Combine(folder, $"{index:D4}.bin");
+            File.WriteAllBytes(path, data);
+            result.Add(new CollectedMemoryRegion(meta.ProcessId, CleanText(meta.ProcessName, 260), meta.BaseAddress, data.Length,
+                CleanText(meta.Protection, 64), kind.Value, path, meta.Sha256.ToLowerInvariant()));
+        }
+        return result;
+    }
+
+    /// <summary>Reads the network capture, if any. Only a pcapng file (by its magic number) is accepted.</summary>
+    public string? ReadPcap(string artifactsFolder)
+    {
+        var bytes = ReadBytes(Protocol.PcapFile);
+        if (bytes is null) return null;
+        var content = VerifyOrReport(Protocol.PcapFile, bytes);
+        if (content is null) return null;
+        if (content.Length < 12 || content.Length > Protocol.Limits.MaxPcapBytes || !content.AsSpan(0, 4).SequenceEqual(PcapNgMagic))
+        {
+            RejectedFiles++;
+            Problems.Add($"{Protocol.PcapFile}: not a pcapng capture; ignored.");
+            return null;
+        }
+        Directory.CreateDirectory(artifactsFolder);
+        var path = Path.Combine(artifactsFolder, "capture.pcapng");
+        File.WriteAllBytes(path, content);
+        return path;
+    }
+
+    private static ReadOnlySpan<byte> PcapNgMagic => [0x0A, 0x0D, 0x0D, 0x0A];
+
+    private byte[]? VerifyOrReport(string name, byte[] bytes)
+    {
+        var content = SignedFile.Verify(bytes, channelKey);
+        if (content is not null) return content;
+        TamperedFiles++;
+        Problems.Add($"{name}: signature check failed; discarded.");
+        return null;
+    }
+
+    private static bool MatchesHash(byte[] data, long size, string sha256) =>
+        data.LongLength == size && sha256.Length == 64
+        && Convert.ToHexStringLower(SHA256.HashData(data)).Equals(sha256, StringComparison.OrdinalIgnoreCase);
+
+    private static string CleanText(string? s, int max)
+    {
+        if (string.IsNullOrEmpty(s)) return "?";
+        if (s.Length > max) s = s[..max];
+        return new string(s.Select(c => char.IsControl(c) && c != '\t' ? '\uFFFD' : c).ToArray());
     }
 
     private static IEnumerable<byte[]> SplitLines(byte[] content)
