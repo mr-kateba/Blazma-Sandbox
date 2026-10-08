@@ -26,12 +26,16 @@ public sealed partial class ReportViewModel : PageViewModel
     private readonly IAnalysisRepository _repository;
     private readonly ExportService _export;
     private readonly AskBlazma _ask = new();
+    private readonly Blazma.Intelligence.Ai.LocalAiProvider _ai;
+    private readonly SettingsService _settings;
     private List<TimelineRow> _allTimeline = [];
     private HashSet<long> _highlight = [];
     private int _rawOffset;
 
-    public ReportViewModel(MainViewModel main, IAnalysisRepository repository, ExportService export)
+    public ReportViewModel(MainViewModel main, IAnalysisRepository repository, ExportService export, Blazma.Intelligence.Ai.LocalAiProvider ai, SettingsService settings)
     {
+        _ai = ai;
+        _settings = settings;
         _main = main;
         _repository = repository;
         _export = export;
@@ -415,8 +419,10 @@ public sealed partial class ReportViewModel : PageViewModel
         HasMoreRaw = page.Count == 1000;
     }
 
+    [ObservableProperty] private bool _aiThinking;
+
     [RelayCommand]
-    private void Ask(string? text)
+    private async Task Ask(string? text)
     {
         var q = (text ?? Question).Trim();
         if (q.Length == 0 || Result is null) return;
@@ -424,6 +430,30 @@ public sealed partial class ReportViewModel : PageViewModel
         var answer = _ask.Ask(Result, q, Loc.Instance.Code);
         Chat.Add(new ChatMessage { FromUser = false, Text = answer.Text, Parts = answer.Parts.Select(p => new ChatPart(p)).ToList() });
         Question = string.Empty;
+
+        // The rule-based answer above stays the reference; the local model only adds an explanation, labelled as AI.
+        if (!_settings.Current.Ai.Enabled || AiThinking) return;
+        var result = Result;
+        AiThinking = true;
+        try
+        {
+            var reply = await _ai.AskAsync(result, q, Loc.Instance.Code, CancellationToken.None);
+            if (!ReferenceEquals(result, Result) || string.IsNullOrWhiteSpace(reply)) return;
+            Chat.Add(new ChatMessage
+            {
+                FromUser = false,
+                Text = string.Empty,
+                Parts = [new ChatPart(new AnswerPart(reply.Trim(), Provenance.AiInterpretation, [], []))],
+            });
+        }
+        catch (Blazma.Intelligence.Ai.AiProviderException ex)
+        {
+            _main.Toasts.Show(ToastKind.Warning, Loc.T("AiFailed"), ex.UserMessage.Get(Loc.Instance.Code));
+        }
+        finally
+        {
+            AiThinking = false;
+        }
     }
 
     [RelayCommand] private Task ExportHtml() => Result is null ? Task.CompletedTask : _export.ExportAsync(Result, Core.Settings.ReportFormat.Html);

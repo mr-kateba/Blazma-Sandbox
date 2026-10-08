@@ -73,6 +73,36 @@
               <TextBlock Classes="caption" Text="{l:T StaticNeverRuns}" Foreground="{DynamicResource FaintBrush}" />
             </StackPanel>
           </Border>
+
+          <!-- Hash reputation (local history always; online services only when enabled) -->
+          <Border Classes="card" IsVisible="{Binding HasReport}">
+            <StackPanel Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="section" Text="{l:T Reputation}" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="{l:T LookupOnline}" Command="{Binding LookupOnlineCommand}" IsVisible="{Binding CanLookupOnline}" />
+              </Grid>
+              <ProgressBar IsIndeterminate="True" IsVisible="{Binding CheckingReputation}" />
+              <ItemsControl ItemsSource="{Binding ReputationRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ReputationRow">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                      <StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock Text="{Binding Provider}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Verdict}" Foreground="{DynamicResource DangerBrush}" IsVisible="{Binding Bad}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Verdict}" Foreground="{DynamicResource MutedBrush}" IsVisible="{Binding !Bad}" />
+                        </StackPanel>
+                        <TextBlock Classes="caption" Text="{Binding Detail}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Classes="link" Content="{l:T OpenPage}" IsVisible="{Binding Link, Converter={x:Static ObjectConverters.IsNotNull}}"
+                              Command="{Binding $parent[UserControl].((vm:NewAnalysisViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Link}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="caption" Text="{l:T ReputationPrivacy}" TextWrapping="Wrap" Foreground="{DynamicResource FaintBrush}" />
+            </StackPanel>
+          </Border>
         </StackPanel>
 
         <!-- Configuration -->
@@ -105,15 +135,32 @@
                 <CheckBox Content="{l:T CaptureRegistry}" IsChecked="{Binding CaptureRegistry}" />
                 <CheckBox Content="{l:T CaptureNetwork}" IsChecked="{Binding CaptureNetwork}" />
                 <CheckBox Content="{l:T TakeSnapshots}" IsChecked="{Binding TakeSnapshots}" />
-                <CheckBox Content="{l:T CaptureScreenshotsPlanned}" IsEnabled="False" />
+                <CheckBox Content="{l:T CaptureScreenshots}" IsChecked="{Binding CaptureScreenshots}" />
+                <CheckBox Content="{l:T CollectDropped}" IsChecked="{Binding CollectDropped}" ToolTip.Tip="{l:T CollectDroppedHelp}" />
+                <CheckBox Content="{l:T DumpMemory}" IsChecked="{Binding DumpMemory}" ToolTip.Tip="{l:T DumpMemoryHelp}" />
               </UniformGrid>
               <Border Classes="rule" />
+              <TextBlock Classes="section" Text="{l:T Interaction}" />
+              <CheckBox Content="{l:T InteractiveMode}" IsChecked="{Binding Interactive}" />
+              <TextBlock Classes="caption" Text="{l:T InteractiveModeHelp}" TextWrapping="Wrap" Margin="26,-8,0,0" />
+              <CheckBox Content="{l:T SimulateUser}" IsChecked="{Binding SimulateUser}" IsEnabled="{Binding !Interactive}" />
+              <TextBlock Classes="caption" Text="{l:T SimulateUserHelp}" TextWrapping="Wrap" Margin="26,-8,0,0" />
+              <Border Classes="rule" />
               <TextBlock Classes="section" Text="{l:T NetworkPolicy}" />
-              <ToggleSwitch IsChecked="{Binding NetworkEnabled}" OnContent="{l:T NetworkOn}" OffContent="{l:T NetworkOff}" />
+              <RadioButton GroupName="net" IsChecked="{Binding NetworkSimulatedMode}">
+                <StackPanel><TextBlock Text="{l:T NetSimulated}" FontWeight="SemiBold" /><TextBlock Classes="caption" Text="{l:T NetSimulatedHelp}" TextWrapping="Wrap" /></StackPanel>
+              </RadioButton>
+              <RadioButton GroupName="net" IsChecked="{Binding NetworkOffMode}">
+                <StackPanel><TextBlock Text="{l:T NetOff}" FontWeight="SemiBold" /><TextBlock Classes="caption" Text="{l:T NetOffHelp}" TextWrapping="Wrap" /></StackPanel>
+              </RadioButton>
+              <RadioButton GroupName="net" IsChecked="{Binding NetworkRealMode}">
+                <StackPanel><TextBlock Text="{l:T NetReal}" FontWeight="SemiBold" /><TextBlock Classes="caption" Text="{l:T NetRealHelp}" TextWrapping="Wrap" /></StackPanel>
+              </RadioButton>
               <Border Classes="banner warn" IsVisible="{Binding ShowNetworkWarning}">
                 <StackPanel Spacing="8">
                   <TextBlock Text="{l:T NetworkWarning}" TextWrapping="Wrap" />
                   <CheckBox Content="{l:T NetworkConsent}" IsChecked="{Binding NetworkConsent}" />
+                  <CheckBox Content="{l:T CapturePcap}" IsChecked="{Binding CapturePcap}" />
                 </StackPanel>
               </Border>
               <Border Classes="rule" />

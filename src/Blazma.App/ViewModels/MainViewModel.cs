@@ -191,10 +191,10 @@ public sealed partial class MainViewModel : ViewModelBase
         await Task.CompletedTask;
     }
 
-    public async Task StartAnalysisAsync(string path, StaticReport report, AnalysisOptions options, ISandboxProvider provider)
+    public async Task StartAnalysisAsync(string path, StaticReport report, AnalysisOptions options, ISandboxProvider provider, IReadOnlyList<ReputationResult>? reputation = null)
     {
         _last = (path, report, options, provider.Id);
-        var active = _coordinator.Start(path, report, options, provider);
+        var active = _coordinator.Start(path, report, options, provider, reputation);
         AnalysisRunning = true;
         var live = Page<LiveAnalysisViewModel>();
         live.Attach(active);
@@ -297,9 +297,11 @@ public sealed partial class MainViewModel : ViewModelBase
         return false;
     }
 
-    private static void OpenUrl(string url)
+    /// <summary>Opens a web page in the user's browser. Only https addresses; never anything taken from a sample.</summary>
+    public void OpenUrl(string? url)
     {
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps) return;
+        try { Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true }); }
         catch (System.ComponentModel.Win32Exception) { }
     }
 
