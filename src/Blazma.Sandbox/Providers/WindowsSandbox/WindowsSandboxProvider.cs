@@ -55,8 +55,11 @@ public sealed class WindowsSandboxProvider(WindowsSandboxOptions options, ILogge
             buildOk ? new("Windows 10 1903 or later.", "Windows 10 1903 أو أحدث.") : new("Windows 10 version 1903 or later is required.", "يلزم Windows 10 إصدار 1903 أو أحدث.")));
 
         var featureOk = File.Exists(SandboxExecutable);
+        var home = !featureOk && IsHomeEdition(ReadEditionId());
         checks.Add(Check("feature", new("Windows Sandbox feature", "ميزة Windows Sandbox"), featureOk,
             featureOk ? new("Installed.", "مثبتة.")
+            : home ? new("This is Windows Home, which does not include Windows Sandbox. Use a VirtualBox virtual machine instead (Settings → Isolated environment), or upgrade to Windows Pro.",
+                         "هذه نسخة Windows Home، ولا تتضمن Windows Sandbox. استخدم جهازًا افتراضيًا في VirtualBox بدلًا منه (الإعدادات ← البيئة المعزولة)، أو رقِّ إلى Windows Pro.")
                       : new("Turn on \"Windows Sandbox\" in Windows Features (optionalfeatures.exe), enable virtualization in firmware if asked, then restart.",
                             "فعّل \"Windows Sandbox\" من ميزات Windows ‏(optionalfeatures.exe)، وفعّل المحاكاة الافتراضية من BIOS إذا طُلب، ثم أعد التشغيل.")));
 
@@ -82,4 +85,22 @@ public sealed class WindowsSandboxProvider(WindowsSandboxOptions options, ILogge
     }
 
     private static ProviderCheck Check(string id, LocalizedText label, bool passed, LocalizedText detail) => new(id, label, passed, detail);
+
+    /// <summary>Home editions ("Core…") have no Windows Sandbox and cannot turn it on.</summary>
+    internal static bool IsHomeEdition(string? editionId) =>
+        editionId is not null && editionId.StartsWith("Core", StringComparison.OrdinalIgnoreCase);
+
+    private static string? ReadEditionId()
+    {
+        if (!OperatingSystem.IsWindows()) return null;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+            return key?.GetValue("EditionID") as string;
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return null;
+        }
+    }
 }

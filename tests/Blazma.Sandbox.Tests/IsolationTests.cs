@@ -53,3 +53,17 @@ public class IsolationTests
     public void Sample_names_cannot_escape_the_sample_folder(string input, string expected) =>
         Assert.Equal(expected, WindowsSandboxSession.SafeFileName(input));
 }
+
+public class EditionTests
+{
+    [Theory]
+    [InlineData("Core", true)]
+    [InlineData("CoreSingleLanguage", true)]
+    [InlineData("CoreCountrySpecific", true)]
+    [InlineData("Professional", false)]
+    [InlineData("Enterprise", false)]
+    [InlineData("Education", false)]
+    [InlineData(null, false)]
+    public void Home_editions_are_recognised(string? edition, bool home) =>
+        Assert.Equal(home, Blazma.Sandbox.Providers.WindowsSandbox.WindowsSandboxProvider.IsHomeEdition(edition));
+}
