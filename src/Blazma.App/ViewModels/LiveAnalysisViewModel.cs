@@ -94,6 +94,16 @@ public sealed partial class LiveAnalysisViewModel : PageViewModel
     [ObservableProperty] private string? _failureReason;
     [ObservableProperty] private Guid? _resultId;
     [ObservableProperty] private double _progress;
+    [ObservableProperty] private Avalonia.Media.Imaging.Bitmap? _screen;
+    [ObservableProperty] private bool _canControl;
+    private string? _screenPath;
+
+    public bool HasScreen => Screen is not null;
+    partial void OnScreenChanged(Avalonia.Media.Imaging.Bitmap? oldValue, Avalonia.Media.Imaging.Bitmap? newValue)
+    {
+        oldValue?.Dispose();
+        OnPropertyChanged(nameof(HasScreen));
+    }
 
     public event EventHandler? RowsAdded;
 
@@ -107,6 +117,7 @@ public sealed partial class LiveAnalysisViewModel : PageViewModel
         EventCount = ProcessCount = ConnectionCount = LiveScore = 0;
         LiveVerdict = Verdict.LowRisk;
         IsRunning = true; IsDone = false; IsFailed = false; FailureReason = null; ResultId = null; MonitoringInterrupted = false;
+        Screen = null; _screenPath = null; CanControl = false;
         foreach (var s in Steps) s.State = StepState.Pending;
         active.Progress += (_, p) => Dispatcher.UIThread.Post(() => OnProgress(p));
         _timer.Start();
@@ -179,6 +190,14 @@ public sealed partial class LiveAnalysisViewModel : PageViewModel
         ProcessCount = p.ProcessCount;
         ConnectionCount = p.ConnectionCount;
         MonitoringInterrupted = p.MonitoringInterrupted;
+        CanControl = p.CanControl;
+        if (p.LatestScreenshot is { } shot && shot != _screenPath)
+        {
+            _screenPath = shot;
+            // The PNG was written by the host from validated raw pixels, never taken from the sandbox as-is.
+            try { Screen = new Avalonia.Media.Imaging.Bitmap(shot); }
+            catch (Exception ex) when (ex is IOException or ArgumentException or InvalidOperationException) { }
+        }
         if (p.LiveScore is { } score) { LiveScore = score; LiveVerdict = p.LiveVerdict ?? Verdict.LowRisk; }
         var index = AnalysisStateMachine.IndexOf(p.Stage);
         if (index < 0) return;
@@ -216,6 +235,22 @@ public sealed partial class LiveAnalysisViewModel : PageViewModel
         if (_active is null || !IsRunning) return;
         if (await _main.Dialogs.ConfirmAsync(Loc.T("CancelAnalysisTitle"), Loc.T("CancelAnalysisBody"), Loc.T("CancelAnalysis"), danger: true))
             await _active.Cancellation.CancelAsync();
+    }
+
+    [RelayCommand]
+    private async Task ExtendRun()
+    {
+        if (_active is null || !CanControl) return;
+        await _active.Control.ExtendAsync(TimeSpan.FromMinutes(2));
+        _toasts.Info(Loc.T("RunExtended"));
+    }
+
+    [RelayCommand]
+    private async Task FinishRun()
+    {
+        if (_active is null || !CanControl) return;
+        await _active.Control.FinishNowAsync();
+        _toasts.Info(Loc.T("RunFinishing"));
     }
 
     [RelayCommand] private Task OpenReport() => ResultId is { } id ? _main.OpenReportAsync(id) : Task.CompletedTask;

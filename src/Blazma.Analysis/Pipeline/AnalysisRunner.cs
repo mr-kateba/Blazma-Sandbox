@@ -19,8 +19,11 @@ public sealed record AnalysisRequest
     public required EngineSettings EngineSettings { get; init; }
     public int MaxEvents { get; init; } = 250_000;
 
-    /// <summary>Where screenshots, dropped files, memory and captures are kept. Null: artifacts are not collected.</summary>
-    public string? ArtifactsFolder { get; init; }
+    /// <summary>
+    /// Root for artifacts (screenshots, dropped files, memory, captures); each analysis gets
+    /// <c>&lt;root&gt;/&lt;analysis id&gt;</c>. Null: artifacts are not collected.
+    /// </summary>
+    public string? ArtifactsRoot { get; init; }
 
     /// <summary>Analyzes dropped files and memory regions (out of process in the app). Null: they are stored but not analyzed.</summary>
     public IArtifactInspector? Inspector { get; init; }
@@ -154,7 +157,8 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
             }
 
             MoveTo(AnalysisStage.CreatingSandbox);
-            session = await provider.CreateSessionAsync(new SandboxSessionRequest(result.AnalysisId, request.SamplePath, result.Sample, options, request.ArtifactsFolder), cancellationToken).ConfigureAwait(false);
+            var artifactsFolder = request.ArtifactsRoot is { } root ? Path.Combine(root, result.AnalysisId.ToString("N")) : null;
+            session = await provider.CreateSessionAsync(new SandboxSessionRequest(result.AnalysisId, request.SamplePath, result.Sample, options, artifactsFolder), cancellationToken).ConfigureAwait(false);
             await session.CreateEnvironmentAsync(cancellationToken).ConfigureAwait(false);
 
             MoveTo(AnalysisStage.Booting);
@@ -290,7 +294,8 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
     /// </summary>
     private async Task AttachArtifactsAsync(AnalysisResult result, AnalysisRequest request, List<CollectedScreenshot> screenshots, CollectedArtifacts collected, CancellationToken ct)
     {
-        string Relative(string path) => request.ArtifactsFolder is { } root ? Path.GetRelativePath(root, path) : path;
+        var folder = request.ArtifactsRoot is { } root ? Path.Combine(root, result.AnalysisId.ToString("N")) : null;
+        string Relative(string path) => folder is not null ? Path.GetRelativePath(folder, path) : path;
 
         result.Reputation = request.Reputation;
         result.Screenshots = screenshots.OrderBy(s => s.RelativeTime).Select(s => new ScreenshotInfo(s.RelativeTime, Relative(s.Path), s.Width, s.Height)).ToList();

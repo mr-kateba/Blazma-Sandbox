@@ -26,16 +26,16 @@ public class ArtifactPipelineTests
     {
         var f = await Fixture.CreateAsync();
         var inspector = new InProcessInspector();
-        var folder = Path.Combine(f.Dir.FullName, "artifacts", "pending");
+        var root = Path.Combine(f.Dir.FullName, "artifacts");
         var request = f.Request() with
         {
-            ArtifactsFolder = folder,
+            ArtifactsRoot = root,
             Inspector = inspector,
             Options = new AnalysisOptions { Duration = TimeSpan.FromMinutes(2), Network = NetworkPolicy.Simulated },
             Reputation = [new ReputationResult { ProviderId = "test", ProviderName = "Test service", Verdict = ReputationVerdict.Malicious, Detections = 40, Engines = 70, Family = "ContosoLoader" }],
         };
         var result = await f.Runner.RunAsync(request, new DemoSandboxProvider(TimeProvider.System, speed: 0), null, null, CancellationToken.None);
-        return (f, result, inspector, folder);
+        return (f, result, inspector, Path.Combine(root, result.AnalysisId.ToString("N")));
     }
 
     [Fact]
@@ -73,10 +73,9 @@ public class ArtifactPipelineTests
     {
         var (f, result, _, folder) = await RunAsync();
         await using var _ = f;
-        var stored = Path.Combine(f.Dir.FullName, "artifacts", result.AnalysisId.ToString("N"));
-        Directory.Move(folder, stored);
+        Assert.True(Directory.Exists(folder));
         await f.Repository.DeleteAsync(result.AnalysisId, CancellationToken.None);
-        Assert.False(Directory.Exists(stored));
+        Assert.False(Directory.Exists(folder));
     }
 
     [Fact]

@@ -37,6 +37,7 @@ public sealed class ToastService(SettingsService settings)
         });
     }
 
+    public void Info(string title, string? message = null) => Show(ToastKind.Info, title, message);
     public void AnalysisCompleted(string file, int score) { if (settings.Current.Notifications.AnalysisCompleted) Show(ToastKind.Success, Loc.T("ToastAnalysisCompleted"), $"{file} · {score}/100"); }
     public void AnalysisFailed(string reason) { if (settings.Current.Notifications.AnalysisFailed) Show(ToastKind.Error, Loc.T("ToastAnalysisFailed"), reason); }
     public void HighRisk(string file) { if (settings.Current.Notifications.HighRiskDetected) Show(ToastKind.Warning, Loc.T("ToastHighRisk"), file); }

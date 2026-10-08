@@ -54,7 +54,7 @@ public partial class App : Application
         services.AddSingleton<DialogService>();
         services.AddSingleton<FileDialogService>();
         services.AddSingleton<ExportService>();
-        services.AddSingleton<IAnalysisRepository>(sp => new SqliteAnalysisRepository(paths.Database, sp.GetRequiredService<ILogger<SqliteAnalysisRepository>>()));
+        services.AddSingleton<IAnalysisRepository>(sp => new SqliteAnalysisRepository(paths.Database, sp.GetRequiredService<ILogger<SqliteAnalysisRepository>>()) { ArtifactsRoot = paths.Artifacts });
         services.AddSingleton<AnalysisCoordinator>();
         services.AddSingleton<MainViewModel>();
         return services.BuildServiceProvider();

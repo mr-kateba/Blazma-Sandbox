@@ -24,6 +24,10 @@ public sealed class ActiveAnalysis
     public required Task<AnalysisResult> Completion { get; init; }
     public required CancellationTokenSource Cancellation { get; init; }
     public required bool IsDemo { get; init; }
+
+    /// <summary>Extend or finish the run while it is analyzing (when the provider supports it).</summary>
+    public required AnalysisControl Control { get; init; }
+
     public event EventHandler<AnalysisProgress>? Progress;
     internal void Raise(AnalysisProgress p) => Progress?.Invoke(this, p);
     public AnalysisProgress? Last { get; internal set; }
@@ -167,7 +171,7 @@ public sealed class AnalysisCoordinator(
         Warnings = ["Demo sample: these values are synthetic."],
     };
 
-    public ActiveAnalysis Start(string samplePath, StaticReport report, AnalysisOptions options, ISandboxProvider provider)
+    public ActiveAnalysis Start(string samplePath, StaticReport report, AnalysisOptions options, ISandboxProvider provider, IReadOnlyList<ReputationResult>? reputation = null)
     {
         if (Active is { Completion.IsCompleted: false }) throw new InvalidOperationException("An analysis is already running.");
         var engine = new AnalysisEngine(BuildRuleEngine());
@@ -183,11 +187,22 @@ public sealed class AnalysisCoordinator(
             Options = options,
             EngineSettings = EngineSettings.From(settings.Current.Detection),
             MaxEvents = settings.Current.Storage.MaxEventsPerAnalysis,
+            ArtifactsRoot = paths.Artifacts,
+            Inspector = new StaticWorkerInspector(this),
+            Reputation = reputation ?? [],
+            Control = new AnalysisControl(),
         };
         var task = Task.Run(() => runner.RunAsync(request, provider, progress, channel.Writer, cts.Token));
-        active = new ActiveAnalysis { FileName = report.Sample.FileName, Events = channel, Completion = task, Cancellation = cts, IsDemo = provider.IsDemo };
+        active = new ActiveAnalysis { FileName = report.Sample.FileName, Events = channel, Completion = task, Cancellation = cts, IsDemo = provider.IsDemo, Control = request.Control };
         Active = active;
         ActiveChanged?.Invoke(this, EventArgs.Empty);
         return active;
+    }
+
+    /// <summary>Dropped files and memory dumps are as hostile as the sample: they get the same out-of-process static analysis.</summary>
+    private sealed class StaticWorkerInspector(AnalysisCoordinator owner) : IArtifactInspector
+    {
+        public async Task<StaticReport?> InspectAsync(string path, string displayName, CancellationToken cancellationToken) =>
+            await owner.AnalyzeStaticAsync(path, cancellationToken).ConfigureAwait(false);
     }
 }
