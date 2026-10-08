@@ -162,7 +162,7 @@ public sealed class StixExporter : IReportExporter
                 return $"[url:value = '{Escape(value)}']";
             case IndicatorType.IpAddress when InteropData.IpFamily(value) is { } family:
                 return $"[{(family == AddressFamily.InterNetworkV6 ? "ipv6-addr" : "ipv4-addr")}:value = '{Escape(value)}']";
-            case IndicatorType.FilePath when !Redacted(value):
+            case IndicatorType.FilePath when !InteropData.IsRedacted(value):
             {
                 var path = PathRules.NormalizeFilePath(value);
                 var name = PathRules.FileName(path);
@@ -176,9 +176,9 @@ public sealed class StixExporter : IReportExporter
             {
                 // Only the name survives redaction intact.
                 var name = PathRules.FileName(value);
-                return name.Length == 0 || Redacted(name) ? null : $"[file:name = '{Escape(name)}']";
+                return name.Length == 0 || InteropData.IsRedacted(name) ? null : $"[file:name = '{Escape(name)}']";
             }
-            case IndicatorType.RegistryKey when !Redacted(value):
+            case IndicatorType.RegistryKey when !InteropData.IsRedacted(value):
             {
                 var (key, valueName) = InteropData.SplitRegistryTarget(a, value);
                 var full = InteropData.FullHive(key);
@@ -194,9 +194,6 @@ public sealed class StixExporter : IReportExporter
     /// <summary>STIX patterning string literal escaping: backslash and single quote.</summary>
     public static string Escape(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("'", "\\'", StringComparison.Ordinal);
-
-    private static bool Redacted(string value) => value.Contains("<user>", StringComparison.Ordinal)
-        || value.Contains("<machine>", StringComparison.Ordinal) || value.Contains("<sid>", StringComparison.Ordinal);
 
     private static string TypeLabel(IndicatorType type) => type switch
     {

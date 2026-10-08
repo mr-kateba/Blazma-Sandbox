@@ -67,6 +67,10 @@ internal static class InteropData
     /// <summary>Status high enough to be used for detection (blocking, alerting), not just context.</summary>
     public static bool IsActionable(IndicatorStatus status) => status >= IndicatorStatus.Suspicious;
 
+    /// <summary>The value carries a <see cref="Reporting.Redactor"/> placeholder, so it no longer matches the original exactly.</summary>
+    public static bool IsRedacted(string value) => value.Contains("<user>", StringComparison.Ordinal)
+        || value.Contains("<machine>", StringComparison.Ordinal) || value.Contains("<sid>", StringComparison.Ordinal);
+
     public static bool IsHex(string? value, int length) =>
         value is not null && value.Length == length && value.All(Uri.IsHexDigit);
 
