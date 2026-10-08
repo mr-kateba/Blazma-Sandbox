@@ -1,0 +1,282 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Blazma.App.ViewModels"
+        xmlns:svc="using:Blazma.App.Services"
+        xmlns:c="using:Blazma.App.Controls"
+        xmlns:l="using:Blazma.App.Localization"
+        x:Class="Blazma.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Blazma Sandbox"
+        Width="1360" Height="860" MinWidth="1040" MinHeight="680"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="BorderOnly"
+        Background="{DynamicResource BgBrush}"
+        Foreground="{DynamicResource TextBrush}"
+        FontFamily="{DynamicResource BodyFont}"
+        FontSize="13.5">
+
+  <Panel x:Name="Root" FlowDirection="{ReflectionBinding FlowDirection, Source={x:Static l:Loc.Instance}}">
+    <LayoutTransformControl>
+      <LayoutTransformControl.LayoutTransform>
+        <ScaleTransform ScaleX="{Binding UiScale}" ScaleY="{Binding UiScale}" />
+      </LayoutTransformControl.LayoutTransform>
+
+      <Grid RowDefinitions="46,*">
+        <!-- Title bar ........................................................ -->
+        <Grid Grid.Row="0" x:Name="TitleBar" Background="{DynamicResource SidebarBrush}" ColumnDefinitions="Auto,*,Auto,*,Auto,Auto">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" Margin="16,0" VerticalAlignment="Center">
+            <c:LogoMark Width="20" Height="20" />
+            <TextBlock Text="Blazma Sandbox" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource AccentTextBrush}" />
+          </StackPanel>
+
+          <Border Grid.Column="2" Width="460" Height="32" Classes="field" Padding="10,0" VerticalAlignment="Center">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Path Classes="icon fixed" Data="{StaticResource IconSearch}" Width="14" Height="14" />
+              <TextBox x:Name="SearchBox" Grid.Column="1" Text="{Binding Search.Query}" PlaceholderText="{l:T SearchPlaceholder}"
+                       Background="Transparent" BorderThickness="0" VerticalAlignment="Center" MinHeight="0" Padding="8,4" />
+              <Border Grid.Column="2" Classes="badge" Padding="6,0">
+                <TextBlock Classes="mono" Text="Ctrl+K" FontSize="10" Foreground="{DynamicResource FaintBrush}" />
+              </Border>
+            </Grid>
+          </Border>
+
+          <Border Grid.Column="4" Classes="badge" Margin="0,0,12,0" Padding="10,2">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Ellipse Width="7" Height="7" Fill="{DynamicResource OkBrush}" IsVisible="{Binding SandboxReady}" />
+              <Ellipse Width="7" Height="7" Fill="{DynamicResource WarnBrush}" IsVisible="{Binding !SandboxReady}" />
+              <TextBlock Text="{Binding SandboxStatus}" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" />
+            </StackPanel>
+          </Border>
+
+          <StackPanel Grid.Column="5" Orientation="Horizontal">
+            <Button Classes="chrome" x:Name="MinimizeButton" ToolTip.Tip="{l:T Minimize}">
+              <Path Classes="icon fixed" Data="M1,6 H11" Width="12" Height="12" Stretch="None" />
+            </Button>
+            <Button Classes="chrome" x:Name="MaximizeButton" ToolTip.Tip="{l:T Maximize}">
+              <Path Classes="icon fixed" Data="M1,1 H10 V10 H1 Z" Width="11" Height="11" Stretch="None" />
+            </Button>
+            <Button Classes="chrome close" x:Name="CloseButton" ToolTip.Tip="{l:T Close}">
+              <Path Classes="icon fixed" Data="{StaticResource IconClose}" Width="12" Height="12" />
+            </Button>
+          </StackPanel>
+        </Grid>
+
+        <!-- Body ............................................................. -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,1,*">
+          <!-- Sidebar -->
+          <DockPanel Grid.Column="0" Width="{Binding SidebarWidth}" Background="{DynamicResource SidebarBrush}">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="18,18,12,22">
+              <c:LogoMark Width="34" Height="34" />
+              <StackPanel VerticalAlignment="Center" IsVisible="{Binding SidebarExpanded}" FlowDirection="LeftToRight">
+                <TextBlock Text="BLAZMA" FontWeight="Bold" FontSize="14" LetterSpacing="4" Foreground="{DynamicResource AccentTextBrush}" />
+                <TextBlock Text="SANDBOX" FontSize="9.5" LetterSpacing="6" Foreground="{DynamicResource MutedBrush}" />
+              </StackPanel>
+            </StackPanel>
+
+            <StackPanel DockPanel.Dock="Bottom" Margin="14,10,14,16" Spacing="8">
+              <Border Classes="rule" Margin="0,0,0,6" />
+              <StackPanel Spacing="6" IsVisible="{Binding SidebarExpanded}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Ellipse Width="7" Height="7" Fill="{DynamicResource OkBrush}" VerticalAlignment="Center" />
+                  <TextBlock Text="{l:T SystemStatus}" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" />
+                  <TextBlock Text="{Binding SystemStatus}" FontSize="11.5" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Ellipse Width="7" Height="7" Fill="{DynamicResource OkBrush}" IsVisible="{Binding SandboxReady}" VerticalAlignment="Center" />
+                  <Ellipse Width="7" Height="7" Fill="{DynamicResource WarnBrush}" IsVisible="{Binding !SandboxReady}" VerticalAlignment="Center" />
+                  <TextBlock Text="{l:T SandboxStatusLabel}" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" />
+                </StackPanel>
+                <TextBlock Text="{Binding SandboxStatus}" FontSize="11" Foreground="{DynamicResource FaintBrush}" TextWrapping="Wrap" Margin="15,0,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
+                  <TextBlock Classes="mono" Text="{Binding Version}" FontSize="11" Foreground="{DynamicResource FaintBrush}" VerticalAlignment="Center" />
+                  <Button Classes="link" Content="GitHub" FontSize="11" Command="{Binding OpenGitHubCommand}" />
+                </StackPanel>
+              </StackPanel>
+              <Button Classes="ghost" Command="{Binding ToggleSidebarCommand}" HorizontalAlignment="Left" Padding="8,6" ToolTip.Tip="{l:T CmdToggleSidebar}">
+                <Path Classes="icon fixed" Data="{StaticResource IconMenu}" Width="16" Height="16" />
+              </Button>
+            </StackPanel>
+
+            <ItemsControl ItemsSource="{Binding Nav}" Margin="10,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:NavItem">
+                  <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding GoCommand}" Margin="0,1" ToolTip.Tip="{Binding Title}">
+                    <Grid ColumnDefinitions="3,Auto,*">
+                      <Border Classes="navbar" Width="3" CornerRadius="2" Margin="-12,2,9,2" />
+                      <Path Grid.Column="1" Classes="icon fixed" Data="{Binding IconKey, Converter={x:Static c:IconConverter.Instance}}" />
+                      <TextBlock Grid.Column="2" Text="{Binding Title}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                 IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).SidebarExpanded}" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </DockPanel>
+
+          <Border Grid.Column="1" Classes="vrule" />
+
+          <ContentControl Grid.Column="2" Classes="page" Content="{Binding CurrentPage}" />
+        </Grid>
+      </Grid>
+    </LayoutTransformControl>
+
+    <!-- Global search results ............................................... -->
+    <Border IsVisible="{Binding Search.IsOpen}" Classes="card" VerticalAlignment="Top" HorizontalAlignment="Center"
+            Width="560" MaxHeight="460" Margin="0,50,0,0" Padding="8" BoxShadow="0 18 50 0 #80000000">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="8,4,4,8">
+          <TextBlock Classes="section" Text="{l:T SearchResults}" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="ghost" Padding="6,2" Command="{Binding Search.CloseCommand}">
+            <Path Classes="icon fixed" Data="{StaticResource IconClose}" Width="12" Height="12" />
+          </Button>
+        </Grid>
+        <TextBlock DockPanel.Dock="Top" Classes="caption" Text="{l:T NoResults}" IsVisible="{Binding Search.IsEmpty}" Margin="8" />
+        <ListBox Classes="rows" ItemsSource="{Binding Search.Results}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:SearchResultRow">
+              <Button Classes="ghost" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="6,4"
+                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).Search.OpenCommand}" CommandParameter="{Binding}">
+                <Grid ColumnDefinitions="90,*">
+                  <TextBlock Classes="section" Text="{Binding Source}" VerticalAlignment="Center" FontSize="10" />
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="caption" Text="{Binding Snippet}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                    <TextBlock Classes="caption" Text="{Binding File}" FontSize="11" Foreground="{DynamicResource FaintBrush}" />
+                  </StackPanel>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <!-- Command palette ...................................................... -->
+    <Panel IsVisible="{Binding Palette.IsOpen}">
+      <Border Background="#99000000" PointerPressed="OnScrimPressed" />
+      <Border Classes="card" Width="580" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,90,0,0" Padding="10" BoxShadow="0 24 60 0 #A0000000">
+        <StackPanel Spacing="8">
+          <TextBox x:Name="PaletteBox" Text="{Binding Palette.Query}" PlaceholderText="{l:T PalettePlaceholder}" FontSize="15" />
+          <ListBox Classes="rows" ItemsSource="{Binding Palette.Items}" SelectedItem="{Binding Palette.Selected}" MaxHeight="380">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:PaletteCommand">
+                <Grid ColumnDefinitions="*,Auto" Background="Transparent" Tapped="OnPaletteItemTapped">
+                  <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Classes="mono faint" Text="{Binding Shortcut}" VerticalAlignment="Center" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <TextBlock Classes="caption" Text="{l:T PaletteHint}" Margin="4,0" />
+        </StackPanel>
+      </Border>
+    </Panel>
+
+    <!-- Onboarding ......................................................... -->
+    <Panel IsVisible="{Binding Onboarding.IsOpen}">
+      <Border Background="#CC07070A" />
+      <Border Classes="card" Width="620" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="32,28" BoxShadow="0 30 80 0 #A0000000">
+        <StackPanel Spacing="18">
+          <StackPanel Orientation="Horizontal" Spacing="14">
+            <c:LogoMark Width="44" Height="44" />
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Classes="h2" Text="{l:T WelcomeTitle}" />
+              <TextBlock Classes="caption" Text="Analyze. Observe. Understand." FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Spacing="14" IsVisible="{Binding Onboarding.IsWelcome}">
+            <TextBlock Classes="body" Text="{l:T WelcomeBody}" />
+            <TextBlock Classes="body" Text="{l:T WelcomeSafety}" Foreground="{DynamicResource MutedBrush}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Classes="caption" Text="{l:T Language}" VerticalAlignment="Center" />
+              <Button Content="English" Command="{Binding Onboarding.SetEnglishCommand}" Padding="10,4" />
+              <Button Content="العربية" Command="{Binding Onboarding.SetArabicCommand}" Padding="10,4" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+              <Button Classes="ghost" Content="{l:T Skip}" Command="{Binding Onboarding.FinishCommand}" />
+              <Button Classes="primary" Content="{l:T CheckSystem}" Command="{Binding Onboarding.RunChecksCommand}" />
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Spacing="12" IsVisible="{Binding Onboarding.IsChecks}">
+            <TextBlock Classes="section" Text="{l:T SystemCheck}" />
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding Onboarding.IsChecking}" />
+            <ItemsControl ItemsSource="{Binding Onboarding.Checks}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CheckRow">
+                  <Grid ColumnDefinitions="26,*" Margin="0,5">
+                    <TextBlock Text="✓" Foreground="{DynamicResource OkBrush}" FontWeight="Bold" IsVisible="{Binding Passed}" />
+                    <TextBlock Text="✕" Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" IsVisible="{Binding !Passed}" />
+                    <StackPanel Grid.Column="1">
+                      <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                      <TextBlock Classes="caption" Text="{Binding Detail}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Border Classes="banner" Background="{DynamicResource OkSoftBrush}" BorderBrush="{DynamicResource OkBrush}" IsVisible="{Binding Onboarding.Ready}">
+              <TextBlock Text="{l:T SystemReady}" Foreground="{DynamicResource OkBrush}" FontWeight="SemiBold" />
+            </Border>
+            <Border Classes="banner warn" IsVisible="{Binding !Onboarding.Ready}">
+              <TextBlock Classes="body" Text="{l:T SystemNotReady}" />
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+              <Button Content="{l:T TryDemo}" Command="{Binding Onboarding.TryDemoCommand}" />
+              <Button Classes="primary" Content="{l:T Continue}" Command="{Binding Onboarding.FinishCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Panel>
+
+    <!-- Dialog ............................................................. -->
+    <Panel IsVisible="{Binding Dialogs.Current, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <Border Background="#AA000000" />
+      <Border Classes="card" Width="520" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24,22"
+              DataContext="{Binding Dialogs.Current}" x:DataType="svc:DialogViewModel" BoxShadow="0 24 60 0 #A0000000">
+        <StackPanel Spacing="14">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="▲" Foreground="{DynamicResource DangerBrush}" FontSize="16" IsVisible="{Binding IsError}" VerticalAlignment="Center" />
+            <TextBlock Classes="h2" Text="{Binding Title}" TextWrapping="Wrap" />
+          </StackPanel>
+          <TextBlock Classes="caption" Text="{l:T Reason}" IsVisible="{Binding IsError}" />
+          <TextBlock Classes="body" Text="{Binding Message}" />
+          <Button Classes="link" Content="{Binding DetailsLabel}" IsVisible="{Binding HasDetails}" Command="{Binding ToggleDetailsCommand}" />
+          <Border Classes="field" IsVisible="{Binding ShowDetails}">
+            <SelectableTextBlock Classes="mono" Text="{Binding Details}" TextWrapping="Wrap" FlowDirection="LeftToRight" />
+          </Border>
+          <ItemsControl ItemsSource="{Binding Buttons}" HorizontalAlignment="Right">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="svc:DialogButton">
+                <Button Content="{Binding Label}" Classes.primary="{Binding Primary}" Classes.danger="{Binding Danger}"
+                        Command="{Binding $parent[Border].((svc:DialogViewModel)DataContext).ChooseCommand}" CommandParameter="{Binding Result}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </Panel>
+
+    <!-- Toasts ............................................................. -->
+    <ItemsControl ItemsSource="{Binding Toasts.Items}" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="20" Width="340">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="svc:Toast">
+          <Border Classes="card" Padding="14,10" Margin="0,8,0,0" BoxShadow="0 10 30 0 #80000000">
+            <Grid ColumnDefinitions="24,*">
+              <TextBlock Text="{Binding Glyph}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="Bold" />
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Classes="caption" Text="{Binding Message}" IsVisible="{Binding HasMessage}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </Panel>
+</Window>

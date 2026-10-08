@@ -1,0 +1,735 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:c="using:Blazma.App.Controls"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.ReportView" x:DataType="vm:ReportViewModel">
+  <UserControl.Styles>
+    <Style Selector="Grid.row.highlight">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    </Style>
+    <Style Selector="TreeViewItem" x:DataType="vm:ProcessItem">
+      <Setter Property="IsExpanded" Value="{Binding IsExpanded}" />
+    </Style>
+    <Style Selector="TextBlock.th">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Panel>
+    <Border IsVisible="{Binding IsLoading}" Classes="card" HorizontalAlignment="Center" VerticalAlignment="Center" Width="320">
+      <StackPanel Spacing="10"><TextBlock Text="{l:T LoadingReport}" /><ProgressBar IsIndeterminate="True" /></StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
+      <DockPanel Margin="30,22,30,16">
+        <!-- Header -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
+          <Button Classes="ghost" Command="{Binding BackCommand}" Padding="6" Margin="0,0,10,0" VerticalAlignment="Top" ToolTip.Tip="{l:T NavHistory}">
+            <Path Classes="icon" Data="M15,6 L9,12 L15,18" Width="16" Height="16" />
+          </Button>
+          <StackPanel Grid.Column="1" Spacing="4">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <TextBlock Classes="h1" Text="{Binding FileName}" FlowDirection="LeftToRight" />
+              <c:RiskBadge Verdict="{Binding Verdict}" Large="True" />
+              <Border Classes="badge banner demo" IsVisible="{Binding IsDemo}"><TextBlock Text="DEMO" Foreground="#FFB066" /></Border>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <SelectableTextBlock Classes="mono faint" Text="{Binding Sha256}" FlowDirection="LeftToRight" />
+              <Button Classes="link" Command="{Binding CopyHashCommand}" ToolTip.Tip="{l:T Copy}">
+                <Path Classes="icon fixed" Data="{StaticResource IconCopy}" Width="13" Height="13" />
+              </Button>
+            </StackPanel>
+            <TextBlock Classes="caption" Text="{Binding MetaLine}" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+            <Button Content="{l:T Compare}" Command="{Binding CompareCommand}" />
+            <Button Content="{l:T ExportIoc}" Command="{Binding ExportIndicatorsCommand}" />
+            <Button Content="JSON" Command="{Binding ExportJsonCommand}" />
+            <Button Classes="primary" Command="{Binding ExportHtmlCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Path Classes="icon fixed" Data="{StaticResource IconExport}" Stroke="{DynamicResource OnAccentBrush}" Width="14" Height="14" />
+                <TextBlock Text="{l:T ExportHtml}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+
+        <StackPanel DockPanel.Dock="Top" Spacing="8">
+          <Border Classes="banner demo" IsVisible="{Binding IsDemo}"><TextBlock Text="{l:T DemoReportBanner}" Foreground="#FFB066" TextWrapping="Wrap" /></Border>
+          <Border Classes="banner warn" IsVisible="{Binding MonitoringInterrupted}"><TextBlock Text="{l:T MonitoringInterruptedBanner}" TextWrapping="Wrap" /></Border>
+          <Border Classes="banner danger" IsVisible="{Binding IsFailed}"><TextBlock Text="{Binding FailureReason}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" /></Border>
+        </StackPanel>
+
+        <TabControl SelectedIndex="{Binding SelectedTab}">
+          <!-- 0 Overview ............................................................ -->
+          <TabItem Header="{l:T TabOverview}">
+            <ScrollViewer>
+              <StackPanel Spacing="18" Margin="0,4,8,20">
+                <Grid ColumnDefinitions="300,18,*">
+                  <Border Classes="card" Padding="20">
+                    <StackPanel Spacing="12" HorizontalAlignment="Center">
+                      <Panel Width="190" Height="190">
+                        <c:ScoreRing Value="{Binding Score}" Verdict="{Binding Verdict}" Thickness="12" />
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Score}" FontFamily="{DynamicResource MonoFont}" FontSize="56" FontWeight="Medium" HorizontalAlignment="Center" />
+                          <Border Classes="rule" Width="60" />
+                          <TextBlock Classes="mono faint" Text="100" HorizontalAlignment="Center" FontSize="14" />
+                        </StackPanel>
+                      </Panel>
+                      <TextBlock Text="{Binding VerdictText}" FontWeight="Bold" LetterSpacing="2" HorizontalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="{Binding Disclaimer}" TextAlignment="Center" MaxWidth="250" />
+                    </StackPanel>
+                  </Border>
+                  <Border Grid.Column="2" Classes="card">
+                    <ItemsControl ItemsSource="{Binding Summary}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SummaryRow">
+                          <Grid ColumnDefinitions="190,*,Auto" Margin="0,7">
+                            <TextBlock Classes="muted" Text="{Binding Label}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <c:RiskBadge Grid.Column="2" Severity="{Binding Level}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Border>
+                </Grid>
+
+                <TextBlock Classes="caption" Text="{Binding NoiseNote}" IsVisible="{Binding HasNoiseNote}" />
+
+                <TextBlock Classes="section" Text="{l:T WhyScore}" />
+                <Border Classes="card">
+                  <StackPanel>
+                    <TextBlock Classes="caption" Text="{l:T NoFindings}" IsVisible="{Binding HasNoFindings}" />
+                    <ItemsControl ItemsSource="{Binding Contributions}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ContributionRow">
+                          <Grid ColumnDefinitions="60,*" Margin="0,5">
+                            <TextBlock Classes="mono" Text="{Binding Points}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="14" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                              <TextBlock Text="{Binding Title}" FontSize="14" />
+                              <TextBlock Classes="caption" Text="{l:T Capped}" IsVisible="{Binding Capped}" VerticalAlignment="Center" />
+                            </StackPanel>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+
+                <TextBlock Classes="section" Text="{l:T ImportantFindings}" IsVisible="{Binding HasFindings}" />
+                <ItemsControl ItemsSource="{Binding Findings}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FindingItem">
+                      <Border Classes="card clickable" Margin="0,0,0,8" Tapped="OnFindingTapped">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Spacing="6">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                              <c:RiskBadge Severity="{Binding Severity}" />
+                              <TextBlock Classes="h3" Text="{Binding Title}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Classes="body muted" Text="{Binding Explanation}" />
+                            <StackPanel Orientation="Horizontal" Spacing="14">
+                              <TextBlock Classes="mono faint" Text="{Binding RuleId}" FontSize="11" />
+                              <TextBlock Classes="mono faint" Text="{Binding Attack}" FontSize="11" IsVisible="{Binding HasAttack}" />
+                              <TextBlock Classes="faint" Text="{Binding Provenance}" FontSize="11" />
+                            </StackPanel>
+                          </StackPanel>
+                          <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Points}" FontSize="18" Foreground="{DynamicResource AccentTextBrush}" VerticalAlignment="Center" Margin="16,0,0,0" FlowDirection="LeftToRight" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Classes="section" Text="{l:T BehaviorChains}" IsVisible="{Binding HasChains}" />
+                <ItemsControl ItemsSource="{Binding Chains}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ChainItem">
+                      <Border Classes="card" Margin="0,0,0,8">
+                        <StackPanel Spacing="8">
+                          <StackPanel Orientation="Horizontal" Spacing="10">
+                            <c:RiskBadge Severity="{Binding Severity}" />
+                            <TextBlock Classes="h3" Text="{Binding Title}" VerticalAlignment="Center" />
+                          </StackPanel>
+                          <ItemsControl ItemsSource="{Binding Steps}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:ChainStepRow">
+                                <StackPanel>
+                                  <Grid ColumnDefinitions="110,*,Auto">
+                                    <TextBlock Classes="section" Text="{Binding Kind}" FontSize="10" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Classes="mono" Text="{Binding Text}" TextWrapping="Wrap" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                                    <TextBlock Grid.Column="2" Classes="mono faint" Text="{Binding Time}" FontSize="11" />
+                                  </Grid>
+                                  <TextBlock Text="↓" Foreground="{DynamicResource FaintBrush}" Margin="40,0,0,0" IsVisible="{Binding ShowArrow}" />
+                                </StackPanel>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <!-- 1 Timeline ............................................................ -->
+          <TabItem Header="{l:T TabTimeline}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,10">
+                <ItemsControl ItemsSource="{Binding CategoryChips}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FilterChip">
+                      <ToggleButton Classes="chip" Content="{Binding Label}" IsChecked="{Binding IsChecked}" Margin="0,0,8,0" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid ColumnDefinitions="*,10,170,10,170,10,90,6,90,10,Auto">
+                  <TextBox Text="{Binding TimelineSearch}" PlaceholderText="{l:T FilterText}" />
+                  <ComboBox Grid.Column="2" ItemsSource="{Binding SeverityOptions}" SelectedItem="{Binding MinSeverity}" MinWidth="0" HorizontalAlignment="Stretch" />
+                  <ComboBox Grid.Column="4" ItemsSource="{Binding ProcessNames}" SelectedItem="{Binding ProcessFilter}" MinWidth="0" HorizontalAlignment="Stretch" />
+                  <TextBox Grid.Column="6" Text="{Binding FromSeconds}" PlaceholderText="{l:T FromSec}" />
+                  <TextBox Grid.Column="8" Text="{Binding ToSeconds}" PlaceholderText="{l:T ToSec}" />
+                  <Button Grid.Column="10" Content="{l:T ClearHighlight}" Command="{Binding ClearHighlightCommand}" />
+                </Grid>
+                <TextBlock Classes="caption" Text="{Binding TimelineCount}" />
+              </StackPanel>
+              <Border Classes="card" Padding="4">
+                <DockPanel>
+                  <Grid DockPanel.Dock="Top" ColumnDefinitions="92,96,150,70,140,*" Margin="12,6" FlowDirection="LeftToRight">
+                    <TextBlock Classes="th" Text="{l:T Time}" />
+                    <TextBlock Grid.Column="1" Classes="th" Text="{l:T Category}" />
+                    <TextBlock Grid.Column="2" Classes="th" Text="{l:T Process}" />
+                    <TextBlock Grid.Column="3" Classes="th" Text="PID" />
+                    <TextBlock Grid.Column="4" Classes="th" Text="{l:T Action}" />
+                    <TextBlock Grid.Column="5" Classes="th" Text="{l:T Target}" />
+                  </Grid>
+                  <ListBox x:Name="TimelineList" Classes="rows dense" ItemsSource="{Binding Timeline}" FlowDirection="LeftToRight">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TimelineRow">
+                        <Grid Classes="row" Classes.highlight="{Binding Highlight}" ColumnDefinitions="92,96,150,70,140,*">
+                          <TextBlock Classes="mono faint" Text="{Binding Time}" />
+                          <TextBlock Grid.Column="1" Classes="mono accent" Text="{Binding Category}" FontSize="11" />
+                          <TextBlock Grid.Column="2" Text="{Binding Process}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="3" Classes="mono faint" Text="{Binding Pid}" />
+                          <TextBlock Grid.Column="4" Classes="muted" Text="{Binding Action}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="5" Classes="mono" Text="{Binding Target}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Target}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </DockPanel>
+              </Border>
+            </DockPanel>
+          </TabItem>
+
+          <!-- 2 Processes ........................................................... -->
+          <TabItem Header="{l:T TabProcesses}">
+            <Grid ColumnDefinitions="380,16,*">
+              <Border Classes="card" Padding="8">
+                <DockPanel>
+                  <CheckBox DockPanel.Dock="Top" Content="{l:T ShowBackground}" IsChecked="{Binding ShowBackgroundProcesses}" Margin="8,0,0,8" />
+                  <TreeView ItemsSource="{Binding ProcessRoots}" SelectedItem="{Binding SelectedProcess}">
+                    <TreeView.ItemTemplate>
+                      <TreeDataTemplate x:DataType="vm:ProcessItem" ItemsSource="{Binding Children}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Classes.muted="{Binding IsBackground}" />
+                          <TextBlock Classes="mono faint" Text="{Binding Pid}" FontSize="11" VerticalAlignment="Center" />
+                          <Border Classes="badge" BorderBrush="{DynamicResource AccentBrush}" Padding="6,0" IsVisible="{Binding IsSample}">
+                            <TextBlock Text="{l:T SampleTag}" Foreground="{DynamicResource AccentTextBrush}" FontSize="10" />
+                          </Border>
+                          <Border Classes="badge" BorderBrush="{DynamicResource WarnBrush}" Padding="6,0" IsVisible="{Binding IsDropped}">
+                            <TextBlock Text="{l:T DroppedTag}" Foreground="{DynamicResource WarnBrush}" FontSize="10" />
+                          </Border>
+                        </StackPanel>
+                      </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                  </TreeView>
+                </DockPanel>
+              </Border>
+              <Border Grid.Column="2" Classes="card" IsVisible="{Binding HasProcessSelected}">
+                <DockPanel>
+                  <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                    <TextBlock Classes="h2" Text="{Binding SelectedProcess.Name}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                    <Button Grid.Column="1" Content="{l:T ShowInTimeline}" Command="{Binding ProcessInTimelineCommand}" />
+                  </Grid>
+                  <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding ProcessDetails}" Margin="0,0,0,12">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:DetailRow">
+                        <Grid ColumnDefinitions="150,*" Margin="0,3">
+                          <TextBlock Classes="caption" Text="{Binding Label}" />
+                          <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock DockPanel.Dock="Top" Classes="section" Text="{l:T RelatedEvents}" Margin="0,0,0,6" />
+                  <ListBox Classes="rows dense" ItemsSource="{Binding ProcessActivity}" FlowDirection="LeftToRight">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TimelineRow">
+                        <Grid ColumnDefinitions="92,140,*">
+                          <TextBlock Classes="mono faint" Text="{Binding Time}" />
+                          <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Action}" />
+                          <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </DockPanel>
+              </Border>
+            </Grid>
+          </TabItem>
+
+          <!-- 3 Files ................................................................ -->
+          <TabItem Header="{l:T TabFiles}">
+            <DockPanel>
+              <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" Margin="0,0,0,10">
+                <ItemsControl ItemsSource="{Binding FileChips}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FilterChip">
+                      <ToggleButton Classes="chip" Content="{Binding Label}" IsChecked="{Binding IsChecked}" Margin="0,0,8,0" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBox Grid.Column="1" Text="{Binding FileSearch}" PlaceholderText="{l:T FilterText}" />
+              </Grid>
+              <Border Classes="card" Padding="4">
+                <ListBox Classes="rows dense" ItemsSource="{Binding Files}" FlowDirection="LeftToRight">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FileRow">
+                      <Grid ColumnDefinitions="92,110,150,*,60,190">
+                        <TextBlock Classes="mono faint" Text="{Binding Time}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Action}" Foreground="{DynamicResource AccentTextBrush}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Process}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                        <TextBlock Grid.Column="4" Classes="mono faint" Text="{Binding Type}" />
+                        <TextBlock Grid.Column="5" Classes="mono faint" Text="{Binding Extra}" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Border>
+            </DockPanel>
+          </TabItem>
+
+          <!-- 4 Registry ............................................................. -->
+          <TabItem Header="{l:T TabRegistry}">
+            <DockPanel>
+              <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                <TextBox Text="{Binding RegistrySearch}" PlaceholderText="{l:T FilterText}" />
+                <CheckBox Grid.Column="1" Content="{l:T PersistenceOnly}" IsChecked="{Binding RegistryPersistenceOnly}" Margin="12,0,0,0" />
+              </Grid>
+              <Border Classes="card" Padding="4">
+                <ListBox Classes="rows" ItemsSource="{Binding Registry}" FlowDirection="LeftToRight">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RegistryRow">
+                      <Grid ColumnDefinitions="92,130,150,*">
+                        <TextBlock Classes="mono faint" Text="{Binding Time}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Action}" Foreground="{DynamicResource AccentTextBrush}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Process}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Grid.Column="3" Spacing="2">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Classes="badge" BorderBrush="{DynamicResource WarnBrush}" Padding="6,0" IsVisible="{Binding Sensitive}">
+                              <TextBlock Text="{l:T PersistenceRelated}" Foreground="{DynamicResource WarnBrush}" FontSize="10" />
+                            </Border>
+                            <TextBlock Classes="mono" Text="{Binding Key}" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <TextBlock Classes="mono muted" Text="{Binding ValueLine}" IsVisible="{Binding HasValue}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Border>
+            </DockPanel>
+          </TabItem>
+
+          <!-- 5 Network ............................................................. -->
+          <TabItem Header="{l:T TabNetwork}">
+            <ScrollViewer>
+              <StackPanel Spacing="16" Margin="0,0,8,16">
+                <Border Classes="banner" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource RuleBrush}">
+                  <TextBlock Classes="caption" Text="{l:T NetworkMetadataNote}" />
+                </Border>
+                <TextBlock Classes="caption" Text="{l:T NoNetwork}" IsVisible="{Binding HasNoNetwork}" />
+                <Grid ColumnDefinitions="*,16,*">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="section" Text="{l:T ProcessDomainMap}" />
+                    <Border Classes="card">
+                      <ItemsControl ItemsSource="{Binding NetworkTree}" FlowDirection="LeftToRight">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:NetworkTreeNode">
+                            <StackPanel Margin="0,4">
+                              <TextBlock Text="{Binding Text}" FontWeight="SemiBold" />
+                              <ItemsControl ItemsSource="{Binding Children}" Margin="18,2,0,0">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:NetworkTreeNode">
+                                    <StackPanel Margin="0,3">
+                                      <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="└─" Foreground="{DynamicResource FaintBrush}" />
+                                        <TextBlock Classes="mono" Text="{Binding Text}" Foreground="{DynamicResource AccentTextBrush}" />
+                                        <TextBlock Classes="caption" Text="{Binding Sub}" />
+                                      </StackPanel>
+                                      <ItemsControl ItemsSource="{Binding Children}" Margin="26,0,0,0">
+                                        <ItemsControl.ItemTemplate>
+                                          <DataTemplate x:DataType="vm:NetworkTreeNode">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                              <TextBlock Text="└─" Foreground="{DynamicResource FaintBrush}" />
+                                              <TextBlock Classes="mono" Text="{Binding Text}" />
+                                            </StackPanel>
+                                          </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                      </ItemsControl>
+                                    </StackPanel>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Spacing="8">
+                    <TextBlock Classes="section" Text="{l:T DnsRequests}" />
+                    <Border Classes="card" Padding="6">
+                      <ItemsControl ItemsSource="{Binding Dns}" FlowDirection="LeftToRight">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:DnsRow">
+                            <Grid ColumnDefinitions="88,*,130" Margin="8,4">
+                              <TextBlock Classes="mono faint" Text="{Binding Time}" />
+                              <StackPanel Grid.Column="1">
+                                <TextBlock Classes="mono" Text="{Binding Domain}" />
+                                <TextBlock Classes="caption" Text="{Binding Result}" />
+                              </StackPanel>
+                              <TextBlock Grid.Column="2" Text="{Binding Process}" Classes="muted" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                  </StackPanel>
+                </Grid>
+                <TextBlock Classes="section" Text="{l:T Connections}" />
+                <Border Classes="card" Padding="6">
+                  <StackPanel FlowDirection="LeftToRight">
+                    <Grid ColumnDefinitions="88,150,160,70,70,*,120" Margin="8,4">
+                      <TextBlock Classes="th" Text="{l:T Time}" />
+                      <TextBlock Grid.Column="1" Classes="th" Text="{l:T Process}" />
+                      <TextBlock Grid.Column="2" Classes="th" Text="IP" />
+                      <TextBlock Grid.Column="3" Classes="th" Text="{l:T Port}" />
+                      <TextBlock Grid.Column="4" Classes="th" Text="{l:T Protocol}" />
+                      <TextBlock Grid.Column="5" Classes="th" Text="{l:T Domain}" />
+                      <TextBlock Grid.Column="6" Classes="th" Text="{l:T Bytes}" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Connections}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ConnectionRow">
+                          <Grid ColumnDefinitions="88,150,160,70,70,*,120" Margin="8,4">
+                            <TextBlock Classes="mono faint" Text="{Binding Time}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Process}" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Address}" />
+                            <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Port}" />
+                            <TextBlock Grid.Column="4" Classes="muted" Text="{Binding Protocol}" />
+                            <TextBlock Grid.Column="5" Classes="mono" Text="{Binding Domain}" Foreground="{DynamicResource AccentTextBrush}" />
+                            <TextBlock Grid.Column="6" Classes="mono faint" Text="{Binding Bytes}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <!-- 6 Persistence ......................................................... -->
+          <TabItem Header="{l:T TabPersistence}">
+            <ScrollViewer>
+              <StackPanel Spacing="10" Margin="0,0,8,16">
+                <Border Classes="card" IsVisible="{Binding HasNoPersistence}"><TextBlock Text="{l:T NoPersistence}" Classes="muted" /></Border>
+                <ItemsControl ItemsSource="{Binding Persistence}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PersistenceItem">
+                      <Border Classes="card" Margin="0,0,0,10">
+                        <StackPanel Spacing="8">
+                          <Grid ColumnDefinitions="Auto,*,Auto">
+                            <c:RiskBadge Severity="{Binding Severity}" />
+                            <TextBlock Grid.Column="1" Classes="h3" Text="{Binding Title}" Margin="10,0" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Classes="mono faint" Text="{Binding Time}" />
+                          </Grid>
+                          <TextBlock Classes="body" Text="{Binding Explanation}" />
+                          <TextBlock Classes="section" Text="{l:T TechnicalDetails}" FontSize="10" />
+                          <Border Classes="field">
+                            <StackPanel FlowDirection="LeftToRight">
+                              <SelectableTextBlock Classes="mono" Text="{Binding Target}" TextWrapping="Wrap" />
+                              <SelectableTextBlock Classes="mono muted" Text="{Binding Value}" TextWrapping="Wrap" IsVisible="{Binding HasValue}" />
+                            </StackPanel>
+                          </Border>
+                          <StackPanel Orientation="Horizontal" Spacing="16">
+                            <TextBlock Classes="caption" Text="{Binding Process}" />
+                            <TextBlock Classes="caption" Text="{Binding Attribution}" />
+                            <TextBlock Classes="caption" Text="{l:T PointsToDropped}" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding PointsToDrop}" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <!-- 7 Indicators .......................................................... -->
+          <TabItem Header="{l:T TabIndicators}">
+            <ScrollViewer>
+              <StackPanel Spacing="12" Margin="0,0,8,16">
+                <TextBlock Classes="caption" Text="{l:T IndicatorsNote}" />
+                <ItemsControl ItemsSource="{Binding Indicators}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:IndicatorGroup">
+                      <StackPanel Spacing="6" Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <TextBlock Classes="section" Text="{Binding Title}" />
+                          <TextBlock Classes="mono faint" Text="{Binding Count}" FontSize="11" />
+                        </StackPanel>
+                        <Border Classes="card" Padding="6">
+                          <ItemsControl ItemsSource="{Binding Items}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:IndicatorItem">
+                                <Grid ColumnDefinitions="*,160,140,Auto" Margin="8,4">
+                                  <SelectableTextBlock Classes="mono" Text="{Binding Value}" TextWrapping="Wrap" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                                  <c:RiskBadge Grid.Column="1" Status="{Binding Status}" />
+                                  <TextBlock Grid.Column="2" Classes="caption" Text="{Binding Source}" VerticalAlignment="Center" />
+                                  <Button Grid.Column="3" Classes="ghost" Padding="6,2" ToolTip.Tip="{l:T Copy}"
+                                          Command="{Binding $parent[UserControl].((vm:ReportViewModel)DataContext).CopyValueCommand}" CommandParameter="{Binding Value}">
+                                    <Path Classes="icon fixed" Data="{StaticResource IconCopy}" Width="12" Height="12" />
+                                  </Button>
+                                </Grid>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </Border>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <!-- 8 System changes ...................................................... -->
+          <TabItem Header="{l:T TabChanges}">
+            <ScrollViewer>
+              <StackPanel Spacing="14" Margin="0,0,8,16">
+                <Border Classes="card" IsVisible="{Binding HasNoChanges}"><TextBlock Classes="muted" Text="{l:T NoSnapshot}" /></Border>
+                <ItemsControl ItemsSource="{Binding ChangeTiles}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="5" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ChangeTile">
+                      <Border Classes="card" Margin="0,0,10,0">
+                        <StackPanel Spacing="3">
+                          <TextBlock Classes="section" Text="{Binding Title}" />
+                          <TextBlock Classes="mono" Text="{Binding Line1}" FontSize="14" Foreground="{DynamicResource OkBrush}" />
+                          <TextBlock Classes="mono" Text="{Binding Line2}" FontSize="14" Foreground="{DynamicResource WarnBrush}" />
+                          <TextBlock Classes="mono" Text="{Binding Line3}" FontSize="14" Foreground="{DynamicResource DangerBrush}" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding ChangeGroups}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ChangeGroup">
+                      <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch">
+                        <Expander.Header>
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                            <TextBlock Classes="mono faint" Text="{Binding Count}" />
+                          </StackPanel>
+                        </Expander.Header>
+                        <ItemsControl ItemsSource="{Binding Lines}" FlowDirection="LeftToRight">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String"><SelectableTextBlock Classes="mono" Text="{Binding}" TextWrapping="Wrap" Margin="0,2" /></DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </Expander>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <!-- 9 Raw events .......................................................... -->
+          <TabItem Header="{l:T TabRaw}">
+            <DockPanel>
+              <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                <TextBlock Classes="caption" Text="{l:T RawNote}" VerticalAlignment="Center" />
+                <Button Grid.Column="1" Content="{l:T LoadMore}" Command="{Binding LoadMoreRawCommand}" IsVisible="{Binding HasMoreRaw}" />
+              </Grid>
+              <Border Classes="card" Padding="4">
+                <ListBox Classes="rows dense" ItemsSource="{Binding RawEvents}" FlowDirection="LeftToRight">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TimelineRow">
+                      <Grid ColumnDefinitions="70,92,170,90,150,*">
+                        <TextBlock Classes="mono faint" Text="{Binding Sequence}" />
+                        <TextBlock Grid.Column="1" Classes="mono faint" Text="{Binding Time}" />
+                        <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Event.Action}" />
+                        <TextBlock Grid.Column="3" Classes="mono" Text="{Binding Pid}" />
+                        <TextBlock Grid.Column="4" Classes="mono" Text="{Binding Process}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="5" Classes="mono muted" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Border>
+            </DockPanel>
+          </TabItem>
+
+          <!-- 10 Ask Blazma / AI .................................................... -->
+          <TabItem Header="{l:T TabAsk}">
+            <Grid ColumnDefinitions="*,16,300">
+              <Border Classes="card">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Bottom" Spacing="10" Margin="0,10,0,0">
+                    <ItemsControl ItemsSource="{Binding Suggestions}">
+                      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                          <Button Classes="ghost" Content="{Binding}" Margin="0,0,6,6" BorderThickness="1" BorderBrush="{DynamicResource RuleStrongBrush}" CornerRadius="999" Padding="12,4" FontSize="12"
+                                  Command="{Binding $parent[UserControl].((vm:ReportViewModel)DataContext).AskCommand}" CommandParameter="{Binding}" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBox x:Name="AskBox" Text="{Binding Question}" PlaceholderText="{l:T AskPlaceholder}" KeyDown="OnAskKeyDown" />
+                      <Button Grid.Column="1" Classes="primary" Content="{l:T Ask}" Command="{Binding AskCommand}" Margin="8,0,0,0" />
+                    </Grid>
+                  </StackPanel>
+                  <ScrollViewer x:Name="ChatScroll">
+                    <StackPanel Spacing="12">
+                      <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Path Classes="icon" Data="{StaticResource IconChat}" Stroke="{DynamicResource AccentTextBrush}" />
+                        <TextBlock Classes="h3" Text="Ask Blazma" FlowDirection="LeftToRight" />
+                      </StackPanel>
+                      <TextBlock Classes="caption" Text="{l:T AskIntro}" />
+                      <ItemsControl ItemsSource="{Binding Chat}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:ChatMessage">
+                            <StackPanel Margin="0,6">
+                              <Border IsVisible="{Binding FromUser}" HorizontalAlignment="Right" Background="{DynamicResource AccentSoftBrush}" CornerRadius="10" Padding="12,8" MaxWidth="560">
+                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                              </Border>
+                              <ItemsControl IsVisible="{Binding !FromUser}" ItemsSource="{Binding Parts}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:ChatPart">
+                                    <Border Classes="field" Margin="0,0,0,6" Padding="12,10">
+                                      <StackPanel Spacing="6">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                          <Border Classes="badge" Padding="6,0" BorderBrush="{DynamicResource OkBrush}" IsVisible="{Binding !IsInference}">
+                                            <TextBlock Text="{Binding Label}" Foreground="{DynamicResource OkBrush}" FontSize="10" />
+                                          </Border>
+                                          <Border Classes="badge" Padding="6,0" BorderBrush="{DynamicResource AccentBrush}" IsVisible="{Binding IsInference}">
+                                            <TextBlock Text="{Binding Label}" Foreground="{DynamicResource AccentTextBrush}" FontSize="10" />
+                                          </Border>
+                                          <Button Classes="link" Content="{Binding Citation}" FontSize="11" IsVisible="{Binding HasCitation}"
+                                                  Command="{Binding $parent[UserControl].((vm:ReportViewModel)DataContext).PartInTimelineCommand}" CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                        <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" LineHeight="21" />
+                                      </StackPanel>
+                                    </Border>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </ScrollViewer>
+                </DockPanel>
+              </Border>
+              <StackPanel Grid.Column="2" Spacing="12">
+                <Border Classes="card">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="section" Text="{l:T HowAnswered}" />
+                    <TextBlock Classes="caption" Text="{l:T HowAnsweredBody}" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="card">
+                  <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Classes="section" Text="{l:T LocalAi}" />
+                      <Border Classes="badge" Padding="6,0"><TextBlock Text="{l:T Planned}" Foreground="{DynamicResource MutedBrush}" FontSize="10" /></Border>
+                    </StackPanel>
+                    <TextBlock Classes="caption" Text="{l:T LocalAiBody}" />
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </Grid>
+          </TabItem>
+        </TabControl>
+      </DockPanel>
+
+      <!-- Finding side panel ........................................................ -->
+      <Border Grid.Column="1" Width="400" IsVisible="{Binding HasFindingSelected}" Background="{DynamicResource SidebarBrush}"
+              BorderBrush="{DynamicResource RuleBrush}" BorderThickness="1,0,0,0">
+        <ScrollViewer>
+          <StackPanel Margin="22,22,22,22" Spacing="14" DataContext="{Binding SelectedFinding}" x:DataType="vm:FindingItem">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="section" Text="{l:T FindingDetails}" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="ghost" Padding="6" Command="{Binding $parent[UserControl].((vm:ReportViewModel)DataContext).CloseFindingCommand}">
+                <Path Classes="icon fixed" Data="{StaticResource IconClose}" Width="12" Height="12" />
+              </Button>
+            </Grid>
+            <TextBlock Classes="h2" Text="{Binding Title}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+              <TextBlock Classes="caption" Text="{l:T Severity}" />
+              <c:RiskBadge Grid.Column="1" Severity="{Binding Severity}" />
+              <TextBlock Grid.Row="1" Classes="caption" Text="{l:T Detected}" Margin="0,8,0,0" />
+              <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding FirstSeen}" Margin="0,8,0,0" />
+              <TextBlock Grid.Row="2" Classes="caption" Text="{l:T Category}" Margin="0,8,0,0" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Category}" Margin="0,8,0,0" />
+              <TextBlock Grid.Row="3" Classes="caption" Text="{l:T Score}" Margin="0,8,0,0" />
+              <TextBlock Grid.Row="3" Grid.Column="1" Classes="mono" Text="{Binding Points}" Margin="0,8,0,0" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+              <TextBlock Grid.Row="4" Classes="caption" Text="{l:T Source}" Margin="0,8,0,0" />
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Provenance}" Margin="0,8,0,0" />
+            </Grid>
+            <TextBlock Classes="section" Text="{l:T Description}" />
+            <TextBlock Classes="body" Text="{Binding Explanation}" />
+            <TextBlock Classes="section" Text="{l:T Evidence}" />
+            <ItemsControl ItemsSource="{Binding Evidence}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:EvidenceRow">
+                  <Border Classes="field" Margin="0,0,0,8">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                      <SelectableTextBlock Classes="mono muted" Text="{Binding Technical}" TextWrapping="Wrap" IsVisible="{Binding HasTechnical}" FlowDirection="LeftToRight" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <TextBlock Classes="caption" Text="{l:T RelatedEvents}" />
+              <TextBlock Classes="mono" Text="{Binding RelatedEvents}" />
+              <TextBlock Classes="caption" Text="{l:T RelatedProcesses}" />
+              <TextBlock Classes="mono" Text="{Binding RelatedProcesses}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="primary" Content="{l:T ShowInTimeline}" Command="{Binding $parent[UserControl].((vm:ReportViewModel)DataContext).FindingInTimelineCommand}" />
+              <Button Content="{l:T ShowProcess}" Command="{Binding $parent[UserControl].((vm:ReportViewModel)DataContext).FindingProcessCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+  </Panel>
+</UserControl>

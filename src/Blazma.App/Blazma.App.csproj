@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The desktop UI (Avalonia, like Blazma Crosshair). It only orchestrates: analysis,
+    storage, reporting and sandbox code live in their own projects and are injected.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>Blazma.App</RootNamespace>
+    <AssemblyName>BlazmaSandbox</AssemblyName>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <NoWarn>$(NoWarn);CA1416;CA2000;CA1001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <EmbeddedResource Include="Localization\*.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Blazma.Core\Blazma.Core.csproj" />
+    <ProjectReference Include="..\Blazma.Analysis\Blazma.Analysis.csproj" />
+    <ProjectReference Include="..\Blazma.Storage\Blazma.Storage.csproj" />
+    <ProjectReference Include="..\Blazma.Reporting\Blazma.Reporting.csproj" />
+    <ProjectReference Include="..\Blazma.Intelligence\Blazma.Intelligence.csproj" />
+    <ProjectReference Include="..\Blazma.Sandbox\Blazma.Sandbox.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Blazma.App.Tests" />
+    <InternalsVisibleTo Include="Blazma.Screenshots" />
+  </ItemGroup>
+</Project>

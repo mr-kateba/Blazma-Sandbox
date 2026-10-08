@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:c="using:Blazma.App.Controls"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.DashboardView" x:DataType="vm:DashboardViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="36,30,36,36" Spacing="24" MaxWidth="1180">
+      <!-- Header -->
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="h1" Text="Blazma Sandbox" FontSize="30" />
+          <TextBlock Text="Analyze. Observe. Understand." FontSize="15" Foreground="{DynamicResource MutedBrush}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Button Content="{l:T TryDemo}" Command="{Binding TryDemoCommand}" ToolTip.Tip="{l:T TryDemoTip}" />
+          <Button Classes="primary" Command="{Binding SelectFileCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Classes="icon fixed" Data="{StaticResource IconUpload}" Stroke="{DynamicResource OnAccentBrush}" Width="15" Height="15" />
+              <TextBlock Text="{l:T AnalyzeFile}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <!-- Drop zone -->
+      <Border x:Name="DropZone" CornerRadius="14" BorderThickness="1.5" Padding="30,38"
+              BorderBrush="{DynamicResource RuleStrongBrush}" Background="{DynamicResource FieldBrush}"
+              Classes.drag="{Binding IsDragOver}" DragDrop.AllowDrop="True">
+        <Border.Styles>
+          <Style Selector="Border.drag">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+          </Style>
+        </Border.Styles>
+        <StackPanel HorizontalAlignment="Center" Spacing="10">
+          <Border Width="56" Height="56" CornerRadius="28" BorderThickness="1" BorderBrush="{DynamicResource AccentBrush}" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Center">
+            <Path Classes="icon fixed" Data="{StaticResource IconUpload}" Stroke="{DynamicResource AccentTextBrush}" Width="22" Height="22" />
+          </Border>
+          <TextBlock Classes="h2" Text="{l:T DropTitle}" HorizontalAlignment="Center" />
+          <TextBlock Classes="mono faint" Text="EXE • MSI • DLL • PS1 • BAT • VBS • JS • LNK" HorizontalAlignment="Center" FlowDirection="LeftToRight" />
+          <Button Content="{l:T SelectFile}" Command="{Binding SelectFileCommand}" HorizontalAlignment="Center" Margin="0,6,0,0" />
+          <TextBlock Classes="caption" Text="{l:T DropSafety}" HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="560" />
+        </StackPanel>
+      </Border>
+
+      <!-- Stat cards -->
+      <UniformGrid Rows="1" Columns="5">
+        <Border Classes="card" Margin="0,0,10,0" IsVisible="{Binding ShowToday}">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="section" Text="{l:T StatToday}" />
+            <TextBlock Classes="num" Text="{Binding AnalysesToday}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Margin="0,0,10,0" IsVisible="{Binding ShowHigh}">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="section" Text="{l:T StatHigh}" />
+            <TextBlock Classes="num" Text="{Binding HighRisk}" Foreground="{DynamicResource DangerBrush}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Margin="0,0,10,0" IsVisible="{Binding ShowSuspicious}">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="section" Text="{l:T StatSuspicious}" />
+            <TextBlock Classes="num" Text="{Binding Suspicious}" Foreground="{DynamicResource WarnBrush}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card" Margin="0,0,10,0" IsVisible="{Binding ShowLow}">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="section" Text="{l:T StatLow}" />
+            <TextBlock Classes="num" Text="{Binding LowRisk}" Foreground="{DynamicResource OkBrush}" />
+          </StackPanel>
+        </Border>
+        <Border Classes="card clickable" IsVisible="{Binding ShowSandbox}" PointerPressed="OnSandboxPressed">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="section" Text="{l:T StatSandbox}" />
+            <Grid ColumnDefinitions="Auto,*">
+              <Panel Width="9" Height="9" Margin="0,6,8,0" VerticalAlignment="Top">
+                <Ellipse Fill="{DynamicResource OkBrush}" IsVisible="{Binding Main.SandboxReady}" />
+                <Ellipse Fill="{DynamicResource WarnBrush}" IsVisible="{Binding !Main.SandboxReady}" />
+              </Panel>
+              <TextBlock Grid.Column="1" Text="{Binding Main.SandboxStatus}" FontWeight="SemiBold" TextWrapping="Wrap" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </UniformGrid>
+
+      <!-- Recent analyses -->
+      <StackPanel Spacing="10">
+        <TextBlock Classes="section" Text="{l:T RecentAnalyses}" />
+        <Border Classes="card" Padding="6">
+          <StackPanel>
+            <Grid ColumnDefinitions="2.4*,70,1.6*,1*,80,1.2*" Margin="12,6,12,8">
+              <TextBlock Classes="caption" Text="{l:T File}" />
+              <TextBlock Grid.Column="1" Classes="caption" Text="{l:T Score}" />
+              <TextBlock Grid.Column="2" Classes="caption" Text="{l:T Risk}" />
+              <TextBlock Grid.Column="3" Classes="caption" Text="{l:T Time}" />
+              <TextBlock Grid.Column="4" Classes="caption" Text="{l:T Duration}" />
+              <TextBlock Grid.Column="5" Classes="caption" Text="{l:T Status}" />
+            </Grid>
+            <Border Classes="rule" />
+            <TextBlock Classes="caption" Text="{l:T NoAnalysesYet}" Margin="12,16" IsVisible="{Binding !HasRecent}" />
+            <ListBox Classes="rows" ItemsSource="{Binding Recent}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:AnalysisRow">
+                  <Grid ColumnDefinitions="2.4*,70,1.6*,1*,80,1.2*" Background="Transparent" Tapped="OnRowTapped">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FlowDirection="LeftToRight" />
+                      <Border Classes="badge banner demo" Padding="6,0" IsVisible="{Binding IsDemo}">
+                        <TextBlock Text="DEMO" FontSize="9.5" Foreground="#FFB066" />
+                      </Border>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Classes="mono" Text="{Binding ScoreText}" FontSize="15" VerticalAlignment="Center" />
+                    <c:RiskBadge Grid.Column="2" Verdict="{Binding Verdict}" IsVisible="{Binding IsCompleted}" />
+                    <TextBlock Grid.Column="3" Classes="muted" Text="{Binding Ago}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Classes="mono muted" Text="{Binding Duration}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="5" Classes="muted" Text="{Binding Status}" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

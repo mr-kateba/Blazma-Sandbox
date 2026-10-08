@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.ReportsView" x:DataType="vm:ReportsViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="36,30,36,36" Spacing="18" MaxWidth="1180">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="h1" Text="{l:T NavReports}" />
+        <TextBlock Classes="caption" Text="{l:T ReportsSubtitle}" />
+      </StackPanel>
+
+      <TextBlock Classes="section" Text="{l:T CompareAnalyses}" />
+      <Border Classes="card">
+        <StackPanel Spacing="14">
+          <TextBlock Classes="caption" Text="{l:T CompareHelp}" />
+          <Grid ColumnDefinitions="*,Auto,*,Auto">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="caption" Text="{l:T Baseline}" />
+              <ComboBox ItemsSource="{Binding Analyses}" SelectedItem="{Binding Baseline}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AnalysisRow"><TextBlock><Run Text="{Binding FileName}" /><Run Text="  ·  " /><Run Text="{Binding Date}" /><Run Text="  ·  " /><Run Text="{Binding ScoreText}" /></TextBlock></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+            <Button Grid.Column="1" Classes="ghost" Content="⇄" FontSize="18" Command="{Binding SwapCommand}" Margin="10,18,10,0" />
+            <StackPanel Grid.Column="2" Spacing="4">
+              <TextBlock Classes="caption" Text="{l:T Target}" />
+              <ComboBox ItemsSource="{Binding Analyses}" SelectedItem="{Binding Target}" HorizontalAlignment="Stretch">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AnalysisRow"><TextBlock><Run Text="{Binding FileName}" /><Run Text="  ·  " /><Run Text="{Binding Date}" /><Run Text="  ·  " /><Run Text="{Binding ScoreText}" /></TextBlock></DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+            <Button Grid.Column="3" Classes="primary" Content="{l:T Compare}" Command="{Binding CompareCommand}" Margin="12,18,0,0" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <StackPanel Spacing="12" IsVisible="{Binding HasComparison}">
+        <Border Classes="card">
+          <Grid ColumnDefinitions="Auto,*">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="section" Text="{l:T ScoreDifference}" />
+              <TextBlock Classes="num" Text="{Binding ScoreDelta}" Foreground="{DynamicResource OkBrush}" IsVisible="{Binding !ScoreUp}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+              <TextBlock Classes="num" Text="{Binding ScoreDelta}" Foreground="{DynamicResource DangerBrush}" IsVisible="{Binding ScoreUp}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="30,0,0,0" VerticalAlignment="Center" Spacing="4">
+              <TextBlock Classes="mono" Text="{Binding ScoreLine}" FontSize="16" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+              <TextBlock Classes="caption" Text="{l:T SameSampleNote}" IsVisible="{Binding SameSample}" />
+            </StackPanel>
+          </Grid>
+        </Border>
+        <ItemsControl ItemsSource="{Binding Sections}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:DiffSection">
+              <Border Classes="card" Margin="0,0,10,10">
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="section" Text="{Binding Title}" />
+                  <TextBlock Classes="caption" Text="{l:T NoDifference}" IsVisible="{Binding Unchanged}" />
+                  <ItemsControl ItemsSource="{Binding Added}" FlowDirection="LeftToRight">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String"><TextBlock Classes="mono" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}"><Run Text="+ " /><Run Text="{Binding}" /></TextBlock></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <ItemsControl ItemsSource="{Binding Removed}" FlowDirection="LeftToRight">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String"><TextBlock Classes="mono" TextWrapping="Wrap" Foreground="{DynamicResource OkBrush}"><Run Text="− " /><Run Text="{Binding}" /></TextBlock></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="section" Text="{l:T ExportedReports}" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Content="{l:T OpenFolder}" Command="{Binding OpenFolderCommand}" />
+      </Grid>
+      <Border Classes="card" Padding="6">
+        <StackPanel>
+          <TextBlock Classes="caption" Text="{l:T NoExports}" Margin="12,8" IsVisible="{Binding !Exports.Count}" />
+          <ItemsControl ItemsSource="{Binding Exports}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ExportedFile">
+                <Grid ColumnDefinitions="*,160" Margin="12,6">
+                  <TextBlock Classes="mono" Text="{Binding Name}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                  <TextBlock Grid.Column="1" Classes="mono faint" Text="{Binding When}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="caption" Text="{l:T PdfPlanned}" Margin="12,10,12,6" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

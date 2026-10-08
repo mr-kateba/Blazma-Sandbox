@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:c="using:Blazma.App.Controls"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.HistoryView" x:DataType="vm:HistoryViewModel">
+  <DockPanel Margin="36,30,36,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="16" Margin="0,0,0,14">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="h1" Text="{l:T NavHistory}" />
+        <TextBlock Classes="caption" Text="{l:T HistorySubtitle}" />
+      </StackPanel>
+      <Grid ColumnDefinitions="*,12,200,12,200,12,Auto,16,Auto">
+        <TextBox Text="{Binding Search}" PlaceholderText="{l:T HistorySearch}" />
+        <ComboBox Grid.Column="2" ItemsSource="{Binding Verdicts}" SelectedItem="{Binding Verdict}" HorizontalAlignment="Stretch" />
+        <ComboBox Grid.Column="4" ItemsSource="{Binding Sorts}" SelectedItem="{Binding Sort}" HorizontalAlignment="Stretch" />
+        <CheckBox Grid.Column="6" Content="{l:T IncludeDemo}" IsChecked="{Binding IncludeDemo}" />
+        <TextBlock Grid.Column="8" Classes="caption" Text="{Binding CountText}" VerticalAlignment="Center" />
+      </Grid>
+    </StackPanel>
+    <Border Classes="card" Padding="6">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="2*,1.4*,1.2*,60,1.5*,80,1.1*,1*,Auto" Margin="12,6,12,8">
+          <TextBlock Classes="caption" Text="{l:T File}" />
+          <TextBlock Grid.Column="1" Classes="caption" Text="SHA-256" />
+          <TextBlock Grid.Column="2" Classes="caption" Text="{l:T Date}" />
+          <TextBlock Grid.Column="3" Classes="caption" Text="{l:T Score}" />
+          <TextBlock Grid.Column="4" Classes="caption" Text="{l:T Verdict}" />
+          <TextBlock Grid.Column="5" Classes="caption" Text="{l:T Duration}" />
+          <TextBlock Grid.Column="6" Classes="caption" Text="{l:T Environment}" />
+          <TextBlock Grid.Column="7" Classes="caption" Text="{l:T Status}" />
+        </Grid>
+        <TextBlock DockPanel.Dock="Top" Classes="caption" Text="{l:T NoAnalysesYet}" Margin="12,14" IsVisible="{Binding IsEmpty}" />
+        <ListBox Classes="rows" ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:AnalysisRow">
+              <Grid ColumnDefinitions="2*,1.4*,1.2*,60,1.5*,80,1.1*,1*,Auto" Background="Transparent" DoubleTapped="OnRowDoubleTapped">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" FlowDirection="LeftToRight" />
+                  <Border Classes="badge banner demo" Padding="6,0" IsVisible="{Binding IsDemo}"><TextBlock Text="DEMO" FontSize="9.5" Foreground="#FFB066" /></Border>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Classes="mono faint" Text="{Binding Sha256Short}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Classes="mono muted" Text="{Binding Date}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="3" Classes="mono" Text="{Binding ScoreText}" VerticalAlignment="Center" FontSize="14" />
+                <c:RiskBadge Grid.Column="4" Verdict="{Binding Verdict}" IsVisible="{Binding IsCompleted}" />
+                <TextBlock Grid.Column="5" Classes="mono muted" Text="{Binding Duration}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="6" Classes="muted" Text="{Binding Provider}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="7" Classes="muted" Text="{Binding Status}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="8" Orientation="Horizontal" Spacing="4">
+                  <Button Classes="ghost" Padding="8,4" Content="{l:T Open}" Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}" />
+                  <Button Classes="ghost" Padding="6,4" ToolTip.Tip="{l:T Compare}" Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).CompareCommand}" CommandParameter="{Binding}">
+                    <Path Classes="icon fixed" Data="{StaticResource IconCompare}" Width="14" Height="14" />
+                  </Button>
+                  <Button Classes="ghost" Padding="6,4" ToolTip.Tip="{l:T Export}" Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).ExportCommand}" CommandParameter="{Binding}">
+                    <Path Classes="icon fixed" Data="{StaticResource IconExport}" Width="14" Height="14" />
+                  </Button>
+                  <Button Classes="ghost" Padding="6,4" ToolTip.Tip="{l:T Delete}" Command="{Binding $parent[UserControl].((vm:HistoryViewModel)DataContext).DeleteCommand}" CommandParameter="{Binding}">
+                    <Path Classes="icon fixed" Data="{StaticResource IconTrash}" Width="14" Height="14" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+  </DockPanel>
+</UserControl>

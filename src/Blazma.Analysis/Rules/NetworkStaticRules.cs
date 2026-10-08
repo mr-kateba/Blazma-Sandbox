@@ -259,7 +259,10 @@ public sealed class FullChainRule : Rule
             Description = new(string.Join(" → ", c.Steps.Select(s => $"{s.Kind}: {s.Target}")), string.Join(" ← ", c.Steps.Select(s => s.Target))),
             EventSequences = c.Steps.Select(s => s.EventSequence).Distinct().ToList(),
         }).ToList();
-        return Build(evidence);
+        var processes = chains.SelectMany(c => c.Steps).Select(s => s.EventSequence)
+            .Select(seq => context.Events.FirstOrDefault(e => e.Sequence == seq))
+            .Where(e => e is not null).Select(e => context.NodeOf(e!)).Where(n => n is not null).Select(n => n!.Key);
+        return Build(evidence, processes: processes, firstSeen: chains.Count == 0 ? null : chains.Min(c => c.Steps[0].Time));
     }
 }
 

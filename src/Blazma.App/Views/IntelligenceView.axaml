@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:set="using:Blazma.Core.Settings"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.IntelligenceView" x:DataType="vm:IntelligenceViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="36,30,36,36" Spacing="18" MaxWidth="1180">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="h1" Text="{l:T NavIntelligence}" />
+        <TextBlock Classes="caption" Text="{l:T IntelSubtitle}" />
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,16,*">
+        <!-- Watchlist -->
+        <StackPanel Spacing="10">
+          <TextBlock Classes="section" Text="{l:T Watchlist}" />
+          <Border Classes="card">
+            <StackPanel Spacing="12">
+              <TextBlock Classes="caption" Text="{l:T WatchlistHelp}" />
+              <Grid ColumnDefinitions="150,8,*">
+                <ComboBox ItemsSource="{Binding WatchTypes}" SelectedItem="{Binding NewType}" MinWidth="0" HorizontalAlignment="Stretch" />
+                <TextBox Grid.Column="2" Text="{Binding NewValue}" PlaceholderText="{l:T WatchValue}" />
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding NewNote}" PlaceholderText="{l:T WatchNote}" />
+                <Button Grid.Column="1" Classes="primary" Content="{l:T Add}" Command="{Binding AddWatchCommand}" Margin="8,0,0,0" />
+              </Grid>
+              <Border Classes="rule" />
+              <ItemsControl ItemsSource="{Binding Watchlist}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="set:WatchlistEntry">
+                    <Grid ColumnDefinitions="110,*,Auto" Margin="0,4">
+                      <TextBlock Classes="section" Text="{Binding Type}" FontSize="10" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Classes="mono" Text="{Binding Value}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                        <TextBlock Classes="caption" Text="{Binding Note}" />
+                      </StackPanel>
+                      <Button Grid.Column="2" Classes="ghost" Padding="6,4" Command="{Binding $parent[UserControl].((vm:IntelligenceViewModel)DataContext).RemoveWatchCommand}" CommandParameter="{Binding}">
+                        <Path Classes="icon fixed" Data="{StaticResource IconTrash}" Width="14" Height="14" />
+                      </Button>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="section" Text="{l:T FutureIntel}" Margin="0,8,0,0" />
+          <Border Classes="card">
+            <StackPanel Spacing="12">
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Classes="h3" Text="{l:T LocalAiTitle}" />
+                  <Border Classes="badge" Padding="6,0"><TextBlock Text="{l:T Planned}" Foreground="{DynamicResource MutedBrush}" FontSize="10" /></Border>
+                </StackPanel>
+                <TextBlock Classes="caption" Text="{l:T LocalAiBody}" />
+              </StackPanel>
+              <Border Classes="rule" />
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Classes="h3" Text="{l:T CommunityTitle}" />
+                  <Border Classes="badge" Padding="6,0"><TextBlock Text="{l:T PlannedOptIn}" Foreground="{DynamicResource MutedBrush}" FontSize="10" /></Border>
+                </StackPanel>
+                <TextBlock Classes="caption" Text="{l:T CommunityBody}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- Rules -->
+        <StackPanel Grid.Column="2" Spacing="10">
+          <TextBlock Classes="section" Text="{l:T DetectionRules}" />
+          <Border Classes="card">
+            <StackPanel Spacing="10">
+              <TextBlock Text="{Binding RulesSummary}" />
+              <TextBlock Classes="caption" Text="{l:T RulePacksHelp}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="{l:T OpenRulesFolder}" Command="{Binding OpenRulesFolderCommand}" />
+                <Button Content="{l:T CreateExample}" Command="{Binding CreateExamplePackCommand}" />
+                <Button Classes="ghost" Content="{l:T Reload}" Command="{Binding ReloadCommand}" />
+              </StackPanel>
+              <TextBlock Classes="mono faint" Text="{Binding RulesFolder}" TextWrapping="Wrap" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+              <Border Classes="banner danger" IsVisible="{Binding HasRuleErrors}">
+                <ItemsControl ItemsSource="{Binding RuleErrors}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String"><TextBlock Classes="mono" Text="{Binding}" TextWrapping="Wrap" /></DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+            </StackPanel>
+          </Border>
+          <Border Classes="card" Padding="6">
+            <ItemsControl ItemsSource="{Binding Rules}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RuleRow">
+                  <Grid ColumnDefinitions="80,*,40" Margin="10,5">
+                    <TextBlock Classes="mono faint" Text="{Binding Id}" FontSize="11" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1">
+                      <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                      <TextBlock Classes="caption" Text="{Binding Meta}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Weight}" Foreground="{DynamicResource AccentTextBrush}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

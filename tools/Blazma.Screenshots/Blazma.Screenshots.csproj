@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Developer tool: renders the real app headlessly (Skia) with demo data and saves a PNG
+    of every screen. Used for README screenshots and for reviewing UI changes without
+    a display. Usage: dotnet run with arguments: output folder, en or ar, optional name filter, optional theme.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <NoWarn>$(NoWarn);CA1416;CA2007</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Blazma.App\Blazma.App.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" />
+    <PackageReference Include="Avalonia.Skia" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Blazma.App.Controls"
+        x:Class="Blazma.App.Views.SplashWindow"
+        Width="420" Height="300" CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        WindowDecorations="None"
+        Background="{DynamicResource BgBrush}"
+        FontFamily="{DynamicResource BodyFont}"
+        Title="Blazma Sandbox">
+  <Border BorderBrush="{DynamicResource RuleBrush}" BorderThickness="1">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+      <c:LogoMark Width="68" Height="68" HorizontalAlignment="Center" />
+      <StackPanel HorizontalAlignment="Center" Spacing="2">
+        <TextBlock Text="BLAZMA" FontSize="22" FontWeight="Bold" LetterSpacing="6" HorizontalAlignment="Center" Foreground="{DynamicResource AccentTextBrush}" />
+        <TextBlock Text="SANDBOX" FontSize="11" LetterSpacing="8" HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}" />
+      </StackPanel>
+      <TextBlock x:Name="Status" Text="Initializing security environment…" FontSize="12" HorizontalAlignment="Center"
+                 Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" MaxWidth="340" TextAlignment="Center" />
+      <ProgressBar x:Name="Bar" IsIndeterminate="True" Width="160" HorizontalAlignment="Center" />
+    </StackPanel>
+  </Border>
+</Window>

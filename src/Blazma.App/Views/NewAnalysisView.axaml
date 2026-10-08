@@ -1,0 +1,161 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.NewAnalysisView" x:DataType="vm:NewAnalysisViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="36,30,36,36" Spacing="20" MaxWidth="1180">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="h1" Text="{l:T NewAnalysisTitle}" />
+        <TextBlock Classes="caption" Text="{l:T NewAnalysisSubtitle}" />
+      </StackPanel>
+
+      <Border Classes="banner demo" IsVisible="{Binding IsDemoSample}">
+        <TextBlock Text="{l:T DemoSampleBanner}" Foreground="#FFB066" TextWrapping="Wrap" />
+      </Border>
+
+      <!-- Empty state -->
+      <Border Classes="card" Padding="30" IsVisible="{Binding HasNoReport}">
+        <StackPanel Spacing="12" HorizontalAlignment="Center">
+          <TextBlock Classes="h3" Text="{l:T NoFileSelected}" HorizontalAlignment="Center" />
+          <TextBlock Classes="caption" Text="{l:T NoFileSelectedBody}" HorizontalAlignment="Center" TextAlignment="Center" />
+          <Button Classes="primary" Content="{l:T SelectFile}" Command="{Binding PickFileCommand}" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="card" IsVisible="{Binding IsLoading}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{l:T ReadingFile}" />
+          <ProgressBar IsIndeterminate="True" />
+        </StackPanel>
+      </Border>
+
+      <Border Classes="banner danger" IsVisible="{Binding HasError}">
+        <TextBlock Text="{Binding Error}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
+      </Border>
+
+      <Grid ColumnDefinitions="*,20,*" IsVisible="{Binding HasReport}">
+        <!-- File information -->
+        <StackPanel Spacing="14">
+          <TextBlock Classes="section" Text="{l:T FileInformation}" />
+          <Border Classes="card">
+            <ItemsControl ItemsSource="{Binding FileRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:InfoRow">
+                  <Grid ColumnDefinitions="120,*" Margin="0,5">
+                    <TextBlock Classes="caption" Text="{Binding Label}" VerticalAlignment="Top" />
+                    <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+          <TextBlock Classes="section" Text="{l:T StaticDetails}" />
+          <Border Classes="card">
+            <StackPanel Spacing="10">
+              <ItemsControl ItemsSource="{Binding PeRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:InfoRow">
+                    <Grid ColumnDefinitions="120,*" Margin="0,4">
+                      <TextBlock Classes="caption" Text="{Binding Label}" />
+                      <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding Warnings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Classes="caption" Text="{Binding}" Margin="0,2" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="caption" Text="{l:T StaticNeverRuns}" Foreground="{DynamicResource FaintBrush}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- Configuration -->
+        <StackPanel Grid.Column="2" Spacing="14">
+          <TextBlock Classes="section" Text="{l:T AnalysisConfiguration}" />
+          <Border Classes="card">
+            <StackPanel Spacing="14">
+              <Grid ColumnDefinitions="150,*">
+                <TextBlock Text="{l:T Profile}" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" HorizontalAlignment="Stretch" />
+              </Grid>
+              <Grid ColumnDefinitions="150,*,70">
+                <TextBlock Text="{l:T AnalysisDuration}" VerticalAlignment="Center" />
+                <Slider Grid.Column="1" Minimum="15" Maximum="600" TickFrequency="15" IsSnapToTickEnabled="True" Value="{Binding DurationSeconds}" />
+                <TextBlock Grid.Column="2" Classes="mono" Text="{Binding DurationText}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+              </Grid>
+              <Grid ColumnDefinitions="150,*">
+                <TextBlock Text="{l:T Environment}" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding Providers}" SelectedItem="{Binding SelectedProvider}" HorizontalAlignment="Stretch">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProviderOption"><TextBlock Text="{Binding Name}" /></DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </Grid>
+              <Border Classes="rule" />
+              <TextBlock Classes="section" Text="{l:T Capture}" />
+              <UniformGrid Columns="2">
+                <CheckBox Content="{l:T CaptureProcesses}" IsChecked="{Binding CaptureProcesses}" />
+                <CheckBox Content="{l:T CaptureFiles}" IsChecked="{Binding CaptureFiles}" />
+                <CheckBox Content="{l:T CaptureRegistry}" IsChecked="{Binding CaptureRegistry}" />
+                <CheckBox Content="{l:T CaptureNetwork}" IsChecked="{Binding CaptureNetwork}" />
+                <CheckBox Content="{l:T TakeSnapshots}" IsChecked="{Binding TakeSnapshots}" />
+                <CheckBox Content="{l:T CaptureScreenshotsPlanned}" IsEnabled="False" />
+              </UniformGrid>
+              <Border Classes="rule" />
+              <TextBlock Classes="section" Text="{l:T NetworkPolicy}" />
+              <ToggleSwitch IsChecked="{Binding NetworkEnabled}" OnContent="{l:T NetworkOn}" OffContent="{l:T NetworkOff}" />
+              <Border Classes="banner warn" IsVisible="{Binding ShowNetworkWarning}">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="{l:T NetworkWarning}" TextWrapping="Wrap" />
+                  <CheckBox Content="{l:T NetworkConsent}" IsChecked="{Binding NetworkConsent}" />
+                </StackPanel>
+              </Border>
+              <Border Classes="rule" />
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Text="{Binding NewProfileName}" PlaceholderText="{l:T NewProfileName}" />
+                <Button Grid.Column="1" Content="{l:T SaveProfile}" Command="{Binding SaveProfileCommand}" Margin="8,0,0,0" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="section" Text="{l:T EnvironmentChecks}" />
+          <Border Classes="card">
+            <StackPanel Spacing="6">
+              <ProgressBar IsIndeterminate="True" IsVisible="{Binding CheckingProvider}" />
+              <ItemsControl ItemsSource="{Binding ProviderChecks}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:CheckRow">
+                    <Grid ColumnDefinitions="24,*" Margin="0,4">
+                      <TextBlock Text="✓" Foreground="{DynamicResource OkBrush}" FontWeight="Bold" IsVisible="{Binding Passed}" />
+                      <TextBlock Text="✕" Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" IsVisible="{Binding !Passed}" />
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                        <TextBlock Classes="caption" Text="{Binding Detail}" />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Classes="link" Content="{l:T Recheck}" Command="{Binding RecheckCommand}" HorizontalAlignment="Left" />
+            </StackPanel>
+          </Border>
+
+          <Button Classes="primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="18,12" FontSize="15"
+                  Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Classes="icon fixed" Data="{StaticResource IconPlay}" Fill="{DynamicResource OnAccentBrush}" StrokeThickness="0" Width="12" Height="12" />
+              <TextBlock Text="{l:T StartAnalysis}" />
+            </StackPanel>
+          </Button>
+          <TextBlock Classes="caption" Text="{l:T StartNote}" />
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

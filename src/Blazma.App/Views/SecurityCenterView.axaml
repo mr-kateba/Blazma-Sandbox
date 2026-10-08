@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:c="using:Blazma.App.Controls"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.SecurityCenterView" x:DataType="vm:SecurityCenterViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="36,30,36,36" Spacing="18" MaxWidth="1180">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="h1" Text="{l:T SecurityCenter}" />
+          <TextBlock Classes="caption" Text="{l:T SecuritySubtitle}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Content="{l:T OpenDataFolder}" Command="{Binding OpenDataFolderCommand}" />
+          <Button Classes="primary" Content="{l:T Recheck}" Command="{Binding RecheckCommand}" />
+        </StackPanel>
+      </Grid>
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsChecking}" />
+
+      <ItemsControl ItemsSource="{Binding Items}">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:StatusItem">
+            <Border Classes="card" Margin="0,0,12,12">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="h3" Text="{Binding Title}" />
+                  <TextBlock Classes="caption" Text="{Binding Detail}" />
+                </StackPanel>
+                <Border Grid.Column="1" Classes="badge" Margin="12,0,0,0" VerticalAlignment="Top" Padding="10,2">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Ellipse Width="8" Height="8" Fill="{DynamicResource OkBrush}" IsVisible="{Binding IsOk}" VerticalAlignment="Center" />
+                    <Ellipse Width="8" Height="8" Fill="{DynamicResource WarnBrush}" IsVisible="{Binding IsWarn}" VerticalAlignment="Center" />
+                    <Ellipse Width="8" Height="8" Fill="{DynamicResource DangerBrush}" IsVisible="{Binding IsBad}" VerticalAlignment="Center" />
+                    <Ellipse Width="8" Height="8" Fill="{DynamicResource InfoBrush}" IsVisible="{Binding IsInfo}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding State}" FontSize="11.5" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Grid ColumnDefinitions="*,16,*">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="section" Text="{l:T EnvironmentChecks}" />
+          <Border Classes="card">
+            <ItemsControl ItemsSource="{Binding ProviderChecks}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CheckRow">
+                  <Grid ColumnDefinitions="26,*" Margin="0,5">
+                    <TextBlock Text="✓" Foreground="{DynamicResource OkBrush}" FontWeight="Bold" IsVisible="{Binding Passed}" />
+                    <TextBlock Text="✕" Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" IsVisible="{Binding !Passed}" />
+                    <StackPanel Grid.Column="1">
+                      <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                      <TextBlock Classes="caption" Text="{Binding Detail}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Spacing="10">
+          <TextBlock Classes="section" Text="{l:T IsolationPolicy}" />
+          <Border Classes="card">
+            <ItemsControl ItemsSource="{Binding IsolationLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <Grid ColumnDefinitions="22,*" Margin="0,4">
+                    <TextBlock Text="●" Foreground="{DynamicResource AccentTextBrush}" FontSize="9" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

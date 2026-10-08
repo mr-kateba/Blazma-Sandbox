@@ -1,0 +1,278 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.SettingsView" x:DataType="vm:SettingsViewModel">
+  <UserControl.Styles>
+    <Style Selector="Grid.setting">
+      <Setter Property="Margin" Value="0,8" />
+    </Style>
+    <Style Selector="StackPanel.group">
+      <Setter Property="Spacing" Value="6" />
+    </Style>
+  </UserControl.Styles>
+  <Grid ColumnDefinitions="230,1,*">
+    <DockPanel Margin="20,28,12,20">
+      <TextBlock DockPanel.Dock="Top" Classes="h1" Text="{l:T NavSettings}" Margin="10,0,0,16" />
+      <ListBox Classes="rows" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:SettingsSection"><TextBlock Text="{Binding Title}" /></DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+    <Border Grid.Column="1" Classes="vrule" />
+    <ScrollViewer Grid.Column="2">
+      <StackPanel Margin="36,30,36,36" MaxWidth="820" Spacing="10">
+        <TextBlock Classes="h2" Text="{Binding SelectedSection.Title}" Margin="0,0,0,10" />
+
+        <!-- General -->
+        <Border Classes="card" IsVisible="{Binding ShowGeneral}">
+          <StackPanel>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetRelativeTime}" /><TextBlock Classes="caption" Text="{l:T SetRelativeTimeHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding RelativeTime}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetShowMs}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowMilliseconds}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetConfirmDelete}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding ConfirmBeforeDelete}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetRerunOnboarding}" VerticalAlignment="Center" /><Button Grid.Column="1" Content="{l:T Open}" Command="{Binding ShowOnboardingCommand}" /></Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Appearance -->
+        <StackPanel Spacing="10" IsVisible="{Binding ShowAppearance}">
+          <Border Classes="card">
+            <StackPanel>
+              <Grid Classes="setting" ColumnDefinitions="*,220"><StackPanel><TextBlock Text="{l:T SetTheme}" /><TextBlock Classes="caption" Text="{l:T SetThemeHelp}" /></StackPanel><ComboBox Grid.Column="1" ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" HorizontalAlignment="Stretch" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,220"><StackPanel><TextBlock Text="{l:T SetAccent}" /><TextBlock Classes="caption" Text="{l:T SetAccentHelp}" /></StackPanel><ComboBox Grid.Column="1" ItemsSource="{Binding Accents}" SelectedItem="{Binding Accent}" HorizontalAlignment="Stretch" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,220"><TextBlock Text="{l:T SetDensity}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" ItemsSource="{Binding Densities}" SelectedItem="{Binding Density}" HorizontalAlignment="Stretch" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,220,60"><TextBlock Text="{l:T SetUiScale}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="90" Maximum="130" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding UiScale}" /><TextBlock Grid.Column="2" Classes="mono" Text="{Binding UiScaleText}" VerticalAlignment="Center" HorizontalAlignment="Right" /></Grid>
+            </StackPanel>
+          </Border>
+          <Border Classes="card">
+            <StackPanel>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetAnimations}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding Animations}" OnContent="" OffContent="" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetReducedMotion}" /><TextBlock Classes="caption" Text="{l:T SetReducedMotionHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding ReducedMotion}" OnContent="" OffContent="" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetGlow}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding AccentGlow}" OnContent="" OffContent="" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetCollapsedSidebar}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding SidebarCollapsed}" OnContent="" OffContent="" /></Grid>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+
+        <!-- Dashboard -->
+        <Border Classes="card" IsVisible="{Binding ShowDashboard}">
+          <StackPanel>
+            <TextBlock Classes="caption" Text="{l:T SetDashboardHelp}" Margin="0,0,0,6" />
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T StatToday}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding DashToday}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T StatHigh}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding DashHigh}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T StatSuspicious}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding DashSuspicious}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T StatLow}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding DashLow}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T StatSandbox}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding DashSandbox}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,140"><TextBlock Text="{l:T SetRecentCount}" VerticalAlignment="Center" /><NumericUpDown Grid.Column="1" Value="{Binding RecentCount}" Minimum="3" Maximum="30" /></Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Analysis -->
+        <StackPanel Spacing="10" IsVisible="{Binding ShowAnalysis}">
+          <Border Classes="card">
+            <StackPanel>
+              <Grid Classes="setting" ColumnDefinitions="*,220"><TextBlock Text="{l:T SetDefaultProfile}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" ItemsSource="{Binding Profiles}" SelectedItem="{Binding DefaultProfile}" HorizontalAlignment="Stretch" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetStopTree}" /><TextBlock Classes="caption" Text="{l:T SetStopTreeHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding StopWhenTreeExits}" OnContent="" OffContent="" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetDemoProvider}" /><TextBlock Classes="caption" Text="{l:T SetDemoProviderHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding UseDemoProvider}" OnContent="" OffContent="" /></Grid>
+            </StackPanel>
+          </Border>
+          <TextBlock Classes="section" Text="{l:T SetProfiles}" />
+          <Border Classes="card">
+            <ItemsControl ItemsSource="{Binding Profiles}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProfileOption">
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,5">
+                    <StackPanel>
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Classes="caption"><Run Text="{Binding Profile.Options.Duration}" /><Run Text=" · " /><Run Text="{Binding Profile.Id}" /></TextBlock>
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="ghost" Content="{l:T Delete}" IsVisible="{Binding !Profile.BuiltIn}"
+                            Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteProfileCommand}" CommandParameter="{Binding}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+
+        <!-- Detection -->
+        <StackPanel Spacing="10" IsVisible="{Binding ShowDetection}">
+          <Border Classes="card">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{l:T SetThresholds}" FontWeight="SemiBold" />
+              <TextBlock Classes="caption" Text="{l:T SetThresholdsHelp}" />
+              <Grid ColumnDefinitions="*,*,*" Margin="0,6,0,0">
+                <StackPanel Spacing="4" Margin="0,0,10,0"><TextBlock Classes="caption" Text="{l:T VerdictSuspicious}" /><NumericUpDown Value="{Binding ThresholdSuspicious}" Minimum="1" Maximum="98" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,10,0"><TextBlock Classes="caption" Text="{l:T VerdictHigh}" /><NumericUpDown Value="{Binding ThresholdHigh}" Minimum="2" Maximum="99" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="caption" Text="{l:T VerdictCritical}" /><NumericUpDown Value="{Binding ThresholdCritical}" Minimum="3" Maximum="100" /></StackPanel>
+              </Grid>
+              <TextBlock Classes="caption" Text="{l:T ThresholdsInvalid}" Foreground="{DynamicResource DangerBrush}" IsVisible="{Binding ThresholdsInvalid}" />
+            </StackPanel>
+          </Border>
+          <Border Classes="card">
+            <StackPanel>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetNoise}" /><TextBlock Classes="caption" Text="{l:T SetNoiseHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding SuppressNoise}" OnContent="" OffContent="" /></Grid>
+              <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetRulePacks}" /><TextBlock Classes="caption" Text="{l:T SetRulePacksHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding CustomRulePacks}" OnContent="" OffContent="" /></Grid>
+              <StackPanel Classes="group" Margin="0,8">
+                <TextBlock Text="{l:T SetAllowlist}" />
+                <TextBlock Classes="caption" Text="{l:T SetAllowlistHelp}" />
+                <TextBox Text="{Binding NoiseAllowlist}" AcceptsReturn="True" Height="80" FontFamily="{DynamicResource MonoFont}" />
+              </StackPanel>
+              <StackPanel Classes="group" Margin="0,8">
+                <TextBlock Text="{l:T SetTrustedPublishers}" />
+                <TextBlock Classes="caption" Text="{l:T SetTrustedPublishersHelp}" />
+                <TextBox Text="{Binding TrustedPublishers}" AcceptsReturn="True" Height="70" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="section" Text="{l:T SetRuleWeights}" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="ghost" Content="{l:T ResetDefaults}" Command="{Binding ResetRulesCommand}" />
+          </Grid>
+          <Border Classes="card" Padding="8">
+            <ItemsControl ItemsSource="{Binding RuleRows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RuleOverrideRow">
+                  <Grid ColumnDefinitions="Auto,90,*,130" Margin="6,3">
+                    <CheckBox IsChecked="{Binding Enabled}" />
+                    <TextBlock Grid.Column="1" Classes="mono faint" Text="{Binding Id}" FontSize="11" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <NumericUpDown Grid.Column="3" Value="{Binding Weight}" Minimum="0" Maximum="50" IsEnabled="{Binding Enabled}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+        </StackPanel>
+
+        <!-- Sandbox -->
+        <Border Classes="card" IsVisible="{Binding ShowSandbox}">
+          <StackPanel>
+            <Grid Classes="setting" ColumnDefinitions="*,160"><StackPanel><TextBlock Text="{l:T SetMemory}" /><TextBlock Classes="caption" Text="{l:T SetMemoryHelp}" /></StackPanel><NumericUpDown Grid.Column="1" Value="{Binding SandboxMemory}" Minimum="2048" Maximum="32768" Increment="1024" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,160"><StackPanel><TextBlock Text="{l:T SetHeartbeat}" /><TextBlock Classes="caption" Text="{l:T SetHeartbeatHelp}" /></StackPanel><NumericUpDown Grid.Column="1" Value="{Binding HeartbeatTimeout}" Minimum="5" Maximum="120" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,160"><StackPanel><TextBlock Text="{l:T SetQuota}" /><TextBlock Classes="caption" Text="{l:T SetQuotaHelp}" /></StackPanel><NumericUpDown Grid.Column="1" Value="{Binding OutboxQuotaMb}" Minimum="16" Maximum="4096" Increment="64" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetIsolationInfo}" VerticalAlignment="Center" TextWrapping="Wrap" /><Button Grid.Column="1" Content="{l:T SecurityCenter}" Command="{Binding OpenSecurityCenterCommand}" /></Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Network -->
+        <Border Classes="card" IsVisible="{Binding ShowNetwork}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{l:T SetNetworkDefault}" FontWeight="SemiBold" />
+            <TextBlock Classes="body" Text="{l:T SetNetworkBody}" />
+            <TextBlock Classes="caption" Text="{l:T SetNoTls}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Privacy -->
+        <Border Classes="card" IsVisible="{Binding ShowPrivacy}">
+          <StackPanel>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetRedact}" /><TextBlock Classes="caption" Text="{l:T SetRedactHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding RedactExports}" OnContent="" OffContent="" /></Grid>
+            <Border Classes="rule" Margin="0,8" />
+            <TextBlock Classes="body" Text="{l:T SetPrivacyFacts}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Reports -->
+        <Border Classes="card" IsVisible="{Binding ShowReports}">
+          <StackPanel>
+            <Grid Classes="setting" ColumnDefinitions="*,220"><TextBlock Text="{l:T SetDefaultFormat}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" ItemsSource="{Binding Formats}" SelectedItem="{Binding DefaultFormat}" HorizontalAlignment="Stretch" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetIncludeTimeline}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludeTimeline}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetIncludeStatic}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludeStatic}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetIncludeIndicators}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludeIndicators}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetIncludeRaw}" /><TextBlock Classes="caption" Text="{l:T SetIncludeRawHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding IncludeRawEvents}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,160"><TextBlock Text="{l:T SetTimelineLimit}" VerticalAlignment="Center" /><NumericUpDown Grid.Column="1" Value="{Binding TimelineLimit}" Minimum="20" Maximum="5000" Increment="20" /></Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Notifications -->
+        <Border Classes="card" IsVisible="{Binding ShowNotifications}">
+          <StackPanel>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T ToastAnalysisCompleted}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyCompleted}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T ToastAnalysisFailed}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyFailed}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T ToastHighRisk}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyHighRisk}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T ToastExported}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyExported}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,140"><TextBlock Text="{l:T SetToastSeconds}" VerticalAlignment="Center" /><NumericUpDown Grid.Column="1" Value="{Binding ToastSeconds}" Minimum="2" Maximum="20" /></Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Shortcuts -->
+        <StackPanel Spacing="10" IsVisible="{Binding ShowShortcuts}">
+          <TextBlock Classes="caption" Text="{l:T SetShortcutsHelp}" />
+          <Border Classes="card">
+            <ItemsControl ItemsSource="{Binding Shortcuts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ShortcutRow">
+                  <Grid ColumnDefinitions="*,220" Margin="0,4">
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1">
+                      <TextBox Text="{Binding Gesture}" FontFamily="{DynamicResource MonoFont}" FlowDirection="LeftToRight" />
+                      <TextBlock Classes="caption" Text="{l:T InvalidShortcut}" Foreground="{DynamicResource DangerBrush}" IsVisible="{Binding Invalid}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+          <Button Content="{l:T ResetDefaults}" Command="{Binding ResetShortcutsCommand}" HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <!-- AI -->
+        <Border Classes="card" IsVisible="{Binding ShowAI}">
+          <StackPanel Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="{l:T LocalAiTitle}" FontWeight="SemiBold" />
+              <Border Classes="badge" Padding="6,0"><TextBlock Text="{l:T Planned}" Foreground="{DynamicResource MutedBrush}" FontSize="10" /></Border>
+            </StackPanel>
+            <TextBlock Classes="body" Text="{l:T SetAiBody}" />
+            <ToggleSwitch IsEnabled="False" OnContent="{l:T Planned}" OffContent="{l:T Planned}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Storage -->
+        <Border Classes="card" IsVisible="{Binding ShowStorage}">
+          <StackPanel>
+            <Grid Classes="setting" ColumnDefinitions="*,160"><StackPanel><TextBlock Text="{l:T SetRetention}" /><TextBlock Classes="caption" Text="{l:T SetRetentionHelp}" /></StackPanel><NumericUpDown Grid.Column="1" Value="{Binding RetentionDays}" Minimum="0" Maximum="3650" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,160"><StackPanel><TextBlock Text="{l:T SetMaxEvents}" /><TextBlock Classes="caption" Text="{l:T SetMaxEventsHelp}" /></StackPanel><NumericUpDown Grid.Column="1" Value="{Binding MaxEvents}" Minimum="10000" Maximum="2000000" Increment="10000" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto">
+              <StackPanel><TextBlock Text="{l:T SetDataFolder}" /><TextBlock Classes="mono faint" Text="{Binding DataFolder}" TextWrapping="Wrap" FlowDirection="LeftToRight" HorizontalAlignment="Left" /><TextBlock Classes="caption"><Run Text="{l:T SetDatabaseSize}" /><Run Text=" " /><Run Text="{Binding DatabaseSize}" /></TextBlock></StackPanel>
+              <Button Grid.Column="1" Content="{l:T OpenFolder}" Command="{Binding OpenDataFolderCommand}" VerticalAlignment="Top" />
+            </Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T ClearHistory}" VerticalAlignment="Center" /><Button Grid.Column="1" Classes="danger" Content="{l:T ClearHistory}" Command="{Binding ClearHistoryCommand}" /></Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Language -->
+        <Border Classes="card" IsVisible="{Binding ShowLanguage}">
+          <StackPanel Spacing="10">
+            <RadioButton GroupName="lang" Content="English" IsChecked="{Binding English}" />
+            <RadioButton GroupName="lang" Content="العربية" IsChecked="{Binding Arabic}" />
+            <TextBlock Classes="caption" Text="{l:T SetLanguageHelp}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Advanced -->
+        <Border Classes="card" IsVisible="{Binding ShowAdvanced}">
+          <StackPanel>
+            <Grid Classes="setting" ColumnDefinitions="*,220"><StackPanel><TextBlock Text="{l:T SetLogLevel}" /><TextBlock Classes="caption" Text="{l:T SetLogLevelHelp}" /></StackPanel><ComboBox Grid.Column="1" ItemsSource="{Binding LogLevels}" SelectedItem="{Binding LogLevel}" HorizontalAlignment="Stretch" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,220,60"><TextBlock Text="{l:T SetDemoSpeed}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="0.5" Maximum="10" Value="{Binding DemoSpeed}" /><TextBlock Grid.Column="2" Classes="mono" Text="{Binding DemoSpeedText}" VerticalAlignment="Center" HorizontalAlignment="Right" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetLogs}" /><TextBlock Classes="mono faint" Text="{Binding LogsFolder}" FlowDirection="LeftToRight" HorizontalAlignment="Left" /></StackPanel><Button Grid.Column="1" Content="{l:T OpenFolder}" Command="{Binding OpenLogsCommand}" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T ResetTitle}" VerticalAlignment="Center" /><Button Grid.Column="1" Classes="danger" Content="{l:T Reset}" Command="{Binding ResetAllCommand}" /></Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- About -->
+        <Border Classes="card" IsVisible="{Binding ShowAbout}">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="h2" Text="Blazma Sandbox" />
+            <TextBlock Classes="mono"><Run Text="v" /><Run Text="{Binding Version}" /></TextBlock>
+            <TextBlock Classes="body" Text="{l:T AboutBody}" />
+            <TextBlock Classes="body" Text="{l:T AboutPurpose}" Foreground="{DynamicResource MutedBrush}" />
+            <TextBlock Classes="caption" Text="{l:T AboutFonts}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Blazma.App.ViewModels"
+             xmlns:c="using:Blazma.App.Controls"
+             xmlns:l="using:Blazma.App.Localization"
+             x:Class="Blazma.App.Views.LiveAnalysisView" x:DataType="vm:LiveAnalysisViewModel">
+  <DockPanel Margin="30,24,30,24">
+    <!-- Header -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+      <StackPanel Spacing="4">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Classes="h1" Text="{Binding FileName}" FlowDirection="LeftToRight" />
+          <Border Classes="badge banner demo" IsVisible="{Binding IsDemo}" VerticalAlignment="Center"><TextBlock Text="DEMO" Foreground="#FFB066" /></Border>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding IsRunning}" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="{Binding StageText}" />
+        </StackPanel>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <Button Classes="danger" Content="{l:T CancelAnalysis}" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" />
+        <Button Content="{l:T BackToDashboard}" Command="{Binding BackToDashboardCommand}" IsVisible="{Binding IsFailed}" />
+        <Button Classes="primary" Content="{l:T OpenReport}" Command="{Binding OpenReportCommand}" IsVisible="{Binding IsDone}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Counters -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*,*,*,1.3*" Margin="0,0,0,16">
+      <Border Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T Elapsed}" /><TextBlock Classes="num" Text="{Binding Elapsed}" /></StackPanel></Border>
+      <Border Grid.Column="1" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T EventsLabel}" /><TextBlock Classes="num" Text="{Binding EventCount}" /></StackPanel></Border>
+      <Border Grid.Column="2" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T ProcessesLabel}" /><TextBlock Classes="num" Text="{Binding ProcessCount}" /></StackPanel></Border>
+      <Border Grid.Column="3" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T ConnectionsLabel}" /><TextBlock Classes="num" Text="{Binding ConnectionCount}" /></StackPanel></Border>
+      <Border Grid.Column="4" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T SandboxStatusLabel}" /><TextBlock Text="{Binding StageText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" /></StackPanel></Border>
+      <Border Grid.Column="5" Classes="card">
+        <Grid ColumnDefinitions="64,*">
+          <Panel Width="58" Height="58">
+            <c:ScoreRing Value="{Binding LiveScore}" Verdict="{Binding LiveVerdict}" Thickness="6" />
+            <TextBlock Classes="mono" Text="{Binding LiveScore}" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Panel>
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4" Margin="8,0,0,0">
+            <TextBlock Classes="section" Text="{l:T CurrentScore}" />
+            <c:RiskBadge Verdict="{Binding LiveVerdict}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border DockPanel.Dock="Top" Classes="banner warn" Margin="0,0,0,12" IsVisible="{Binding MonitoringInterrupted}">
+      <TextBlock Text="{l:T MonitoringInterruptedBanner}" TextWrapping="Wrap" />
+    </Border>
+    <Border DockPanel.Dock="Top" Classes="banner danger" Margin="0,0,0,12" IsVisible="{Binding IsFailed}">
+      <TextBlock Text="{Binding FailureReason}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
+    </Border>
+
+    <Grid ColumnDefinitions="280,20,*">
+      <!-- Stage list -->
+      <Border Classes="card" VerticalAlignment="Top">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="section" Text="{l:T Progress}" Margin="0,0,0,8" />
+          <ProgressBar Value="{Binding Progress}" Maximum="100" Margin="0,0,0,10" />
+          <ItemsControl ItemsSource="{Binding Steps}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:StageStep">
+                <Grid ColumnDefinitions="26,*" Margin="0,6">
+                  <TextBlock Text="✓" Foreground="{DynamicResource OkBrush}" FontWeight="Bold" IsVisible="{Binding IsDone}" />
+                  <TextBlock Text="●" Foreground="{DynamicResource AccentBrush}" IsVisible="{Binding IsActive}" />
+                  <TextBlock Text="○" Foreground="{DynamicResource FaintBrush}" IsVisible="{Binding IsPending}" />
+                  <TextBlock Text="✕" Foreground="{DynamicResource DangerBrush}" FontWeight="Bold" IsVisible="{Binding IsFailed}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Title}" Foreground="{DynamicResource TextBrush}" Classes.muted="{Binding IsPending}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- Live timeline (virtualised) -->
+      <Border Grid.Column="2" Classes="card" Padding="6">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="12,6,12,8">
+            <TextBlock Classes="section" Text="{l:T LiveTimeline}" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="1" Content="{l:T AutoScroll}" IsChecked="{Binding AutoScroll}" />
+          </Grid>
+          <ListBox x:Name="EventsList" Classes="rows dense" ItemsSource="{Binding Events}" FlowDirection="LeftToRight">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TimelineRow">
+                <Grid ColumnDefinitions="92,92,150,*">
+                  <TextBlock Classes="mono faint" Text="{Binding Time}" />
+                  <TextBlock Grid.Column="1" Classes="mono accent" Text="{Binding Category}" FontSize="11" />
+                  <TextBlock Grid.Column="2" Text="{Binding Process}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="muted" Text="{Binding Action}" />
+                    <TextBlock Classes="mono" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</UserControl>

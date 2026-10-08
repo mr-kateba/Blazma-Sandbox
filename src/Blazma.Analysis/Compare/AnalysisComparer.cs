@@ -46,8 +46,10 @@ public static class AnalysisComparer
         Findings = Diff(baseline.Findings.Select(f => $"{f.RuleId} {f.Title.En}"), target.Findings.Select(f => $"{f.RuleId} {f.Title.En}")),
     };
 
+    /// <summary>The sample itself is named "&lt;sample&gt;" so a renamed file between versions is not reported as a new process.</summary>
     private static IEnumerable<string> ProcessNames(AnalysisResult r) =>
-        r.AllProcesses.Where(p => p.InAnalyzedTree || r.AllProcesses.All(x => !x.InAnalyzedTree)).Select(p => p.Name.ToLowerInvariant());
+        r.AllProcesses.Where(p => p.InAnalyzedTree || r.AllProcesses.All(x => !x.InAnalyzedTree))
+            .Select(p => p.IsSample ? "<sample>" : p.Name.ToLowerInvariant());
 
     private static IEnumerable<string> Endpoints(AnalysisResult r) =>
         r.Events.Where(e => e.Action == EventAction.NetworkConnect && NetworkMap.IsExternal(e)).Select(NetworkMap.Endpoint);

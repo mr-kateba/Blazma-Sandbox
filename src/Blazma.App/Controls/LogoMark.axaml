@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Blazma.App.Controls.LogoMark"
+             FlowDirection="LeftToRight">
+  <!-- The Blazma family hexagon with the Sandbox cube (assets/blazma-sandbox.svg). -->
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="100" Height="100">
+      <Path Fill="{DynamicResource LogoBrush}" Data="M 50,3 L 91,26.5 L 91,73.5 L 50,97 L 9,73.5 L 9,26.5 Z" />
+      <Path Stroke="White" StrokeThickness="6" StrokeJoin="Round" StrokeLineCap="Round"
+            Data="M50,24 L72,36 L72,62 L50,74 L28,62 L28,36 Z M28,36 L50,48 L72,36 M50,48 L50,74" />
+    </Canvas>
+  </Viewbox>
+</UserControl>
