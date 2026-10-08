@@ -52,7 +52,8 @@
       <TextBlock Text="{Binding FailureReason}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
     </Border>
 
-    <Grid ColumnDefinitions="280,20,*">
+    <Grid ColumnDefinitions="300,20,*">
+      <StackPanel Spacing="14">
       <!-- Stage list -->
       <Border Classes="card" VerticalAlignment="Top">
         <StackPanel Spacing="4">
@@ -73,6 +74,27 @@
           </ItemsControl>
         </StackPanel>
       </Border>
+
+      <!-- The sandbox desktop (screenshots taken inside the sandbox) and live controls -->
+      <Border Classes="card" IsVisible="{Binding HasScreen}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="section" Text="{l:T SandboxScreen}" />
+          <Border CornerRadius="6" ClipToBounds="True" BorderBrush="{DynamicResource RuleBrush}" BorderThickness="1">
+            <Image Source="{Binding Screen}" Stretch="Uniform" MaxHeight="180" />
+          </Border>
+        </StackPanel>
+      </Border>
+      <Border Classes="card" IsVisible="{Binding CanControl}">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="section" Text="{l:T RunControls}" />
+          <TextBlock Classes="caption" Text="{l:T RunControlsHelp}" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,8,*">
+            <Button Content="{l:T ExtendRun}" Command="{Binding ExtendRunCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            <Button Grid.Column="2" Content="{l:T FinishRun}" Command="{Binding FinishRunCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+          </Grid>
+        </StackPanel>
+      </Border>
+      </StackPanel>
 
       <!-- Live timeline (virtualised) -->
       <Border Grid.Column="2" Classes="card" Padding="6">
