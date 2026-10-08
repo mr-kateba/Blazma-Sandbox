@@ -76,7 +76,7 @@ Shot("09-report-ask", async () =>
 {
     await vm.OpenReportAsync(main, 10);
     var report = vm.Page<ReportViewModel>();
-    report.AskCommand.Execute("Why is the score high?");
+    report.AskCommand.Execute(language == AppLanguage.Arabic ? "لماذا الدرجة مرتفعة؟" : "Why is the score high?");
 });
 Shot("10-finding-panel", async () =>
 {

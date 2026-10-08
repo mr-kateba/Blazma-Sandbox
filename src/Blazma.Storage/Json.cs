@@ -15,7 +15,9 @@ public static class BlazmaJson
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        PreferredObjectCreationHandling = JsonObjectCreationHandling.Populate,
+        // Never Populate: it would fill shared default instances in place (for example
+        // RiskAssessment.Empty or RiskThresholds.Default) and leak values between documents.
+        // Settings that need defaults merged in (shortcuts) are handled by SettingsStore.Migrate.
         WriteIndented = indented,
         // Reports are standalone files (never embedded in HTML), so keep Arabic and paths readable.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,

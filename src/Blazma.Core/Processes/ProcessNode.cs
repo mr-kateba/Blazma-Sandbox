@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Blazma.Core.Events;
 
 namespace Blazma.Core.Processes;
@@ -32,6 +33,7 @@ public sealed class ProcessNode
 
     public long StartEventSequence { get; init; }
 
+    [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)] // each node owns its list, so filling it in place is safe
     public List<ProcessNode> Children { get; } = [];
 
     public IEnumerable<ProcessNode> SelfAndDescendants()

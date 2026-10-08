@@ -15,7 +15,7 @@ public sealed class SettingsTests : IDisposable
         var store = new SettingsStore(new BlazmaPaths(_dir.FullName));
         var s = store.Load();
         s.Appearance.Theme = ThemeVariant.Midnight;
-        s.Appearance.Accent = AccentColor.Teal;
+        s.Appearance.Accent = AccentColor.Ember;
         s.Appearance.UiScalePercent = 115;
         s.Detection.Thresholds = new RiskThresholds(15, 40, 70);
         s.Detection.RuleOverrides["BLZ-E001"] = new RuleOverride { Enabled = false };
@@ -25,12 +25,30 @@ public sealed class SettingsTests : IDisposable
 
         var loaded = store.Load();
         Assert.Equal(ThemeVariant.Midnight, loaded.Appearance.Theme);
-        Assert.Equal(AccentColor.Teal, loaded.Appearance.Accent);
+        Assert.Equal(AccentColor.Ember, loaded.Appearance.Accent);
         Assert.Equal(115, loaded.Appearance.UiScalePercent);
         Assert.Equal(new RiskThresholds(15, 40, 70), loaded.Detection.Thresholds);
         Assert.False(loaded.Detection.RuleOverrides["blz-e001"].Enabled);
         Assert.Single(loaded.Detection.Watchlist);
         Assert.Equal("Ctrl+Shift+N", loaded.Shortcuts.Get("NewAnalysis"));
+    }
+
+    [Fact]
+    public async Task Loading_settings_never_changes_shared_defaults()
+    {
+        using var store = new SettingsStore(new BlazmaPaths(_dir.FullName));
+        var before = RiskThresholds.Default;
+        var s = new BlazmaSettings();
+        s.Detection.Thresholds = new RiskThresholds(10, 30, 60);
+        await store.SaveAsync(s);
+
+        var first = store.Load();
+        var second = store.Load();
+        Assert.Equal(new RiskThresholds(10, 30, 60), second.Detection.Thresholds);
+        Assert.Equal(before, RiskThresholds.Default);
+        Assert.Equal(new RiskThresholds(), RiskThresholds.Default);
+        Assert.NotSame(first.Detection.Thresholds, RiskThresholds.Default);
+        Assert.Equal(new BlazmaSettings().Detection.NoiseAllowlist.Count, second.Detection.NoiseAllowlist.Count);
     }
 
     [Fact]

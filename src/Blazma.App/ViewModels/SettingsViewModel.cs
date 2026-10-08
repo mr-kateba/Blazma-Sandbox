@@ -114,7 +114,7 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     // Appearance
     public IReadOnlyList<EnumOption<ThemeVariant>> Themes { get; } = [new(ThemeVariant.Dark, "ThemeDark"), new(ThemeVariant.Midnight, "ThemeMidnight"), new(ThemeVariant.Light, "ThemeLight")];
-    public IReadOnlyList<EnumOption<AccentColor>> Accents { get; } = [new(AccentColor.BlazmaOrange, "AccentOrange"), new(AccentColor.Amber, "AccentAmber"), new(AccentColor.Azure, "AccentAzure"), new(AccentColor.Violet, "AccentViolet"), new(AccentColor.Teal, "AccentTeal")];
+    public IReadOnlyList<EnumOption<AccentColor>> Accents { get; } = [new(AccentColor.BlazmaOrange, "AccentOrange"), new(AccentColor.Amber, "AccentAmber"), new(AccentColor.Ember, "AccentEmber")];
     public IReadOnlyList<EnumOption<Core.Settings.Density>> Densities { get; } = [new(Core.Settings.Density.Comfortable, "DensityComfortable"), new(Core.Settings.Density.Compact, "DensityCompact")];
     public EnumOption<ThemeVariant> Theme { get => Themes.First(t => t.Value == S.Appearance.Theme); set { if (value is null) return; S.Appearance.Theme = value.Value; Appearance(); } }
     public EnumOption<AccentColor> Accent { get => Accents.First(t => t.Value == S.Appearance.Accent); set { if (value is null) return; S.Appearance.Accent = value.Value; Appearance(); } }

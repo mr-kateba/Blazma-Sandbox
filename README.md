@@ -39,7 +39,7 @@ malicious*.
 | **Reports** | Self-contained HTML (no scripts, CSP-locked) and machine-readable JSON with a content integrity hash; indicator CSV. Personal details are redacted by default. |
 | **Ask Blazma** | Ask questions about a report ("Why is the score high?", "ليش أعطيت الملف High Risk؟"). Answers come only from the data and are labelled *observed fact* or *rule-based inference*. |
 | **Compare analyses** | Version 1.2 vs 1.3 of the same installer: new processes, connections, domains, persistence, dropped files, score difference. |
-| **Customisation** | Themes (Dark, Midnight, Light), accent colour, density, UI scale, reduced motion, dashboard cards, analysis profiles, verdict thresholds, per-rule enable/weight, your own JSON rule packs, a local watchlist, noise allowlist, editable shortcuts, report contents, retention. |
+| **Customisation** | Themes (Dark, Midnight, Light), accent colour (Blazma family shades), density, UI scale, reduced motion, dashboard cards, analysis profiles, verdict thresholds, per-rule enable/weight, your own JSON rule packs, a local watchlist, noise allowlist, editable shortcuts, report contents, retention. |
 | **Bilingual** | Full English and Arabic with real right-to-left layout. Technical terms (SHA-256, PID, IP, Registry) stay recognisable. |
 | **Local first** | No uploads, no hash lookups, no telemetry. Everything stays in one folder on your computer. |
 

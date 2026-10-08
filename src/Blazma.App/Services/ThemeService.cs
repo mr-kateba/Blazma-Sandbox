@@ -28,10 +28,8 @@ public sealed class ThemeService
 
     public static Color AccentOf(AccentColor accent) => Color.Parse(accent switch
     {
-        AccentColor.Amber => "#FFA000",
-        AccentColor.Azure => "#38BDF8",
-        AccentColor.Violet => "#A78BFA",
-        AccentColor.Teal => "#2DD4BF",
+        AccentColor.Amber => "#FFB300",
+        AccentColor.Ember => "#FF3D00",
         _ => "#FF6D00",
     });
 
@@ -69,7 +67,7 @@ public sealed class ThemeService
         r["AccentTextBrush"] = new SolidColorBrush(accentText);
         r["AccentSoftBrush"] = new SolidColorBrush(Color.FromArgb(light ? (byte)0x1F : (byte)0x24, accent.R, accent.G, accent.B));
         r["AccentRimBrush"] = new SolidColorBrush(Shade(accent, 0.35));
-        r["OnAccentBrush"] = new SolidColorBrush(settings.Accent is AccentColor.Azure or AccentColor.Teal or AccentColor.Amber ? Color.Parse("#111114") : Color.Parse("#F7F7F7"));
+        r["OnAccentBrush"] = new SolidColorBrush(settings.Accent is AccentColor.Amber ? Color.Parse("#111114") : Color.Parse("#F7F7F7"));
         r["SystemAccentColor"] = accent;
         r["SystemAccentColorLight1"] = Shade(accent, 0.12);
         r["SystemAccentColorLight2"] = Shade(accent, 0.25);

@@ -44,7 +44,8 @@ public sealed class GeneralSettings
 public enum ThemeVariant { Dark, Midnight, Light }
 
 /// <summary>Blazma orange is the family identity and the default; the others are personal choices.</summary>
-public enum AccentColor { BlazmaOrange, Amber, Azure, Violet, Teal }
+/// <summary>Accent choices, all taken from the Blazma family palette (the orange and the two ends of the logo gradient).</summary>
+public enum AccentColor { BlazmaOrange, Amber, Ember }
 
 public enum Density { Comfortable, Compact }
 

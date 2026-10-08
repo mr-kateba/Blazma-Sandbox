@@ -158,3 +158,26 @@ public class PipelineTests
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }
+
+public class CompareTests
+{
+    [Fact]
+    public async Task Comparing_stored_analyses_keeps_each_score()
+    {
+        await using var f = await Fixture.CreateAsync();
+        var quiet = await f.RunDemoAsync("contoso-tool-1.2.exe");
+        var loud = await f.RunDemoAsync("setup.exe");
+        Assert.NotEqual(quiet.Risk.Score, loud.Risk.Score);
+
+        var a = await f.Repository.LoadAsync(quiet.AnalysisId, includeEvents: true, CancellationToken.None);
+        var b = await f.Repository.LoadAsync(loud.AnalysisId, includeEvents: true, CancellationToken.None);
+        var c = Blazma.Analysis.Compare.AnalysisComparer.Compare(a!, b!);
+
+        Assert.Equal(quiet.Risk.Score, c.BaseScore);
+        Assert.Equal(loud.Risk.Score, c.TargetScore);
+        Assert.Equal(loud.Risk.Score - quiet.Risk.Score, c.ScoreDelta);
+        // Loading one analysis must not change another one that is already loaded.
+        Assert.Equal(quiet.Risk.Score, a!.Risk.Score);
+        Assert.Equal(0, Blazma.Core.Findings.RiskAssessment.Empty.Score);
+    }
+}

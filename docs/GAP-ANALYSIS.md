@@ -64,7 +64,8 @@ filter, so system background activity doesn't drown the sample.
 **Gap:** most analysis tools have one fixed look and one language.
 **Blazma:**
 - Themes: Dark, Midnight and Light.
-- Accent colors (Blazma orange by default), density and UI scale.
+- Accent colors from the Blazma family palette (orange by default, amber, ember), density
+  and UI scale.
 - Reduced motion.
 - Dashboard widgets you can turn on or off.
 - Shortcuts you can change.

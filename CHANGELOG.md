@@ -9,7 +9,8 @@ All notable changes to this project are listed here. The format follows
 ### Added
 - Desktop app (Avalonia) in the Blazma family style: graphite surfaces, Blazma orange
   accent, hexagon mark.
-- Dark, Midnight and Light themes, accent colors, density, UI scale and reduced motion.
+- Dark, Midnight and Light themes, accent colors from the Blazma family palette, density,
+  UI scale and reduced motion.
 - Full Arabic and English interfaces with right-to-left layout.
 - Command palette (Ctrl+K), shortcuts you can change, onboarding, Security Center and
   searchable Settings.
@@ -32,6 +33,11 @@ All notable changes to this project are listed here. The format follows
 - Ask Blazma: deterministic questions and answers over a report, citing the evidence.
 - Demo mode with three scenarios.
 - 104 automated tests, a CI workflow and publish scripts.
+
+### Fixed
+- Loading a saved analysis no longer changes the score of another analysis that is already
+  open. Comparing two analyses showed the same score for both. Loading settings could also
+  change the built-in default thresholds.
 
 ### Known limitations
 - The Windows Sandbox provider and ETW agent have not been validated on real Windows yet.
