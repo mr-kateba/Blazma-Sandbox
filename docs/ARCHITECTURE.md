@@ -24,7 +24,8 @@ src/
   Blazma.Core           domain model, interfaces (no dependencies)
   Blazma.Contracts      host <-> agent protocol, signed files
   Blazma.Analysis       Static/ Engine/ Rules/ Pipeline/ Compare/ Text/
-  Blazma.Sandbox        Providers/WindowsSandbox  Providers/Demo  Channel/  Isolation/
+  Blazma.Sandbox        Providers/WindowsSandbox  Providers/VirtualMachine (VirtualBox, Hyper-V)
+                        Providers/Demo  Channel/  Isolation/  Processes/
   Blazma.Agent          in-sandbox ETW agent (win-x64, self-contained)
   Blazma.Storage        SQLite repository, settings store, paths
   Blazma.Reporting      HTML, JSON, indicator CSV, redaction
@@ -153,7 +154,7 @@ contents).
 
 ## Extension points
 
-`ISandboxProvider` (VM or remote providers), `IReportExporter` (PDF), `IAiProvider` (local AI that
+`ISandboxProvider` (VirtualBox and Hyper-V are built in, see [VIRTUAL-MACHINES.md](VIRTUAL-MACHINES.md); remote providers), `IReportExporter` (PDF), `IAiProvider` (local AI that
 receives the structured result, never the sample), `IReputationProvider` (opt-in only), JSON rule
 packs. A plugin system is deliberately not built until the core has been validated.
 
