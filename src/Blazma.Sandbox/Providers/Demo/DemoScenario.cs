@@ -16,7 +16,7 @@ public sealed class DemoScenario
     public required SystemSnapshot Baseline { get; init; }
     public required SystemSnapshot After { get; init; }
 
-    private const string User = @"C:\Users\WDAGUtilityAccount";
+    internal const string User = @"C:\Users\WDAGUtilityAccount";
 
     public static DemoScenario For(string sampleFileName, DateTimeOffset start, int backgroundNoise = 40)
     {
@@ -55,6 +55,9 @@ public sealed class DemoScenario
         b.At(3900).Dns(updater, "cdn.contoso-update.example", "198.51.100.7");
         b.At(4100).Connect(updater, "198.51.100.7", 443);
         b.At(4150).Connect(updater, "198.51.100.7", 4443);
+        b.At(3450).Http(ps, "api.contoso-update.example", "POST", "/v2/register?id=7d2c-11ef", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ContosoUpdate/2.1", "host=DESKTOP-DEMO&user=demo&av=Defender");
+        b.At(4120).Tls(updater, "cdn.contoso-update.example");
+        b.At(4300).Note("Simulated user pressed \"next\"");
         b.At(4600).Exit(ps, 0);
         b.At(5200).File(updater, EventAction.FileWrite, $@"{User}\AppData\Roaming\ContosoUpdate\config.dat");
         b.At(6100).Registry(updater, EventAction.RegistryValueSet, @"HKCU\Software\ContosoUpdate", "LastCheck", "2026-10-07T10:00:00Z");
@@ -201,6 +204,36 @@ public sealed class DemoScenario
             if (answer is not null) d[DetailKeys.QueryResult] = answer;
             Add(EventAction.DnsQuery, p.Pid, 0, p.Key, p.Name, domain, d);
         }
+
+        /// <summary>A request answered by the simulated internet.</summary>
+        public void Http((int Pid, ProcessKey Key, string Name) p, string host, string method, string path, string userAgent, string? body = null)
+        {
+            var d = new Dictionary<string, string>
+            {
+                [DetailKeys.HttpMethod] = method,
+                [DetailKeys.HttpPath] = path,
+                [DetailKeys.HttpHost] = host,
+                [DetailKeys.UserAgent] = userAgent,
+                [DetailKeys.Protocol] = "http",
+                [DetailKeys.RemoteAddress] = "127.0.0.1",
+                [DetailKeys.RemotePort] = "80",
+                [DetailKeys.Simulated] = "true",
+            };
+            if (body is not null) d[DetailKeys.BodyPreview] = body;
+            Add(EventAction.HttpRequest, p.Pid, 0, p.Key, p.Name, $"http://{host}{path}", d);
+        }
+
+        public void Tls((int Pid, ProcessKey Key, string Name) p, string serverName) =>
+            Add(EventAction.TlsHandshake, p.Pid, 0, p.Key, p.Name, serverName, new Dictionary<string, string>
+            {
+                [DetailKeys.ServerName] = serverName,
+                [DetailKeys.RemoteAddress] = "127.0.0.1",
+                [DetailKeys.RemotePort] = "443",
+                [DetailKeys.Simulated] = "true",
+            });
+
+        public void Note(string text) =>
+            Add(EventAction.AnalysisNote, 0, 0, new ProcessKey(0, 0), "blazma-agent", null, new Dictionary<string, string> { [DetailKeys.Reason] = text });
 
         public void Connect((int Pid, ProcessKey Key, string Name) p, string ip, int port) =>
             Add(EventAction.NetworkConnect, p.Pid, 0, p.Key, p.Name, ip, new Dictionary<string, string>
