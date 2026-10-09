@@ -1,5 +1,6 @@
 using Avalonia;
 using Blazma.Analysis.Static;
+using Blazma.App.Services;
 using Blazma.Storage;
 
 namespace Blazma.App;
@@ -13,6 +14,12 @@ internal static class Program
         // problem caused by a hostile file stays in a short-lived separate process.
         if (StaticWorker.IsWorkerInvocation(args))
             return StaticWorker.RunAsync(args, BlazmaJson.Options).GetAwaiter().GetResult();
+
+        // One window per user: a second launch hands its file to the open window and exits.
+        using var instance = SingleInstance.Acquire();
+        if (!instance.IsFirst && instance.TrySendToFirst(ShellIntegration.StartupFile(args), TimeSpan.FromSeconds(3)))
+            return 0;
+        App.Instance = instance.IsFirst ? instance : null;
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) => App.LogFatal(e.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, e) => { App.LogFatal(e.Exception); e.SetObserved(); };
