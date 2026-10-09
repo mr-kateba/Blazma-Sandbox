@@ -1,10 +1,17 @@
 name: Release
 
-# Pushing a tag such as v0.1.0 builds Blazma on Windows and publishes a GitHub Release with the
-# installer, a portable ZIP and their SHA-256 checksums. Notes come from docs/releases/<tag>.md.
+# Builds Blazma on Windows and publishes a GitHub Release with the installer, a portable ZIP and
+# their SHA-256 checksums. Start it by pushing a tag such as v0.1.0, or from the Actions tab
+# ("Run workflow", version 0.1.0); the second way creates the tag on the commit it runs on.
+# Notes come from docs/releases/v<version>.md.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, as in Directory.Build.props (for example 0.1.0)"
+        required: true
 
 permissions:
   contents: write
@@ -23,7 +30,7 @@ jobs:
       - name: Collect release files
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart("v")
+          $version = "${{ inputs.version || github.ref_name }}".TrimStart("v")
           $setup = "publish/BlazmaSandbox-$version-setup.exe"
           if (-not (Test-Path $setup)) { throw "The installer $setup was not built (does Directory.Build.props say $version?)" }
           New-Item -ItemType Directory -Force release | Out-Null
@@ -38,8 +45,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "${{ github.ref_name }}"
+          $tag = "v" + "${{ inputs.version || github.ref_name }}".TrimStart("v")
           $notes = "docs/releases/$tag.md"
           if (-not (Test-Path $notes)) { throw "Missing release notes: $notes" }
-          $pre = if ($tag -match "-|^v0\.") { "--prerelease" } else { "" }
-          gh release create $tag (Get-ChildItem release).FullName --title "Blazma Sandbox $tag" --notes-file $notes $pre
+          $flags = @("--title", "Blazma Sandbox $tag", "--notes-file", $notes, "--target", "${{ github.sha }}")
+          if ($tag -match "-|^v0\.") { $flags += "--prerelease" }
+          gh release create $tag (Get-ChildItem release).FullName @flags
