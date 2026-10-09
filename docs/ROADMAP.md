@@ -20,7 +20,7 @@ Planned features appear in the app as **Planned** and are disabled; nothing pret
 | Monitoring | ETW agent: process, file, registry, TCP/IP, DNS, scheduled tasks | 🧪 |
 | | Before/after snapshots (Run keys, services, tasks, startup folders) | 🧪 |
 | Analysis | Process tree, noise filter, persistence catalog, network map | ✅ |
-| | Behavior chains, 24 built-in rules with ATT&CK IDs, JSON rule packs | ✅ |
+| | Behavior chains, 31 built-in rules with ATT&CK IDs, JSON rule packs | ✅ |
 | | Explainable additive score with category caps, editable thresholds | ✅ |
 | | Watchlist, trusted publishers, rule overrides | ✅ |
 | Reports | Report view (15 tabs), history, full-text search | ✅ |

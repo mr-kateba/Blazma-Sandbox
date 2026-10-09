@@ -24,7 +24,7 @@
       </Border>
 
       <!-- Or a web address, opened in the sandbox's browser -->
-      <Border Classes="card" IsVisible="{Binding !IsLoading}">
+      <Border Classes="card" IsVisible="{Binding ShowUrlInput}">
         <StackPanel Spacing="8">
           <TextBlock Classes="h3" Text="{l:T AnalyzeUrlTitle}" />
           <TextBlock Classes="caption" Text="{l:T AnalyzeUrlHelp}" TextWrapping="Wrap" />

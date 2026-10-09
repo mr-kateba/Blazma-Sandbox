@@ -102,6 +102,7 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     public bool HasError => !string.IsNullOrEmpty(Error);
     public bool IsRunnable => Report?.Sample.IsExecutableKind == true;
     public bool IsUrl => Report?.Sample.Kind == FileKind.Url;
+    public bool ShowUrlInput => (Report is null || IsUrl) && !IsLoading;
     public bool IsArchive => Report?.Sample.Kind == FileKind.Archive && !IsLoading;
     public bool ArchiveNeedsPassword => IsArchive && Report?.Archive is null;
     public bool HasArchiveEntries => ArchiveEntries.Count > 0;
@@ -157,7 +158,7 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         OnPropertyChanged(nameof(CanStart)); OnPropertyChanged(nameof(ShowNetworkWarning)); OnPropertyChanged(nameof(CanLookupOnline));
         OnPropertyChanged(nameof(IsUrl)); OnPropertyChanged(nameof(IsArchive)); OnPropertyChanged(nameof(ArchiveNeedsPassword));
         OnPropertyChanged(nameof(HasArchiveEntries)); OnPropertyChanged(nameof(FromArchive)); OnPropertyChanged(nameof(OriginText));
-        OnPropertyChanged(nameof(UrlNeedsNetwork));
+        OnPropertyChanged(nameof(UrlNeedsNetwork)); OnPropertyChanged(nameof(ShowUrlInput));
     }
 
     public override async Task OnShownAsync()

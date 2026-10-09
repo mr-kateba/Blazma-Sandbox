@@ -723,6 +723,12 @@
                   <Image Source="{Binding SelectedScreenshot.Image}" Stretch="Uniform" MaxHeight="520" />
                 </Border>
                 <ListBox ItemsSource="{Binding Screenshots}" SelectedItem="{Binding SelectedScreenshot}" IsVisible="{Binding HasScreenshots}" Background="Transparent">
+                  <ListBox.Styles>
+                    <Style Selector="ListBoxItem"><Setter Property="CornerRadius" Value="8" /><Setter Property="Margin" Value="0,0,8,8" /></Style>
+                    <Style Selector="ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /><Setter Property="BorderThickness" Value="1" /></Style>
+                    <Style Selector="ListBoxItem:selected:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" /></Style>
+                    <Style Selector="ListBoxItem:selected TextBlock"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style>
+                  </ListBox.Styles>
                   <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
                   <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:ScreenshotItem">
@@ -874,7 +880,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="8" IsVisible="{Binding HasCapabilities}">
-                  <TextBlock Classes="section" Text="{l:T CapabilitiesTitle}" />
+                  <TextBlock Classes="section" Text="{l:T CodeCapabilitiesSection}" />
                   <TextBlock Classes="caption" Text="{l:T CapabilitiesHelp}" TextWrapping="Wrap" />
                   <ItemsControl ItemsSource="{Binding Capabilities}">
                     <ItemsControl.ItemTemplate>
@@ -903,15 +909,15 @@
 
           <!-- 15 ATT&CK matrix ....................................................... -->
           <TabItem Header="ATT&amp;CK">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
               <StackPanel Spacing="12" Margin="0,0,8,16">
                 <TextBlock Classes="caption" Text="{l:T AttackHelp}" TextWrapping="Wrap" />
                 <Border Classes="card" IsVisible="{Binding HasNoAttack}"><TextBlock Text="{l:T NoAttack}" Classes="muted" /></Border>
                 <ItemsControl ItemsSource="{Binding AttackMatrix}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="10" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:AttackColumn">
-                      <StackPanel Width="190" Spacing="6">
+                      <StackPanel Width="190" Spacing="6" Margin="0,0,10,14">
                         <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="8,6">
                           <TextBlock Text="{Binding Tactic}" FontWeight="SemiBold" TextWrapping="Wrap" />
                         </Border>

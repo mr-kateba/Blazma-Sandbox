@@ -58,6 +58,8 @@ malicious*.
 | ![Timeline](docs/screenshots/04-report-timeline-en.png) | ![Process tree](docs/screenshots/05-report-processes-en.png) |
 | ![Network](docs/screenshots/06-report-network-en.png) | ![Finding panel](docs/screenshots/10-finding-panel-en.png) |
 | ![Ask Blazma](docs/screenshots/09-report-ask-en.png) | ![Compare](docs/screenshots/12-compare-en.png) |
+| ![Sandbox screenshots](docs/screenshots/20-report-screenshots-en.png) | ![Created files and memory](docs/screenshots/21-report-artifacts-en.png) |
+| ![Capabilities](docs/screenshots/22-report-code-en.png) | ![ATT&CK matrix](docs/screenshots/23-report-attack-en.png) |
 | ![Settings](docs/screenshots/16-settings-detection-en.png) | ![Security Center](docs/screenshots/14-security-center-en.png) |
 | ![Arabic dashboard](docs/screenshots/01-dashboard-ar.png) | ![Arabic report](docs/screenshots/03-report-overview-ar.png) |
 
