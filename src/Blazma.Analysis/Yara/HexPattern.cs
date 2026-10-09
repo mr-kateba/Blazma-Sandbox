@@ -75,6 +75,8 @@ internal sealed class HexProgram
             }
             if (candidate < 0) break;
 
+            // A pathological candidate can grow the set; start fresh rather than clear it every time.
+            if (visited.Count > 4096) visited = new HashSet<long>();
             var end = Run(data, candidate, stack, visited, deadline);
             if (end == -2) return SearchOutcome.TimedOut;
             if (end >= 0) hits.Add(new YaraHit(candidate, end - candidate));
@@ -90,8 +92,7 @@ internal sealed class HexProgram
     private int Run(ReadOnlySpan<byte> data, int start, Stack<Frame> stack, HashSet<long> visited, long deadline)
     {
         stack.Clear();
-        if (visited.Count > 4096) visited = new HashSet<long>();
-        else visited.Clear();
+        visited.Clear();
         stack.Push(new Frame(0, start, 0, false));
         var steps = 0;
 
