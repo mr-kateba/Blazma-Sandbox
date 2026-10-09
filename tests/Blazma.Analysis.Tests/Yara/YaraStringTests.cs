@@ -331,6 +331,27 @@ public class YaraStringTests
     }
 
     [Fact]
+    public void Regex_matches_are_limited_to_4096_bytes_like_yara()
+    {
+        var run = new string('a', 10_000);
+        Assert.True(Y.Matches("$a = /a+/", "!a[1] == 4096 and @a[2] == 1", run));
+        Assert.False(Y.Matches("$a = /a{5000}/", "$a", run)); // longer than any match YARA can return
+        Assert.True(Y.Matches("$a = /a{4000}/", "$a", run));
+        Assert.True(Y.Matches("$a = /x.{4094}y/s", "$a", "x" + new string('.', 4094) + "y"));
+        Assert.False(Y.Matches("$a = /x.{4095}y/s", "$a", "x" + new string('.', 4095) + "y"));
+    }
+
+    [Fact]
+    public void Regex_word_boundaries_work_deep_into_large_data()
+    {
+        // Regression: .NET's non-backtracking engine missed this with a match timeout set.
+        var data = new byte[3 * 1024 * 1024];
+        new Random(7).NextBytes(data);
+        Y.Bytes(" IEX ").CopyTo(data, 2 * 1024 * 1024);
+        Assert.True(Y.Matches("$a = /\\bIEX\\b/", $"$a at {2 * 1024 * 1024 + 1}", data));
+    }
+
+    [Fact]
     public void Regex_prefilter_does_not_hide_matches()
     {
         // The required literal is "bc": present only via the repetition, never as "abc".

@@ -25,6 +25,12 @@ public static class YaraLimits
     /// <summary>Largest hex jump. Unbounded jumps (<c>[n-]</c>, <c>[-]</c>) stop here.</summary>
     public const int MaxHexJump = 65_535;
 
+    /// <summary>
+    /// Longest regex match, in bytes. YARA's own engine stops at the same 4096 bytes, so a
+    /// match is what the regex finds in the 4 KB after its start.
+    /// </summary>
+    public const int MaxRegexMatchBytes = 4096;
+
     /// <summary>Largest regex repetition bound (the same limit YARA uses).</summary>
     public const int MaxRegexRepeat = 32_767;
 
