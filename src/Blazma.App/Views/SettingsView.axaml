@@ -31,6 +31,7 @@
             <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetRelativeTime}" /><TextBlock Classes="caption" Text="{l:T SetRelativeTimeHelp}" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding RelativeTime}" OnContent="" OffContent="" /></Grid>
             <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetShowMs}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowMilliseconds}" OnContent="" OffContent="" /></Grid>
             <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetConfirmDelete}" VerticalAlignment="Center" /><ToggleSwitch Grid.Column="1" IsChecked="{Binding ConfirmBeforeDelete}" OnContent="" OffContent="" /></Grid>
+            <Grid Classes="setting" ColumnDefinitions="*,Auto" IsVisible="{Binding ExplorerMenuSupported}"><StackPanel><TextBlock Text="{l:T SetExplorerMenu}" /><TextBlock Classes="caption" Text="{l:T SetExplorerMenuHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding ExplorerContextMenu}" OnContent="" OffContent="" /></Grid>
             <Grid Classes="setting" ColumnDefinitions="*,Auto"><TextBlock Text="{l:T SetRerunOnboarding}" VerticalAlignment="Center" /><Button Grid.Column="1" Content="{l:T Open}" Command="{Binding ShowOnboardingCommand}" /></Grid>
           </StackPanel>
         </Border>

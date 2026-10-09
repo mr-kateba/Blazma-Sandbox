@@ -127,6 +127,10 @@ public partial class App : Application
             window.Show();
             splash.Close();
             await main.InitializeAsync();
+
+            // Keep the Explorer entry pointing at this copy of Blazma (it may have been moved or updated).
+            if (settings.Current.General.ExplorerContextMenu) ShellIntegration.Apply(true, Loc.T("ExplorerMenuText"));
+            if (ShellIntegration.StartupFile(desktop.Args ?? []) is { } file) await main.PrepareFileAsync(file);
         }
         catch (Exception ex)
         {
