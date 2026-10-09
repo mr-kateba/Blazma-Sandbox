@@ -28,12 +28,14 @@ public sealed partial class ReportViewModel : PageViewModel
     private readonly AskBlazma _ask = new();
     private readonly Blazma.Intelligence.Ai.LocalAiProvider _ai;
     private readonly SettingsService _settings;
+    private readonly Blazma.Storage.BlazmaPaths _paths;
     private List<TimelineRow> _allTimeline = [];
     private HashSet<long> _highlight = [];
     private int _rawOffset;
 
-    public ReportViewModel(MainViewModel main, IAnalysisRepository repository, ExportService export, Blazma.Intelligence.Ai.LocalAiProvider ai, SettingsService settings)
+    public ReportViewModel(MainViewModel main, IAnalysisRepository repository, ExportService export, Blazma.Intelligence.Ai.LocalAiProvider ai, SettingsService settings, Blazma.Storage.BlazmaPaths paths)
     {
+        _paths = paths;
         _ai = ai;
         _settings = settings;
         _main = main;
@@ -180,7 +182,11 @@ public sealed partial class ReportViewModel : PageViewModel
         var procs = r.AllProcesses.Count(p => p.InAnalyzedTree);
         var scripts = r.AllProcesses.Count(p => p.InAnalyzedTree && p.Name.ToLowerInvariant() is "powershell.exe" or "cmd.exe" or "wscript.exe" or "cscript.exe" or "mshta.exe" or "pwsh.exe");
         var sig = r.Static?.Signature;
-        Summary.Add(new(Loc.T("FileReputation"), Loc.T("ReputationLocalOnly"), Severity.Informational));
+        var badRep = r.Reputation.Where(x => x.Verdict is ReputationVerdict.Malicious or ReputationVerdict.Suspicious).ToList();
+        Summary.Add(new(Loc.T("FileReputation"),
+            badRep.Count > 0 ? string.Join(" · ", badRep.Select(x => $"{x.ProviderName}: {Loc.T("Rep" + x.Verdict)}{(x.Family is { Length: > 0 } f ? $" ({f})" : "")}"))
+            : r.Reputation.Any(x => x.ProviderId != "local-history") ? Loc.T("ReputationNotKnown") : Loc.T("ReputationLocalOnly"),
+            badRep.Any(x => x.Verdict == ReputationVerdict.Malicious) ? Severity.High : badRep.Count > 0 ? Severity.Medium : Severity.Informational));
         Summary.Add(new(Loc.T("DigitalSignature"), sig?.Status switch
         {
             SignatureStatus.Valid => Loc.F("SignedBy", sig.Publisher ?? "?"),
@@ -243,6 +249,7 @@ public sealed partial class ReportViewModel : PageViewModel
         foreach (var g in r.Indicators.GroupBy(i => i.Type)) Indicators.Add(new IndicatorGroup(g.Key, g));
 
         BuildChanges();
+        BuildArtifacts();
 
         RawEvents.Clear();
         _rawOffset = 0;
@@ -458,6 +465,7 @@ public sealed partial class ReportViewModel : PageViewModel
 
     [RelayCommand] private Task ExportHtml() => Result is null ? Task.CompletedTask : _export.ExportAsync(Result, Core.Settings.ReportFormat.Html);
     [RelayCommand] private Task ExportJson() => Result is null ? Task.CompletedTask : _export.ExportAsync(Result, Core.Settings.ReportFormat.Json);
+    [RelayCommand] private Task ExportInterop(string? kind) => Result is null || kind is null ? Task.CompletedTask : _export.ExportInteropAsync(Result, kind);
     [RelayCommand] private Task ExportIndicators() => Result is null ? Task.CompletedTask : _export.ExportIndicatorsAsync(Result);
     [RelayCommand] private Task CopyHash() => _main.CopyAsync(Sha256);
     [RelayCommand] private Task CopyValue(string? value) => _main.CopyAsync(value ?? string.Empty);
