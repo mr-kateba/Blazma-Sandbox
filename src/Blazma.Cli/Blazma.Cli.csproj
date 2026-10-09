@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    "blazma": the command line for scripted and batch analysis. It uses the same analysis
+    environments, rules and storage as the desktop app, so runs appear in the app's history.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Blazma.Cli</RootNamespace>
+    <AssemblyName>blazma</AssemblyName>
+    <NoWarn>$(NoWarn);CA1416;CA2000</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Blazma.Core\Blazma.Core.csproj" />
+    <ProjectReference Include="..\Blazma.Analysis\Blazma.Analysis.csproj" />
+    <ProjectReference Include="..\Blazma.Storage\Blazma.Storage.csproj" />
+    <ProjectReference Include="..\Blazma.Reporting\Blazma.Reporting.csproj" />
+    <ProjectReference Include="..\Blazma.Intelligence\Blazma.Intelligence.csproj" />
+    <ProjectReference Include="..\Blazma.Sandbox\Blazma.Sandbox.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Blazma.Cli.Tests" />
+  </ItemGroup>
+</Project>

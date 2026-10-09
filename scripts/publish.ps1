@@ -14,6 +14,10 @@ if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
 dotnet publish (Join-Path $root "src/Blazma.App") -c $Configuration -r win-x64 --self-contained true -p:PublishSingleFile=true -o $out
 if ($LASTEXITCODE -ne 0) { throw "App publish failed" }
 
+# "blazma" command line, next to the app so it finds the same agent folder.
+dotnet publish (Join-Path $root "src/Blazma.Cli") -c $Configuration -r win-x64 --self-contained true -p:PublishSingleFile=true -o $out
+if ($LASTEXITCODE -ne 0) { throw "Command line publish failed" }
+
 dotnet publish (Join-Path $root "src/Blazma.Agent") -c $Configuration -r win-x64 -o (Join-Path $out "agent")
 if ($LASTEXITCODE -ne 0) { throw "Agent publish failed" }
 

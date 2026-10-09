@@ -9,12 +9,14 @@ namespace Blazma.Analysis.Static;
 /// of strings. In the app this runs inside Blazma.StaticWorker, a separate short-lived
 /// process, so a parser bug triggered by a hostile file cannot reach the UI process.
 /// </summary>
-public sealed class StaticAnalyzer(ISignatureVerifier signatures) : IStaticAnalyzer
+public sealed class StaticAnalyzer(ISignatureVerifier signatures, IYaraScanner? yara = null, bool detectCapabilities = true) : IStaticAnalyzer
 {
     /// <summary>Files above this are hashed but not parsed in depth.</summary>
     public const long MaxDeepParseBytes = 256L * 1024 * 1024;
 
     public StaticAnalyzer() : this(new SignatureVerifier()) { }
+
+    public StaticAnalyzer(IYaraScanner? yara, bool detectCapabilities) : this(new SignatureVerifier(), yara, detectCapabilities) { }
 
     public async Task<StaticReport> AnalyzeAsync(string path, CancellationToken cancellationToken)
     {
@@ -62,6 +64,25 @@ public sealed class StaticAnalyzer(ISignatureVerifier signatures) : IStaticAnaly
             warnings.Add("The compile timestamp is in the future; it has probably been altered.");
 
         cancellationToken.ThrowIfCancellationRequested();
+        var capabilities = detectCapabilities && (pe is not null || IsScript(kind))
+            ? CapabilityDetector.Detect(pe, content)
+            : [];
+
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<YaraMatch> yaraMatches = [];
+        if (yara is { RuleCount: > 0 })
+        {
+            try
+            {
+                yaraMatches = yara.Scan(content, info.Name);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or TimeoutException)
+            {
+                warnings.Add("YARA scanning stopped: " + ex.Message);
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         return new StaticReport
         {
             Sample = new SampleInfo
@@ -77,6 +98,12 @@ public sealed class StaticAnalyzer(ISignatureVerifier signatures) : IStaticAnaly
             Entropy = Math.Round(Entropy.Of(content), 3),
             Strings = StringExtractor.Extract(content),
             Warnings = warnings,
+            ImpHash = pe is null ? null : ImpHash.Compute(pe),
+            Capabilities = capabilities,
+            YaraMatches = yaraMatches,
         };
     }
+
+    private static bool IsScript(FileKind kind) =>
+        kind is FileKind.PowerShell or FileKind.Batch or FileKind.VbScript or FileKind.JScript;
 }
