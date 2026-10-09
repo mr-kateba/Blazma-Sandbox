@@ -234,8 +234,8 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         {
             var encrypted = Report?.Archive?.Encrypted == true || row.Entry.Encrypted;
             IEnumerable<string?> passwords = encrypted
-                ? new[] { ArchivePassword }.Concat(ArchiveReader.DefaultPasswords).Where(p => !string.IsNullOrEmpty(p)).Distinct(StringComparer.Ordinal)
-                : [null];
+                ? new[] { ArchivePassword }.Concat(ArchiveReader.DefaultPasswords).Where(p => !string.IsNullOrEmpty(p)).Distinct(StringComparer.Ordinal).Select(p => (string?)p)
+                : new string?[] { null };
             string? extracted = null;
             Exception? last = null;
             foreach (var password in passwords)
