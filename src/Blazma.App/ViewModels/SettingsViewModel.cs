@@ -114,6 +114,22 @@ public sealed partial class SettingsViewModel : PageViewModel
     public bool RelativeTime { get => S.General.TimelineTime == TimeDisplay.Relative; set { S.General.TimelineTime = value ? TimeDisplay.Relative : TimeDisplay.Absolute; Changed(); } }
     public bool ShowMilliseconds { get => S.General.ShowMilliseconds; set { S.General.ShowMilliseconds = value; Changed(); } }
     public bool ConfirmBeforeDelete { get => S.General.ConfirmBeforeDelete; set { S.General.ConfirmBeforeDelete = value; Changed(); } }
+    public bool ExplorerMenuSupported => ShellIntegration.IsSupported;
+    public bool ExplorerContextMenu
+    {
+        get => S.General.ExplorerContextMenu;
+        set
+        {
+            if (!ShellIntegration.Apply(value, Loc.T("ExplorerMenuText")) && value)
+            {
+                _main.Toasts.Show(ToastKind.Error, Loc.T("ExplorerMenuFailed"));
+                OnPropertyChanged();
+                return;
+            }
+            S.General.ExplorerContextMenu = value;
+            Changed();
+        }
+    }
     [RelayCommand] private void ShowOnboarding() => _main.ShowOnboarding();
 
     // Appearance
