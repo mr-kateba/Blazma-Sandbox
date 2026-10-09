@@ -1,67 +1,70 @@
-# Changelog
+# سجل التغييرات
 
-All notable changes to this project are listed here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
+**العربية** · [English](CHANGELOG.en.md)
+
+<div dir="rtl">
+
+تُدرج هنا كل التغييرات المهمة في هذا المشروع. يتبع التنسيق
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/)، ويستخدم المشروع
 [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
-- Desktop app (Avalonia) in the Blazma family style: graphite surfaces, Blazma orange
-  accent, hexagon mark.
-- Dark, Midnight and Light themes, accent colors from the Blazma family palette, density,
-  UI scale and reduced motion.
-- Full Arabic and English interfaces with right-to-left layout.
-- Command palette (Ctrl+K), shortcuts you can change, onboarding, Security Center and
-  searchable Settings.
-- Static analysis: hashes, file type, entropy, PE parsing, strings and offline Authenticode
-  check. Parsing runs in a separate worker process.
-- Sandbox layer: provider abstraction, a Windows Sandbox provider with a locked-down `.wsb`
-  profile, and an HMAC-signed file channel.
-- In-sandbox ETW monitoring agent and before/after snapshots.
-- Analysis engine:
-  - Process graph, noise filter, persistence catalog and network map.
-  - Behavior chains and 24 rules mapped to MITRE ATT&CK.
-  - Explainable risk score with category caps.
-- JSON rule packs, rule overrides, watchlist, trusted publishers and analysis profiles.
-- Reports:
-  - Report view, history and full-text search.
-  - JSON export with an integrity hash, HTML export with a strict CSP, and CSV/TXT
-    indicator exports.
-  - Redaction.
-- Comparing two analyses.
-- Ask Blazma: deterministic questions and answers over a report, citing the evidence.
-- Demo mode with three scenarios.
-- More environments: VirtualBox and Hyper-V virtual machines restored from a clean snapshot
-  around every run, for Windows Home users and longer analyses.
-- Simulated internet (the new default): names resolve to a fake server inside the sandbox
-  that records HTTP requests, TLS server names and uploads, with no real network.
-- Screenshots of the sandbox screen, shown live and in the report; interactive mode with
-  "two more minutes" and "finish now"; automatic clicking through installers.
-- Files the sample creates are copied out (under neutral names), hashed and analyzed;
-  memory regions with injected or unpacked code are dumped and scanned; optional pcapng.
-- Static analysis: imphash, 95 capability rules, extracted values (URLs, wallets, tokens,
-  Base64), Office/PDF detection, archive listing (ZIP/7z/RAR/TAR/GZip, common sample
-  passwords tried) and extraction of one entry in a helper process.
-- Built-in managed YARA engine and a YARA rules section on the Intelligence page.
-- Web address analysis: look-alike brands, punycode, shorteners; opened in Edge inside the
-  sandbox when the real network is allowed.
-- Opt-in hash-only reputation (VirusTotal, MalwareBazaar) with keys protected by DPAPI.
-- Optional local AI (Ollama, LM Studio, llama.cpp) in Ask Blazma, loopback-only by default.
-- Report tabs for screenshots, created files and memory, code (capabilities, YARA, extracted
-  values) and an ATT&CK matrix; seven new rules (31 in total).
-- Exports to STIX 2.1, MISP, draft Sigma and YARA rules, and an encrypted ZIP of created files.
-- `blazma` command line: static, analyze, batch, list, export, envs, with verdict exit codes.
-- Optional "Analyze with Blazma Sandbox" entry in the Explorer right-click menu.
-- 750+ automated tests, a CI workflow and publish scripts.
+### أُضيف
+- تطبيق سطح مكتب (Avalonia) بأسلوب عائلة Blazma: أسطح بلون الغرافيت، ولون تمييز برتقالي من Blazma،
+  وشعار سداسي الشكل.
+- سمات Dark وMidnight وLight، وألوان تمييز من لوحة ألوان عائلة Blazma، والكثافة، وحجم الواجهة،
+  وتقليل الحركة.
+- واجهتان كاملتان بالعربية والإنجليزية مع تخطيط من اليمين إلى اليسار.
+- لوحة الأوامر (Ctrl+K)، واختصارات يمكنك تغييرها، وتعريف أولي بالتطبيق (onboarding)، ومركز الأمان،
+  وإعدادات قابلة للبحث.
+- التحليل الثابت: البصمات، ونوع الملف، والإنتروبيا، وتحليل PE، والنصوص، والتحقق من Authenticode دون
+  اتصال. يجري التحليل في عملية عاملة منفصلة.
+- طبقة البيئة المعزولة: تجريد للمزوّدين، ومزوّد Windows Sandbox بملف تعريف `.wsb` مُحكم الإغلاق،
+  وقناة ملفات موقّعة بـ HMAC.
+- وكيل مراقبة ETW داخل البيئة المعزولة، ولقطات حالة قبل التشغيل وبعده.
+- محرك التحليل:
+  - مخطط العمليات، ومرشّح الضجيج، وفهرس الاستمرارية، وخريطة الشبكة.
+  - سلاسل السلوك و24 قاعدة مربوطة بـ MITRE ATT&CK.
+  - درجة خطورة قابلة للتفسير مع حدود قصوى لكل فئة.
+- حزم القواعد بصيغة JSON، وتجاوزات القواعد، وقائمة المراقبة، والناشرون الموثوقون، وملفات تعريف التحليل.
+- التقارير:
+  - عرض التقرير، والسجل، والبحث في النص الكامل.
+  - تصدير JSON مع بصمة سلامة، وتصدير HTML مع CSP صارمة، وتصدير المؤشرات بصيغتي CSV/TXT.
+  - حجب البيانات.
+- مقارنة تحليلين.
+- Ask Blazma: أسئلة وأجوبة حتمية (deterministic) حول تقرير، مع الاستشهاد بالأدلة.
+- وضع تجريبي بثلاثة سيناريوهات.
+- بيئات إضافية: أجهزة افتراضية على VirtualBox وHyper-V تُستعاد من لقطة نظيفة حول كل تشغيل، لمستخدمي
+  Windows Home وللتحليلات الأطول.
+- إنترنت محاكى (الوضع الافتراضي الجديد): تُحل الأسماء إلى خادم وهمي داخل البيئة المعزولة يسجّل طلبات
+  HTTP وأسماء خوادم TLS والملفات المرفوعة، دون شبكة حقيقية.
+- لقطات شاشة للبيئة المعزولة، تُعرض مباشرة وفي التقرير؛ ووضع تفاعلي مع "دقيقتين إضافيتين" و"إنهاء
+  الآن"؛ وضغط تلقائي على أزرار برامج التثبيت.
+- الملفات التي تنشئها العيّنة تُنسخ إلى الخارج (بأسماء محايدة)، وتُحسب بصماتها وتُحلَّل؛ وتُفرَّغ
+  مناطق الذاكرة التي تحوي شيفرة محقونة أو مفكوكة الحزم وتُفحص؛ مع pcapng اختياري.
+- التحليل الثابت: imphash، و95 قاعدة قدرات، والقيم المستخرجة (عناوين URL، والمحافظ، والرموز المميزة
+  (tokens)، وBase64)، وكشف Office/PDF، وعرض محتويات الملفات المضغوطة (ZIP/7z/RAR/TAR/GZip، مع تجربة
+  كلمات مرور العيّنات الشائعة) واستخراج مدخل واحد في عملية مساعدة.
+- محرك YARA مُدار مدمج، وقسم لقواعد YARA في صفحة الاستخبارات (Intelligence).
+- تحليل عناوين الويب: العلامات التجارية المقلَّدة، وpunycode، وخدمات اختصار الروابط؛ ويُفتح العنوان في
+  Edge داخل البيئة المعزولة عند السماح بالشبكة الحقيقية.
+- سمعة اختيارية تعتمد على البصمة فقط (VirusTotal وMalwareBazaar) مع مفاتيح محمية بـ DPAPI.
+- ذكاء اصطناعي محلي اختياري (Ollama وLM Studio وllama.cpp) في Ask Blazma، مقتصر على loopback افتراضيًا.
+- تبويبات في التقرير للقطات الشاشة، والملفات المُنشأة والذاكرة، والشيفرة (القدرات، وYARA، والقيم
+  المستخرجة)، ومصفوفة ATT&CK؛ وسبع قواعد جديدة (31 قاعدة في المجموع).
+- التصدير إلى STIX 2.1 وMISP ومسودات قواعد Sigma وYARA، وملف ZIP مشفّر للملفات المُنشأة.
+- سطر الأوامر `blazma`: static، وanalyze، وbatch، وlist، وexport، وenvs، مع رموز خروج حسب الحكم.
+- مدخل اختياري "Analyze with Blazma Sandbox" في قائمة النقر بزر الفأرة الأيمن في Explorer.
+- أكثر من 750 اختبارًا آليًا، وسير عمل CI، ونصوص برمجية للنشر.
 
-### Fixed
-- Loading a saved analysis no longer changes the score of another analysis that is already
-  open. Comparing two analyses showed the same score for both. Loading settings could also
-  change the built-in default thresholds.
+### أُصلح
+- لم يعد تحميل تحليل محفوظ يغيّر درجة تحليل آخر مفتوح بالفعل. كانت مقارنة تحليلين تُظهر الدرجة نفسها
+  لكليهما. وكان تحميل الإعدادات قد يغيّر أيضًا العتبات الافتراضية المدمجة.
 
-### Known limitations
-- The Windows Sandbox provider, the virtual machine providers and the agent (ETW, screen
-  capture, simulated internet, installer clicking, memory dumps, pktmon) have not been
-  validated on real Windows yet.
-- License not chosen yet.
+### القيود المعروفة
+- لم يُتحقق بعد على Windows حقيقي من مزوّد Windows Sandbox، ومزوّدي الأجهزة الافتراضية، والوكيل (ETW،
+  والتقاط الشاشة، والإنترنت المحاكى، والضغط على أزرار برامج التثبيت، وتفريغات الذاكرة، وpktmon).
+- لم يُختر الترخيص بعد.
+
+</div>

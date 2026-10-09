@@ -34,7 +34,8 @@ public enum TimeDisplay { Relative, Absolute }
 
 public sealed class GeneralSettings
 {
-    public AppLanguage Language { get; set; } = AppLanguage.English;
+    /// <summary>Arabic first: most users read Arabic. English is available in Settings.</summary>
+    public AppLanguage Language { get; set; } = AppLanguage.Arabic;
     public TimeDisplay TimelineTime { get; set; } = TimeDisplay.Relative;
     public bool ShowMilliseconds { get; set; } = true;
     public bool Use24HourClock { get; set; } = true;

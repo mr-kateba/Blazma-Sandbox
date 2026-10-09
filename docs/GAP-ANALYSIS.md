@@ -1,134 +1,140 @@
-# Gap analysis: what other tools leave out
+# تحليل الفجوات: ما تُغفله الأدوات الأخرى
 
-Before building Blazma Sandbox we looked at the tools people already use to answer the
-question *"what does this file do?"*. Each one is good at something. This page lists what
-each one does not do well for a **single analyst on a single Windows machine**, and what
-Blazma Sandbox does about it.
+**العربية** · [English](GAP-ANALYSIS.en.md)
 
-This is not a claim that Blazma Sandbox is better than these tools. Commercial sandboxes run
-fleets of instrumented VMs and have years of signatures behind them. Blazma Sandbox's aim is
-narrower: it runs locally and explains its reasoning.
+<div dir="rtl">
 
-## The tools
+قبل بناء Blazma Sandbox درسنا الأدوات التي يستخدمها الناس حاليًا للإجابة عن
+السؤال *«ماذا يفعل هذا الملف؟»*. كل أداة منها جيدة في شيء ما. تسرد هذه الصفحة ما لا
+تُحسنه كل أداة بالنسبة إلى **محلل واحد يعمل على جهاز Windows واحد**، وما يقدّمه
+Blazma Sandbox حيال ذلك.
 
-| Tool | What it does well | What it lacks for our user |
+هذا ليس ادعاءً بأن Blazma Sandbox أفضل من هذه الأدوات. فالبيئات المعزولة التجارية تشغّل
+أساطيل من الآلات الافتراضية المجهّزة بأدوات المراقبة، وخلفها سنوات من التواقيع. أما هدف Blazma Sandbox فهو
+أضيق: أن يعمل محليًا وأن يشرح طريقة تفكيره.
+
+## الأدوات
+
+| الأداة | ما تُحسنه | ما ينقصها بالنسبة إلى مستخدمنا |
 |---|---|---|
-| **ANY.RUN** | Interactive cloud sandbox with a live view and a large community | Samples are uploaded to a third party, and free-tier tasks are public. Needs internet. The score is hard to reproduce. |
-| **Hybrid Analysis / Falcon Sandbox** | Free public reports and good static and dynamic coverage | Upload-only, and reports are public by default. You can't run it offline or change how it scores. |
-| **Joe Sandbox** | Very deep analysis and many OS targets | Commercial, cloud or on-prem appliance. Heavy for one person. |
-| **Cuckoo / CAPE** | Open source and extensible | Linux host, several VMs and a lot of setup. Cuckoo is unmaintained. No desktop UI and no Arabic. |
-| **Process Monitor (Procmon)** | Perfect raw visibility | Collects everything and draws no conclusions. No sandbox, no score, no report. The analyst does the correlation by hand. |
-| **Sandboxie Plus** | Easy local isolation | Contains the program but does not analyse it. No timeline and no verdict. |
-| **Windows Sandbox (plain)** | Built in and disposable | A clean desktop, nothing more: no monitoring, no report, no history. |
-| **VirusTotal** | Many engines and reputation data | Mostly static and reputation. Uploading may leak a private file. Answers "do engines flag it?", not "what did it do?". |
+| **ANY.RUN** | بيئة معزولة سحابية تفاعلية مع عرض مباشر ومجتمع كبير | تُرفع العينات إلى طرف ثالث، ومهام الفئة المجانية علنية. تحتاج إلى الإنترنت. ومن الصعب إعادة إنتاج الدرجة. |
+| **Hybrid Analysis / Falcon Sandbox** | تقارير علنية مجانية وتغطية جيدة للتحليل الثابت والديناميكي | تعمل بالرفع فقط، والتقارير علنية افتراضيًا. لا يمكنك تشغيلها دون اتصال ولا تغيير طريقة احتسابها للدرجة. |
+| **Joe Sandbox** | تحليل عميق جدًا ودعم لأنظمة تشغيل كثيرة | تجارية، سحابية أو جهاز داخل المؤسسة (on-prem appliance). ثقيلة على شخص واحد. |
+| **Cuckoo / CAPE** | مفتوحة المصدر وقابلة للتوسعة | تحتاج إلى مضيف Linux وعدة آلات افتراضية والكثير من الإعداد. Cuckoo لم يعد يُصان. لا واجهة سطح مكتب ولا دعم للعربية. |
+| **Process Monitor (Procmon)** | رؤية خام كاملة | يجمع كل شيء ولا يستخلص أي استنتاج. لا بيئة معزولة، ولا درجة، ولا تقرير. والمحلل يربط الأحداث يدويًا. |
+| **Sandboxie Plus** | عزل محلي سهل | يحتوي البرنامج لكنه لا يحلّله. لا خط زمني ولا حكم. |
+| **Windows Sandbox (بمفرده)** | مدمج في النظام ويُستخدم مرة واحدة | سطح مكتب نظيف لا أكثر: لا مراقبة، ولا تقرير، ولا سجل. |
+| **VirusTotal** | محركات كثيرة وبيانات سمعة | في الغالب تحليل ثابت وسمعة. وقد يؤدي الرفع إلى تسريب ملف خاص. يجيب عن «هل تكتشفه المحركات؟»، وليس عن «ماذا فعل؟». |
 
-## Gaps and what Blazma Sandbox adds
+## الفجوات وما يضيفه Blazma Sandbox
 
-### 1. Privacy: nothing leaves the machine
-**Gap:** the convenient tools are cloud tools, and a confidential document or an internal
-build should not be uploaded to a public service.
-**Blazma:** local-first. No uploads, no telemetry and no cloud scoring. Reputation comes only
-from your own history (`LocalHistoryReputationProvider`). Online features are shown as
-*Planned* and are opt-in by design.
+### 1. الخصوصية: لا شيء يغادر الجهاز
+**الفجوة:** الأدوات المريحة أدوات سحابية، والمستند السري أو النسخة الداخلية من برنامج
+لا ينبغي رفعهما إلى خدمة عامة.
+**Blazma:** محلي أولًا. لا رفع، ولا قياس عن بُعد (telemetry)، ولا احتساب للدرجة في السحابة. السمعة تأتي فقط
+من سجلك أنت (`LocalHistoryReputationProvider`). والميزات المتصلة بالإنترنت تظهر بحالة
+*مخطط له*، وهي اختيارية بحكم التصميم.
 
-### 2. Explainable scoring
-**Gap:** most sandboxes show a number or a red label. The analyst can't see *why* the
-number is 72, or what would change it.
-**Blazma:** an additive score. Every point comes from a named finding that has a weight,
-links to its evidence events, and appears in the score breakdown. Per-category caps stop
-one noisy category from dominating. One indicator alone never yields "malicious", and the
-report says so in its disclaimer.
+### 2. درجة قابلة للتفسير
+**الفجوة:** معظم البيئات المعزولة تعرض رقمًا أو وسمًا أحمر. ولا يستطيع المحلل أن يرى *لماذا* كان
+الرقم 72، ولا ما الذي قد يغيّره.
+**Blazma:** درجة تراكمية. كل نقطة تأتي من نتيجة مسمّاة لها وزن،
+ومرتبطة بأحداث الأدلة الخاصة بها، وتظهر في تفصيل الدرجة. والحد الأقصى لكل فئة يمنع
+فئة واحدة كثيرة الضجيج من الهيمنة. والمؤشر الواحد بمفرده لا يؤدي أبدًا إلى حكم «خبيث»،
+والتقرير يذكر ذلك في إخلاء المسؤولية.
 
-### 3. Evidence you can click
-**Gap:** findings and raw events are often in separate places.
-**Blazma:** every finding links to the exact timeline events, process and ATT&CK technique
-behind it. Each fact is labeled as an observed fact or a rule inference.
+### 3. أدلة يمكنك النقر عليها
+**الفجوة:** كثيرًا ما تكون النتائج والأحداث الخام في أماكن منفصلة.
+**Blazma:** كل نتيجة مرتبطة بأحداث الخط الزمني الدقيقة والعملية وتقنية ATT&CK
+التي تقف خلفها. وكل معلومة موسومة إما حقيقةً تمت ملاحظتها أو استنتاجًا من قاعدة.
 
-### 4. Behavior chains instead of event soup
-**Gap:** Procmon-style tools give you 100,000 rows.
-**Blazma:** a correlation engine that builds chains, for example *drop file → set Run key
-→ start the dropped file → connect out*. It also uses an analyzed-tree filter and a noise
-filter, so system background activity doesn't drown the sample.
+### 4. سلاسل سلوك بدلًا من ركام أحداث
+**الفجوة:** الأدوات المشابهة لـ Procmon تعطيك 100,000 صف.
+**Blazma:** محرك ربط يبني سلاسل، مثل *إسقاط ملف ← إضافة مفتاح Run
+← تشغيل الملف المُسقط ← الاتصال بالخارج*. ويستخدم أيضًا مرشّح الشجرة المحلَّلة ومرشّح
+الضجيج، حتى لا يطغى نشاط النظام في الخلفية على نشاط العينة.
 
-### 5. Customizable detection without code
-**Gap:** changing detection means writing Python signatures (CAPE) or asking a vendor.
+### 5. كشف قابل للتخصيص دون كتابة كود
+**الفجوة:** تغيير الكشف يعني كتابة تواقيع بلغة Python (في CAPE) أو اللجوء إلى المورّد.
 **Blazma:**
-- JSON rule packs ([RULE-PACKS.md](RULE-PACKS.md)).
-- Turn any rule on or off, or change its weight.
-- Adjustable verdict thresholds.
-- Watchlist of domains, IPs, paths and hashes.
-- Noise allowlist and trusted publishers.
-- Analysis profiles (quick, standard, deep, or your own).
+- حزم قواعد JSON ([RULE-PACKS.md](RULE-PACKS.md)).
+- تفعيل أي قاعدة أو تعطيلها، أو تغيير وزنها.
+- حدود حكم قابلة للتعديل.
+- قائمة مراقبة للنطاقات وعناوين IP والمسارات والبصمات (hashes).
+- قائمة استثناء الضجيج والناشرون الموثوقون.
+- ملفات تعريف التحليل (سريع، أو قياسي، أو عميق، أو ملفك الخاص).
 
-### 6. Customizable app, not only detection
-**Gap:** most analysis tools have one fixed look and one language.
+### 6. تطبيق قابل للتخصيص، وليس الكشف فقط
+**الفجوة:** معظم أدوات التحليل لها مظهر واحد ثابت ولغة واحدة.
 **Blazma:**
-- Themes: Dark, Midnight and Light.
-- Accent colors from the Blazma family palette (orange by default, amber, ember), density
-  and UI scale.
-- Reduced motion.
-- Dashboard widgets you can turn on or off.
-- Shortcuts you can change.
-- Report contents and redaction defaults.
-- Notification, storage and retention settings.
-- Every setting is in one searchable Settings page and saved atomically, with a backup if
-  the file is corrupted.
+- السمات: الداكنة (Dark)، ومنتصف الليل (Midnight)، والفاتحة (Light).
+- ألوان تمييز من لوحة ألوان عائلة Blazma (البرتقالي افتراضيًا، والكهرماني، ولون الجمر)، والكثافة
+  وحجم الواجهة.
+- تقليل الحركة.
+- عناصر للوحة التحكم يمكنك إظهارها أو إخفاؤها.
+- اختصارات يمكنك تغييرها.
+- محتوى التقارير والإعدادات الافتراضية لإخفاء المعلومات الحساسة.
+- إعدادات الإشعارات والتخزين ومدة الاحتفاظ.
+- كل الإعدادات في صفحة إعدادات واحدة قابلة للبحث، وتُحفظ بشكل ذري (atomic)، مع نسخة احتياطية إذا
+  تلف الملف.
 
-### 7. Arabic as a first-class language
-**Gap:** none of the tools above has an Arabic interface or Arabic reports.
-**Blazma:** full Arabic UI with real right-to-left layout (not only translated text), Arabic
-reports, and fonts chosen for both scripts (IBM Plex Sans Arabic and IBM Plex Mono).
+### 7. العربية لغة أساسية
+**الفجوة:** لا توجد في أي من الأدوات السابقة واجهة عربية أو تقارير عربية.
+**Blazma:** واجهة عربية كاملة بتخطيط حقيقي من اليمين إلى اليسار (وليس مجرد نص مترجم)، وتقارير
+عربية، وخطوط مختارة لتناسب الكتابتين (IBM Plex Sans Arabic وIBM Plex Mono).
 
-### 8. Sharing reports without leaking
-**Gap:** reports often contain the analyst's user name, machine name and internal paths.
+### 8. مشاركة التقارير دون تسريب
+**الفجوة:** كثيرًا ما تحتوي التقارير على اسم مستخدم المحلل واسم الجهاز والمسارات الداخلية.
 **Blazma:**
-- Redaction when exporting.
-- JSON reports carry a SHA-256 integrity hash, so tampering is visible.
-- HTML reports have a strict CSP and no scripts, so they are safe to open.
-- CSV exports neutralize spreadsheet formulas.
+- إخفاء المعلومات الحساسة عند التصدير.
+- تقارير JSON تحمل بصمة SHA-256 للتحقق من السلامة، لذلك يظهر أي عبث بها.
+- تقارير HTML لها سياسة CSP صارمة ولا تحتوي على سكربتات، لذلك يمكن فتحها بأمان.
+- ملفات CSV المصدَّرة تُبطل صيغ جداول البيانات.
 
-### 9. Comparing two runs
-**Gap:** "is version 1.3 of this tool doing something new compared to 1.2?" usually means
-diffing reports by hand.
-**Blazma:** a compare view that shows the score change, plus findings, processes,
-endpoints, domains, dropped files and persistence added or removed between two analyses.
+### 9. المقارنة بين تشغيلين
+**الفجوة:** سؤال مثل «هل يقوم الإصدار 1.3 من هذه الأداة بشيء جديد مقارنة بالإصدار 1.2؟» يعني عادةً
+مقارنة التقارير يدويًا.
+**Blazma:** شاشة مقارنة تعرض تغيّر الدرجة، إضافة إلى النتائج والعمليات
+ونقاط الاتصال والنطاقات والملفات المُسقطة وآليات الاستمرارية التي أُضيفت أو أُزيلت بين تحليلين.
 
-### 10. Asking questions about a report
-**Gap:** reports are long, and beginners don't know where to look.
-**Blazma:** *Ask Blazma* answers questions like "does it persist?" or "what did it contact?"
-directly from the report. It is deterministic and needs no model or internet. Every answer
-cites its events and says whether it is an observed fact or an inference.
+### 10. طرح أسئلة عن التقرير
+**الفجوة:** التقارير طويلة، والمبتدئون لا يعرفون أين ينظرون.
+**Blazma:** يجيب *Ask Blazma* عن أسئلة مثل «هل يحقق الاستمرارية؟» أو «بماذا اتصل؟»
+مباشرة من التقرير. وهو حتمي (deterministic) ولا يحتاج إلى نموذج ولا إلى إنترنت. وكل إجابة
+تستشهد بأحداثها وتوضح ما إذا كانت حقيقة تمت ملاحظتها أم استنتاجًا.
 
-### 11. Defense in depth around the analyzer itself
-**Gap:** parsing a hostile file is itself an attack surface.
+### 11. دفاع متعدد الطبقات حول أداة التحليل نفسها
+**الفجوة:** تحليل ملف عدائي هو بحد ذاته سطح هجوم.
 **Blazma:**
-- Static parsing runs in a separate worker process.
-- The sandbox profile disables networking, clipboard, GPU, audio, video and printer.
-  Networking is the only one you can turn on, and it shows a warning.
-- The only channel between sandbox and host is a file folder. Every file in it is
-  HMAC-signed, size-limited and checked against an allow-list of names.
-- Anything the agent sends back is treated as untrusted input.
-- Details: [SECURITY.md](../SECURITY.md).
+- التحليل الثابت يعمل في عملية عاملة (worker) منفصلة.
+- ملف تعريف البيئة المعزولة يعطّل الشبكة والحافظة ووحدة GPU والصوت والفيديو والطابعة.
+  والشبكة هي الوحيدة التي يمكنك تفعيلها، ويظهر عندها تحذير.
+- القناة الوحيدة بين البيئة المعزولة والمضيف هي مجلد ملفات. وكل ملف فيه
+  موقّع بـ HMAC، ومحدود الحجم، ويُتحقق منه مقابل قائمة أسماء مسموح بها.
+- كل ما يرسله الوكيل يُعامل على أنه مدخلات غير موثوقة.
+- التفاصيل: [SECURITY.md](../SECURITY.md).
 
-### 12. Honest about its limits
-**Gap:** some tools hide when monitoring broke or the sample did nothing.
+### 12. صريح بشأن حدوده
+**الفجوة:** بعض الأدوات تُخفي حالات تعطل المراقبة أو عدم قيام العينة بأي شيء.
 **Blazma:**
-- A *monitoring interrupted* finding when the agent stops reporting.
-- An event-cap note when the event limit is reached.
-- A clear "no significant behavior observed" result. This is not the same as "safe".
-- Features that are not built yet appear as *Planned* and are disabled.
+- نتيجة *انقطاع المراقبة* عندما يتوقف الوكيل عن إرسال التقارير.
+- ملاحظة بشأن الحد الأقصى للأحداث عند بلوغه.
+- نتيجة واضحة «لم يُلاحظ أي سلوك مهم». وهذا لا يعني «آمن».
+- الميزات التي لم تُبنَ بعد تظهر بحالة *مخطط له* وتكون معطّلة.
 
-## Still behind other tools (on the roadmap)
+## ما زال متأخرًا عن الأدوات الأخرى (ضمن خارطة الطريق)
 
-| Area | Status |
+| المجال | الحالة |
 |---|---|
-| Full VM provider (Hyper-V/VirtualBox) to evade sandbox detection | Planned |
-| Memory analysis and unpacking | Not planned for v1 |
-| YARA scanning | Planned |
-| Network traffic capture (PCAP) and TLS inspection | Planned |
-| PDF reports | Planned |
-| Local AI explanations | Planned, local model only |
-| Community intelligence sharing | Planned, opt-in only |
-| Validation of the Windows Sandbox provider and ETW agent on real hardware | **Needed before the first release** |
+| مزوّد آلة افتراضية كاملة (Hyper-V/VirtualBox) لتفادي اكتشاف البيئة المعزولة | مخطط له |
+| تحليل الذاكرة وفك الحزم (unpacking) | غير مخطط له في الإصدار v1 |
+| فحص YARA | مخطط له |
+| التقاط حركة الشبكة (PCAP) وفحص TLS | مخطط له |
+| تقارير PDF | مخطط له |
+| شروحات بالذكاء الاصطناعي المحلي | مخطط له، بنموذج محلي فقط |
+| مشاركة المعلومات الاستخباراتية مع المجتمع | مخطط له، اختياري فقط |
+| التحقق من مزوّد Windows Sandbox ووكيل ETW على عتاد حقيقي | **مطلوب قبل الإصدار الأول** |
 
-See [ROADMAP.md](ROADMAP.md).
+انظر [ROADMAP.md](ROADMAP.md).
+
+</div>

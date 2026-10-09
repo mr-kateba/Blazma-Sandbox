@@ -41,7 +41,9 @@ public sealed class CliRunTests : IDisposable
                 new StaticAnalyzer(options.YaraFolder is { } y && Directory.Exists(y) ? YaraRuleSet.LoadFolder(y) : null, options.DetectCapabilities).AnalyzeAsync(path, ct),
             ExtractEntry = (archive, entry, password, folder, _) => Task.FromResult(ArchiveReader.ExtractEntry(archive, entry, password, folder)),
         };
-        var code = await app.RunAsync([.. args, "--data", _data], CancellationToken.None);
+        // English unless the test asks for a language: the assertions below read English output.
+        string[] lang = args.Contains("--lang") ? [] : ["--lang", "en"];
+        var code = await app.RunAsync([.. args, .. lang, "--data", _data], CancellationToken.None);
         return (code, stdout.ToString(), stderr.ToString());
     }
 
@@ -54,6 +56,28 @@ public sealed class CliRunTests : IDisposable
         Assert.Equal(ExitCodes.Ok, code);
         Assert.Contains("blazma analyze", output);
         Assert.Contains("30 critical", output);
+    }
+
+    [Fact]
+    public async Task Output_is_arabic_by_default()
+    {
+        using var stdout = new StringWriter();
+        using var stderr = new StringWriter();
+        var app = new CliApp(stdout, stderr);
+        Assert.Equal(ExitCodes.Ok, await app.RunAsync(["help"], CancellationToken.None));
+        Assert.Contains("طريقة الاستخدام", stdout.ToString());
+
+        Assert.Equal(ExitCodes.Usage, await app.RunAsync(["analyze", "x", "--nope"], CancellationToken.None));
+        Assert.Contains("خيار غير معروف", stderr.ToString());
+    }
+
+    [Fact]
+    public async Task Arabic_analysis_summary_uses_arabic_labels()
+    {
+        var (code, output, _) = await Run("analyze", Sample("one.ps1"), "--env", "demo", "--lang", "ar");
+        Assert.NotEqual(ExitCodes.Error, code);
+        Assert.Contains("الدرجة", output);
+        Assert.Contains("تجريبي", output);
     }
 
     [Fact]

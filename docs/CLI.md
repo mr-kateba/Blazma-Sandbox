@@ -1,7 +1,14 @@
-# Command line
+# سطر الأوامر
 
-`blazma` is installed next to `BlazmaSandbox.exe`. It uses the same analysis environments,
-rules, YARA folder and settings as the app, and its analyses appear in the app's History.
+**العربية** · [English](CLI.en.md)
+
+<div dir="rtl">
+
+تُثبَّت الأداة `blazma` بجانب `BlazmaSandbox.exe`. وهي تستخدم بيئات التحليل نفسها والقواعد
+ومجلد YARA والإعدادات نفسها التي يستخدمها التطبيق، وتظهر تحليلاتها في سجل التطبيق (History).
+نصوص المساعدة والرسائل بالعربية افتراضيًا؛ أضف `--lang en` لعرضها بالإنجليزية.
+
+</div>
 
 ```
 blazma static  <file> [--json] [--password <p>]
@@ -13,7 +20,11 @@ blazma envs    [--json]
 blazma help | version
 ```
 
-## Examples
+<div dir="rtl">
+
+## أمثلة
+
+</div>
 
 ```powershell
 # What is this file? Nothing is run.
@@ -33,42 +44,53 @@ blazma batch .\inbox --env virtualbox --profile deep --summary results.csv
 blazma export 31790d6c --format stix --out invoice.stix.json
 ```
 
-## Analysis options
+<div dir="rtl">
 
-| Option | Meaning |
+ما تفعله هذه الأمثلة بالترتيب:
+
+- `blazma static`: يعرض ما هو هذا الملف، دون تشغيل أي شيء.
+- `blazma analyze ... --report`: يشغّل الملف في Windows Sandbox لمدة الدقيقتين المعتادتين، مع الإنترنت المحاكى.
+- عينة مُشارَكة في ملف ZIP مشفّر: تُجرَّب كلمة المرور `infected` تلقائيًا، ويحدّد `--entry` الملف الذي يُشغَّل من داخل الأرشيف.
+- `blazma batch`: يحلّل مجلدًا من العينات طوال الليل داخل جهاز افتراضي، مع ملخص بصيغة CSV.
+- `blazma export --format stix`: يصدّر المؤشرات إلى نظام SIEM أو منصة استخبارات التهديدات لديك.
+
+## خيارات التحليل
+
+| الخيار | المعنى |
 |---|---|
-| `--env windows-sandbox\|virtualbox\|hyperv\|demo` | Where to run. Default: the one chosen in Settings. `demo` produces synthetic events and is labelled DEMO. |
-| `--profile quick\|standard\|deep\|interactive` | Run time and what is captured. Default: `standard`. |
-| `--network simulated\|offline\|internet` | Default `simulated`: no real network, a fake internet inside the sandbox records what the sample tries. |
-| `--allow-internet` | Required with `--network internet`. The sample can then reach real servers. |
-| `--duration <seconds>` | Override the profile's run time (15 to 1800). |
-| `--entry <path>` / `--password <p>` | For archives: the file inside to run, and its password. |
-| `--report <path>` | Also write an `.html` or `.json` report. |
-| `--lookup` | Hash-only reputation lookup with the services enabled in Settings (VirusTotal, MalwareBazaar). The file is never uploaded. |
-| `--pcap` | Record the sandbox's network traffic (pcapng). |
-| `--no-screenshots` | Do not capture the sandbox screen. |
-| `--lang en\|ar` | Language of finding titles in the output. |
-| `--json` | Machine-readable output on stdout; progress goes to stderr. |
-| `--data <folder>` | Use another data folder (also `BLAZMA_DATA`). |
+| `--env windows-sandbox\|virtualbox\|hyperv\|demo` | مكان التشغيل. الافتراضي: البيئة المختارة في الإعدادات (Settings). تُنتج `demo` أحداثًا اصطناعية وتُوسَم بعلامة DEMO. |
+| `--profile quick\|standard\|deep\|interactive` | مدة التشغيل وما يُلتقط. الافتراضي: `standard`. |
+| `--network simulated\|offline\|internet` | الافتراضي `simulated`: لا شبكة حقيقية، وإنترنت مزيّف داخل البيئة المعزولة يسجّل ما تحاول العينة فعله. |
+| `--allow-internet` | مطلوب مع `--network internet`. عندها تستطيع العينة الوصول إلى خوادم حقيقية. |
+| `--duration <seconds>` | يتجاوز مدة التشغيل المحددة في الملف التعريفي (من 15 إلى 1800 ثانية). |
+| `--entry <path>` / `--password <p>` | للأرشيفات: الملف الذي يُشغَّل من داخل الأرشيف، وكلمة مروره. |
+| `--report <path>` | يكتب أيضًا تقريرًا بصيغة `.html` أو `.json`. |
+| `--lookup` | استعلام عن السمعة بالبصمة (hash) فقط، عبر الخدمات المفعّلة في الإعدادات (VirusTotal وMalwareBazaar). لا يُرفع الملف أبدًا. |
+| `--pcap` | يسجّل حركة الشبكة في البيئة المعزولة (pcapng). |
+| `--no-screenshots` | لا يلتقط صور شاشة البيئة المعزولة. |
+| `--lang ar\|en` | لغة المخرجات: نصوص المساعدة والرسائل وعناوين النتائج. الافتراضي `ar` (العربية)؛ و`en` تعطي الإنجليزية. |
+| `--json` | مخرجات قابلة للقراءة آليًا على stdout؛ ويذهب التقدّم إلى stderr. |
+| `--data <folder>` | يستخدم مجلد بيانات آخر (ويمكن أيضًا عبر `BLAZMA_DATA`). |
 
-## Exit codes
+## رموز الخروج (Exit codes)
 
-| Code | Meaning |
+| الرمز | المعنى |
 |---|---|
-| 0 | Done; low risk (or a command other than `analyze`/`batch`) |
-| 10 | Suspicious |
-| 20 | High-risk behavior |
-| 30 | Critical behavior |
-| 1 | Error (the analysis failed, a file could not be read) |
-| 2 | Usage error |
-| 3 | The analysis environment is not ready (`blazma envs` says why) |
-| 4 | Cancelled (Ctrl+C) |
+| 0 | اكتمل؛ خطورة منخفضة (أو أمر غير `analyze`/`batch`) |
+| 10 | مشبوه |
+| 20 | سلوك عالي الخطورة |
+| 30 | سلوك حرج |
+| 1 | خطأ (فشل التحليل، أو تعذّرت قراءة ملف) |
+| 2 | خطأ في طريقة الاستخدام |
+| 3 | بيئة التحليل غير جاهزة (يوضّح `blazma envs` السبب) |
+| 4 | أُلغي (Ctrl+C) |
 
-For `batch`, the most severe result wins. A score is evidence for a person to review, not
-proof that a file is malicious.
+في `batch` تُعتمد النتيجة الأشد خطورة. الدرجة دليل يراجعه شخص، وليست إثباتًا على أن الملف خبيث.
 
-## Safety
+## الأمان
 
-The command line follows the same rules as the app: static analysis and archive extraction run
-in separate helper processes (`blazma --static-worker`, `--extract-worker`), the sample only runs
-inside the analysis environment, and the real network needs `--allow-internet`.
+يتبع سطر الأوامر القواعد نفسها التي يتبعها التطبيق: يجري التحليل الثابت واستخراج الأرشيفات في
+عمليات مساعدة منفصلة (`blazma --static-worker` و`--extract-worker`)، ولا تُشغَّل العينة إلا داخل
+بيئة التحليل، ويتطلب الاتصال بالشبكة الحقيقية الخيار `--allow-internet`.
+
+</div>

@@ -338,6 +338,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     public string DemoSpeedText => $"×{S.Advanced.DemoSpeed:0.0}";
     public string LogsFolder => _paths.Logs;
     [RelayCommand] private void OpenLogs() => _main.OpenFolder(_paths.Logs);
+    [RelayCommand] private void OpenDeveloper() => _main.OpenUrl("https://github.com/mr-kateba");
     [RelayCommand]
     private async Task ResetAll()
     {

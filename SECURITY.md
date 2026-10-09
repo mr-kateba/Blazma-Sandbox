@@ -1,80 +1,85 @@
-# Security
+# الأمان
 
-## Intended use
+**العربية** · [English](SECURITY.en.md)
 
-Blazma Sandbox is for defensive analysis, incident response, education and **authorized**
-security research. Do not use it to analyze files you are not allowed to handle.
+<div dir="rtl">
 
-## Security model
+## الاستخدام المقصود
 
-1. **The sample never runs on the host.** Static analysis reads the file in a separate,
-   short-lived helper process (the app's own executable started with `--static-worker`), with a
-   timeout. Signature checks call `WinVerifyTrust` with revocation and URL retrieval disabled, so
-   nothing is fetched from the network.
-2. **Execution happens only in Windows Sandbox** (a hypervisor-isolated, disposable VM), with a
-   generated configuration that disables networking (unless explicitly allowed for one
-   analysis), vGPU, clipboard, printers, audio and video input, and enables protected client mode.
-3. **Exactly two shared folders.** `in/` is read-only inside the sandbox (agent, configuration,
-   sample). `out/` is the only writable folder.
-4. **`out/` is hostile input.** The host only opens the exact protocol file names, never follows
-   links, enforces per-file and per-analysis size limits, rejects unknown actions, clips strings,
-   strips control characters, caps detail counts, and never executes or opens anything from it.
-5. **Signed monitoring output.** Event chunks, heartbeats, snapshots and the done marker carry an
-   HMAC-SHA256. The key is given to the agent through `in/session.json` and removed from that file
-   as soon as the agent says hello, before the sample is started. Failed verification is reported
-   as tampering and marks monitoring as interrupted.
-6. **Teardown always happens**: on success, failure and cancellation the sandbox processes are
-   stopped and the work folder is deleted.
-7. **Least privilege on the host**: the app runs `asInvoker` and never asks for administrator rights.
-8. **Privacy**: no uploads and no telemetry. Online reputation lookups (VirusTotal, MalwareBazaar)
-   are off until the user enables them and enters a key; they send the **SHA-256 only**, never the
-   file. API keys are encrypted with Windows DPAPI (current user). The optional AI provider only
-   talks to a loopback address unless the user explicitly allows a remote endpoint, and receives
-   the redacted report, never the sample. Exports redact the user name, machine name and profile
-   path by default. Logs never contain file contents.
-9. **Reports are safe to open**: HTML reports contain no scripts, have a restrictive
-   Content-Security-Policy, and HTML-encode every value that came from the sample. CSV exports
-   neutralise spreadsheet formulas.
-10. **Artifacts from the sandbox stay inert**: screenshots arrive as raw pixels and are re-encoded
-    as PNG by the host (no image decoder sees sandbox data); created files and memory dumps are
-    stored as numbered `.bin` files, checked against the hash in their signed sidecar, and only
-    ever read by the static helper process. The encrypted ZIP export uses the convention password
-    `infected` so the files are not opened by accident.
-11. **Archives are hostile input too**: listing and extraction happen in helper processes with
-    limits on entry count, size and compression ratio; links and paths leaving the destination
-    folder are refused; only the chosen entry is written.
-12. **Simulated internet by default**: the sandbox gets no real network adapter; the agent answers
-    DNS and HTTP inside the sandbox. A sample can tell the answers are fake, which can change its
-    behavior, but it cannot reach the internet.
+Blazma Sandbox مخصص للتحليل الدفاعي، والاستجابة للحوادث، والتعليم، وأبحاث الأمان **المصرّح بها**.
+لا تستخدمه لتحليل ملفات غير مسموح لك بالتعامل معها.
 
-## Known limitations (read these)
+## نموذج الأمان
 
-- **Validation on real Windows is pending.** The Windows Sandbox provider and the ETW agent compile
-  and are covered by protocol tests, but they have not yet been exercised end to end on a real
-  Windows machine. Treat real-sample results as preliminary until that is done.
-- **The agent runs inside the sandbox with the sample.** A sample running with the same privileges
-  can try to stop or blind the agent. Blazma detects lost heartbeats and tampered output and says
-  so in the report ("Monitoring was interrupted"), but cannot prevent it.
-- **Evasion.** Some programs detect virtual machines or wait longer than the analysis and behave
-  differently. A quiet report is not proof of safety.
-- **Windows Sandbox escapes** are outside Blazma's control; keep Windows updated.
-- **Virtual machine providers (VirtualBox, Hyper-V)** are only as isolated as the VM you prepared,
-  the guest `in` folder is writable by an elevated sample, and the providers have not yet been
-  validated on real hypervisors. The VM must have no connected network adapter unless an analysis
-  enables the network, and its snapshot is restored before and after every run. See
+1. **لا تعمل العيّنة على المضيف أبدًا.** يقرأ التحليل الثابت الملف في عملية مساعدة منفصلة قصيرة
+   العمر (الملف التنفيذي للتطبيق نفسه مُشغَّلًا بالخيار `--static-worker`)، مع مهلة زمنية. تستدعي
+   عمليات التحقق من التوقيع `WinVerifyTrust` مع تعطيل فحص الإبطال وجلب عناوين URL، فلا يُجلب أي شيء
+   من الشبكة.
+2. **لا يحدث التشغيل إلا في Windows Sandbox** (جهاز افتراضي معزول بواسطة المشرف الافتراضي
+   (hypervisor) ويُحذف بعد الاستخدام)، بإعدادات مولَّدة تعطّل الشبكة (ما لم يُسمح بها صراحةً لتحليل
+   واحد)، وvGPU، والحافظة، والطابعات، وإدخال الصوت والفيديو، وتفعّل وضع العميل المحمي (protected
+   client mode).
+3. **مجلدان مشتركان فقط بالضبط.** `in/` للقراءة فقط داخل البيئة المعزولة (الوكيل، والإعدادات،
+   والعيّنة). و`out/` هو المجلد الوحيد القابل للكتابة.
+4. **`out/` مدخلات معادية.** لا يفتح المضيف إلا أسماء ملفات البروتوكول المحددة بدقة، ولا يتبع الروابط
+   أبدًا، ويفرض حدودًا للحجم لكل ملف ولكل تحليل، ويرفض الإجراءات غير المعروفة، ويقتطع النصوص، ويزيل
+   محارف التحكم، ويحدّ من أعداد التفاصيل، ولا ينفّذ أو يفتح أي شيء منه أبدًا.
+5. **مخرجات مراقبة موقّعة.** تحمل أجزاء الأحداث، ونبضات الحياة (heartbeats)، ولقطات الحالة، وعلامة
+   الانتهاء توقيع HMAC-SHA256. يُسلَّم المفتاح إلى الوكيل عبر `in/session.json` ويُزال من ذلك الملف
+   بمجرد أن يرسل الوكيل رسالة الترحيب (hello)، قبل بدء تشغيل العيّنة. يُبلَّغ عن فشل التحقق على أنه
+   عبث، وتُوسَم المراقبة بأنها انقطعت.
+6. **التفكيك يحدث دائمًا**: عند النجاح والفشل والإلغاء، تُوقف عمليات البيئة المعزولة ويُحذف مجلد
+   العمل.
+7. **أقل الصلاحيات على المضيف**: يعمل التطبيق بمستوى `asInvoker` ولا يطلب صلاحيات المسؤول أبدًا.
+8. **الخصوصية**: لا رفع للملفات ولا قياس عن بُعد (telemetry). عمليات البحث عن السمعة عبر الإنترنت
+   (VirusTotal وMalwareBazaar) معطلة حتى يفعّلها المستخدم ويُدخل مفتاحًا؛ وهي ترسل **SHA-256 فقط**،
+   ولا ترسل الملف أبدًا. تُشفَّر مفاتيح API باستخدام Windows DPAPI (للمستخدم الحالي). لا يتواصل مزوّد
+   الذكاء الاصطناعي الاختياري إلا مع عنوان loopback ما لم يسمح المستخدم صراحةً بنقطة نهاية بعيدة،
+   ويتلقى التقرير بعد حجب البيانات، ولا يتلقى العيّنة أبدًا. يحجب التصدير افتراضيًا اسم المستخدم واسم
+   الجهاز ومسار ملف التعريف (profile). لا تحتوي السجلات أبدًا على محتويات الملفات.
+9. **التقارير آمنة للفتح**: لا تحتوي تقارير HTML على نصوص برمجية، ولها سياسة Content-Security-Policy
+   مقيِّدة، وتُرمَّز بترميز HTML كل قيمة جاءت من العيّنة. ويُبطل تصدير CSV مفعول صيغ جداول البيانات.
+10. **العناصر القادمة من البيئة المعزولة تبقى خاملة**: تصل لقطات الشاشة على شكل بكسلات خام ويعيد
+    المضيف ترميزها بصيغة PNG (فلا يرى أي مفكك ترميز للصور بيانات البيئة المعزولة)؛ وتُخزَّن الملفات
+    المُنشأة وتفريغات الذاكرة كملفات `.bin` مرقّمة، ويُتحقق منها مقابل البصمة الموجودة في ملفها
+    المرافق الموقّع، ولا تقرؤها إلا عملية التحليل الثابت المساعدة. يستخدم تصدير ZIP المشفّر كلمة المرور
+    المتعارف عليها `infected` حتى لا تُفتح الملفات عن طريق الخطأ.
+11. **الملفات المضغوطة مدخلات معادية أيضًا**: يجري عرض المحتويات والاستخراج في عمليات مساعدة مع حدود
+    لعدد المدخلات وحجمها ونسبة الضغط؛ وتُرفض الروابط والمسارات التي تخرج عن مجلد الوجهة؛ ولا يُكتب إلا
+    المدخل المختار.
+12. **إنترنت محاكى افتراضيًا**: لا تحصل البيئة المعزولة على محوّل شبكة حقيقي؛ ويجيب الوكيل على طلبات
+    DNS وHTTP داخل البيئة المعزولة. يمكن للعيّنة أن تدرك أن الإجابات وهمية، وقد يغيّر ذلك سلوكها، لكنها
+    لا تستطيع الوصول إلى الإنترنت.
+
+## القيود المعروفة (اقرأها)
+
+- **التحقق على Windows حقيقي لم يتم بعد.** مزوّد Windows Sandbox ووكيل ETW قابلان للترجمة (compile) وتغطيهما
+  اختبارات البروتوكول، لكنهما لم يُجرَّبا بعد من البداية إلى النهاية على جهاز Windows حقيقي. اعتبر
+  نتائج العيّنات الحقيقية أولية حتى يتم ذلك.
+- **يعمل الوكيل داخل البيئة المعزولة مع العيّنة.** يمكن لعيّنة تعمل بالصلاحيات نفسها أن تحاول إيقاف
+  الوكيل أو تعميته. يكتشف Blazma انقطاع نبضات الحياة والمخرجات التي عُبث بها ويذكر ذلك في التقرير
+  ("Monitoring was interrupted")، لكنه لا يستطيع منعه.
+- **التهرّب.** بعض البرامج تكتشف الأجهزة الافتراضية أو تنتظر مدة أطول من مدة التحليل فتتصرف بشكل
+  مختلف. التقرير الهادئ ليس دليلًا على الأمان.
+- **الهروب من Windows Sandbox** خارج سيطرة Blazma؛ أبقِ Windows محدَّثًا.
+- **مزوّدو الأجهزة الافتراضية (VirtualBox وHyper-V)** لا يتجاوز عزلهم عزل الجهاز الافتراضي الذي
+  جهّزته، ومجلد `in` في نظام الضيف قابل للكتابة من قِبل عيّنة ذات صلاحيات مرتفعة، ولم يُتحقق من هؤلاء
+  المزوّدين بعد على مشرفات افتراضية حقيقية. يجب ألا يكون للجهاز الافتراضي أي محوّل شبكة متصل ما لم
+  يفعّل تحليلٌ ما الشبكة، وتُستعاد لقطته قبل كل تشغيل وبعده. راجع
   [docs/VIRTUAL-MACHINES.md](docs/VIRTUAL-MACHINES.md).
-- **Enabling network access** lets the sample reach the internet from the sandbox. It is off by
-  default and requires explicit consent per analysis (and `--allow-internet` on the command
-  line). Analyzing a web address always needs it.
-- **Screenshots and installer clicking** use the desktop inside the sandbox; a sample can see
-  and react to the simulated user.
-- **Memory dumps** cover selected regions (executable private memory, RWX regions and images
-  with no file behind them) up to a size limit, not the whole process.
-- **Kernel registry events carry no value data**; the agent reads the value right after the event,
-  which can race with a fast-changing value.
+- **تفعيل الوصول إلى الشبكة** يتيح للعيّنة الوصول إلى الإنترنت من البيئة المعزولة. وهو معطل افتراضيًا
+  ويتطلب موافقة صريحة لكل تحليل (و`--allow-internet` في سطر الأوامر). تحليل عنوان ويب يتطلبه دائمًا.
+- **لقطات الشاشة والضغط التلقائي على أزرار برامج التثبيت** تستخدم سطح المكتب داخل البيئة المعزولة؛
+  ويمكن للعيّنة أن ترى المستخدم المحاكى وتتفاعل معه.
+- **تفريغات الذاكرة** تغطي مناطق مختارة (الذاكرة الخاصة القابلة للتنفيذ، ومناطق RWX، والصور (images)
+  التي لا يقف خلفها ملف) حتى حد معين للحجم، وليس العملية بأكملها.
+- **أحداث السجل (Registry) على مستوى النواة لا تحمل بيانات القيم**؛ يقرأ الوكيل القيمة مباشرة بعد
+  الحدث، وقد يحدث تسابق مع قيمة تتغير بسرعة.
 
-## Reporting a vulnerability
+## الإبلاغ عن ثغرة
 
-Please do not open a public issue for security problems. Report them privately through GitHub's
-"Report a vulnerability" (Security tab) on this repository, with steps to reproduce. Please do not
-attach live malware; describe it or share a hash.
+يُرجى عدم فتح بلاغ (issue) عام للمشكلات الأمنية. أبلغ عنها بشكل خاص عبر خاصية GitHub
+"Report a vulnerability" (تبويب Security) في هذا المستودع، مع خطوات إعادة إنتاج المشكلة. يُرجى عدم
+إرفاق برمجيات خبيثة حية؛ صِفها أو شارك بصمتها.
+
+</div>
