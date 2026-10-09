@@ -13,7 +13,12 @@ public sealed class ExportService(SettingsService settings, FileDialogService fi
 {
     public async Task ExportAsync(AnalysisResult result, ReportFormat format)
     {
-        IReportExporter exporter = format == ReportFormat.Json ? new JsonReportExporter() : new HtmlReportExporter();
+        IReportExporter exporter = format switch
+        {
+            ReportFormat.Json => new JsonReportExporter(),
+            ReportFormat.Pdf => new PdfReportExporter(),
+            _ => new HtmlReportExporter(),
+        };
         var name = $"{Path.GetFileNameWithoutExtension(result.Sample.FileName)}-blazma-{result.StartedAt:yyyyMMdd-HHmm}{exporter.FileExtension}";
         var path = await files.PickSaveAsync(name, exporter.FileExtension, settings.Current.Reports.DefaultExportFolder ?? paths.Exports);
         if (path is null) return;

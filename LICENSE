@@ -6,4 +6,6 @@ all rights are reserved by the copyright holder, mr-kateba.
 Third-party components keep their own licenses:
 - IBM Plex Sans Arabic and IBM Plex Mono fonts: SIL Open Font License 1.1 (assets/fonts/OFL.txt)
 - NuGet dependencies (Avalonia, CommunityToolkit.Mvvm, Microsoft.Data.Sqlite, Dapper, Serilog,
-  Microsoft.Diagnostics.Tracing.TraceEvent): see each package's license.
+  Microsoft.Diagnostics.Tracing.TraceEvent, SharpZipLib, SharpCompress): see each package's license.
+- QuestPDF (PDF reports): QuestPDF Community License, free for individuals, open-source projects
+  and organisations with annual revenue under USD 1,000,000. Check the license if that changes.

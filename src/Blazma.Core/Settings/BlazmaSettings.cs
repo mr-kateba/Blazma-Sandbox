@@ -164,7 +164,7 @@ public sealed class PrivacySettings
     // Telemetry and automatic uploads are not settings: Blazma has neither.
 }
 
-public enum ReportFormat { Html, Json }
+public enum ReportFormat { Html, Json, Pdf }
 
 public sealed class ReportSettings
 {

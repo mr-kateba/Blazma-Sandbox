@@ -44,7 +44,7 @@ malicious*.
 | **Persistence detection** | Run keys, Startup folder, scheduled tasks, services, Winlogon, IFEO, AppInit, Active Setup, each with a human explanation and the technical details. |
 | **Risk engine** | 31 contextual rules with ATT&CK IDs, an **ATT&CK matrix** view, per-category caps, a "Why this score?" breakdown, sequence rules that weigh combinations, and noise suppression for Windows background activity. |
 | **Reputation (opt-in)** | Local history always. **VirusTotal** and **MalwareBazaar** only if you turn them on and enter a key: the **SHA-256 is sent, never the file**. Keys are encrypted with Windows DPAPI. |
-| **Reports and sharing** | Self-contained HTML (no scripts, CSP-locked), JSON with an integrity hash, indicator CSV, **STIX 2.1**, **MISP**, draft **Sigma** and **YARA** rules, and an encrypted ZIP (password `infected`) of the created files. Personal details are redacted by default. |
+| **Reports and sharing** | Self-contained HTML (no scripts, CSP-locked), a printable **PDF** in Arabic or English, JSON with an integrity hash, indicator CSV, **STIX 2.1**, **MISP**, draft **Sigma** and **YARA** rules, and an encrypted ZIP (password `infected`) of the created files. Personal details are redacted by default. |
 | **Ask Blazma** | Ask questions about a report ("Why is the score high?", "ليش أعطيت الملف High Risk؟"). Answers come from the data and cite it. Optionally a **local AI model** (Ollama, LM Studio, llama.cpp) on this computer adds a summary, labelled as AI interpretation. |
 | **Command line** | `blazma static`, `analyze`, `batch`, `list`, `export`, `envs`, with exit codes that follow the verdict, for scripts and pipelines. [docs/CLI.en.md](docs/CLI.en.md) |
 | **Compare analyses** | Version 1.2 vs 1.3 of the same installer: new processes, connections, domains, persistence, dropped files, score difference. |
@@ -150,7 +150,7 @@ consent. Details and known limitations: [SECURITY.en.md](SECURITY.en.md).
 | 3. Sandbox: Windows Sandbox, VirtualBox, Hyper-V, signed agent channel | 🧪 Implemented, needs validation on real Windows |
 | 4. Monitoring: ETW events, screenshots, created files, memory, pcap, simulated internet, user simulation | 🧪 Implemented, needs validation on real Windows |
 | 5. Analysis: rules, risk, correlation, persistence, snapshots, ATT&CK matrix | ✅ Done |
-| 6. Reporting: report, history, search, HTML, JSON, STIX, MISP, Sigma, YARA | ✅ Done (PDF planned) |
+| 6. Reporting: report, history, search, HTML, PDF, JSON, STIX, MISP, Sigma, YARA | ✅ Done |
 | 7. Intelligence: Ask Blazma, opt-in hash reputation, optional local AI | ✅ Done |
 | 8. Advanced: compare ✅ · command line ✅ · community intelligence, plugins | Planned |
 

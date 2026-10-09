@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Exporters: machine-readable JSON, a self-contained HTML report, indicator lists, and Interop/ (STIX, MISP, Sigma, YARA, sample archives). -->
+  <!-- Exporters: machine-readable JSON, a self-contained HTML report, a printable PDF, indicator lists, and Interop/ (STIX, MISP, Sigma, YARA, sample archives). -->
   <PropertyGroup>
     <RootNamespace>Blazma.Reporting</RootNamespace>
   </PropertyGroup>
@@ -10,5 +10,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SharpZipLib" />
+    <PackageReference Include="QuestPDF" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The Blazma family fonts, embedded so PDF reports look the same on every computer (SIL OFL). -->
+    <EmbeddedResource Include="..\..\assets\fonts\*.ttf" LogicalName="Blazma.Reporting.Fonts.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

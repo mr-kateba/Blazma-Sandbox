@@ -24,6 +24,7 @@
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
 
     <!-- Reporting: password-protected sample archives (MIT) -->
+    <PackageVersion Include="QuestPDF" Version="2026.8.0" />
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
 
     <!-- Static analysis: listing and extracting ZIP, 7z, RAR, TAR and GZip samples (MIT) -->

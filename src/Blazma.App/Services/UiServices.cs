@@ -123,7 +123,7 @@ public sealed class FileDialogService
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType(Loc.T("SupportedFiles")) { Patterns = ["*.exe", "*.dll", "*.msi", "*.ps1", "*.bat", "*.cmd", "*.vbs", "*.js", "*.lnk"] },
+                new FilePickerFileType(Loc.T("SupportedFiles")) { Patterns = ["*.exe", "*.dll", "*.msi", "*.ps1", "*.bat", "*.cmd", "*.vbs", "*.js", "*.lnk", "*.zip", "*.7z", "*.rar", "*.tar", "*.gz"] },
                 new FilePickerFileType(Loc.T("AllFiles")) { Patterns = ["*"] },
             ],
         });

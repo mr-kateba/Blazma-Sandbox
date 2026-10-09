@@ -11,7 +11,7 @@ blazma static  <file> [--json] [--password <p>]
 blazma analyze <file> [options]
 blazma batch   <folder> [options] [--recursive] [--summary results.csv]
 blazma list    [--limit 20] [--json]
-blazma export  <analysis-id> --format html|json|stix|misp|sigma|yara --out <path>
+blazma export  <analysis-id> --format html|pdf|json|stix|misp|sigma|yara --out <path>
 blazma envs    [--json]
 blazma help | version
 ```
@@ -46,7 +46,7 @@ blazma export 31790d6c --format stix --out invoice.stix.json
 | `--allow-internet` | Required with `--network internet`. The sample can then reach real servers. |
 | `--duration <seconds>` | Override the profile's run time (15 to 1800). |
 | `--entry <path>` / `--password <p>` | For archives: the file inside to run, and its password. |
-| `--report <path>` | Also write an `.html` or `.json` report. |
+| `--report <path>` | Also write an `.html`, `.pdf` or `.json` report. |
 | `--lookup` | Hash-only reputation lookup with the services enabled in Settings (VirusTotal, MalwareBazaar). The file is never uploaded. |
 | `--pcap` | Record the sandbox's network traffic (pcapng). |
 | `--no-screenshots` | Do not capture the sandbox screen. |
