@@ -8,7 +8,7 @@ namespace Blazma.Analysis.Yara;
 /// variables, string operators) is parsed to its end, skipped, and reported with its name
 /// and line, so the rest of the file still loads.
 /// </summary>
-internal sealed class YaraParser(string source, string origin)
+internal sealed partial class YaraParser(string source, string origin)
 {
     private static readonly HashSet<string> KnownModules = new(StringComparer.Ordinal)
     {
@@ -43,7 +43,7 @@ internal sealed class YaraParser(string source, string origin)
                 if (t.IsWord("import"))
                 {
                     _lex.Next();
-                    Expect(TokenKind.Text, "a module name in quotes");
+                    RecordImport(Expect(TokenKind.Text, "a module name in quotes"));
                     continue;
                 }
                 if (t.IsWord("include"))
@@ -340,15 +340,24 @@ internal sealed class YaraParser(string source, string origin)
                 var right = ParseRelational();
                 if ((left.Type == YType.Bool && right.Type == YType.Int) || (left.Type == YType.Int && right.Type == YType.Bool))
                     _rb.Fail(t.Line, $"'{t.Text}' compares a boolean with an integer");
+                if ((left.Type == YType.String) != (right.Type == YType.String) && left.Type != YType.Unknown && right.Type != YType.Unknown)
+                    _rb.Fail(t.Line, $"'{t.Text}' compares text with a number");
                 left = Checked(new CompareExpr(t.Text, left, right), t.Line);
             }
             else if (t.Kind == TokenKind.Identifier && StringOperators.Contains(t.Text))
             {
                 _lex.Next();
-                if (t.Text == "matches") _lex.ReadRegexOperand();
-                else ParseRelational();
-                _rb.Fail(t.Line, $"the string operator '{t.Text}' is not supported (it needs string values, which only modules and external variables provide)");
-                left = new UnknownExpr();
+                if (t.Text == "matches")
+                {
+                    _lex.ReadRegexOperand();
+                    _rb.Fail(t.Line, "the 'matches' operator is not supported yet");
+                    left = new UnknownExpr();
+                    continue;
+                }
+                var right = ParseRelational();
+                if (left.Type is not (YType.String or YType.Unknown) || right.Type is not (YType.String or YType.Unknown))
+                    _rb.Fail(t.Line, $"'{t.Text}' needs text on both sides, such as pe.sections[0].name {t.Text} \"text\"");
+                left = Checked(new StringOpExpr(t.Text, left, right), t.Line);
             }
             else return left;
         }
@@ -423,6 +432,7 @@ internal sealed class YaraParser(string source, string origin)
     private void RequireInt(YExpr e, Token op)
     {
         if (e.Type == YType.Bool) _rb.Fail(op.Line, $"'{op.Text}' needs integer operands, not a boolean");
+        else if (e.Type == YType.String) _rb.Fail(op.Line, $"'{op.Text}' needs integer operands, not text");
     }
 
     private YExpr ParsePrimary()
@@ -442,9 +452,12 @@ internal sealed class YaraParser(string source, string origin)
                 return new ConstExpr(YVal.Int(t.Number), YType.Int);
 
             case TokenKind.Text:
-                _lex.Next();
-                _rb.Fail(t.Line, "text strings in conditions only work with string operators, which are not supported");
-                return new UnknownExpr();
+                {
+                    _lex.Next();
+                    var text = YaraEscapes.ToText(t.Text, out var error);
+                    if (error is not null) _rb.Fail(t.Line, error);
+                    return new ConstExpr(YVal.Str(text), YType.String);
+                }
 
             case TokenKind.StringId:
                 {
@@ -521,8 +534,7 @@ internal sealed class YaraParser(string source, string origin)
                 return new FilesizeExpr();
             case "entrypoint":
                 _lex.Next();
-                _rb.Fail(t.Line, "'entrypoint' is not supported (it is deprecated in YARA; its replacement needs the pe module)");
-                return new UnknownExpr();
+                return EntryPointExpr();
             case "any" or "all" or "none":
                 _lex.Next();
                 return ParseOf(new Quantifier(t.Text switch { "any" => QuantKind.Any, "all" => QuantKind.All, _ => QuantKind.None }), t);
@@ -549,6 +561,7 @@ internal sealed class YaraParser(string source, string origin)
         if (slot >= 0) return new VarExpr(_rb.Vars[slot].Slot);
 
         var next = _lex.Peek();
+        if (t.Text == "pe" && next.IsPunct(".")) return ParsePe(t);
         if (next.IsPunct(".") || next.IsPunct("[") || next.IsPunct("("))
         {
             SkipModuleAccess();

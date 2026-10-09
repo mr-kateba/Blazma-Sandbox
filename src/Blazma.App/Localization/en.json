@@ -765,7 +765,7 @@
  "WhyScore": "WHY THIS SCORE?",
  "YaraCount": "{0} YARA matches",
  "YaraDisabled": "YARA scanning is turned off in Settings → Detection.",
- "YaraHelp": "Put .yar or .yara files in this folder. Blazma scans the sample, the files it creates and suspicious memory regions with them. Matches appear in the report and add points (rule BLZ-Y001). Modules such as pe and include are not supported yet; see docs/YARA.md.",
+ "YaraHelp": "Put .yar or .yara files in this folder. Blazma scans the sample, the files it creates and suspicious memory regions with them. Matches appear in the report and add points (rule BLZ-Y001). The pe module works; other modules (math, hash, dotnet) and include are not supported yet. See docs/YARA.md.",
  "YaraMatchesTitle": "YARA MATCHES",
  "YaraRulesTitle": "YARA RULES",
  "YaraSummary": "YARA rules: {0} · files: {1}",

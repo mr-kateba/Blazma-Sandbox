@@ -55,6 +55,7 @@ All notable changes to this project are listed here. The format follows
 - Exports to STIX 2.1, MISP, draft Sigma and YARA rules, and an encrypted ZIP of created files.
 - `blazma` command line: static, analyze, batch, list, export, envs, with verdict exit codes.
 - Optional "Analyze with Blazma Sandbox" entry in the Explorer right-click menu.
+- The YARA `pe` module: header fields, sections, imports, exports, imphash, version info and PDB path, plus string operators (`contains`, `startswith`, …) and `entrypoint`.
 - Single instance: opening a file from Explorer while Blazma is open sends it to the open window.
 - Arabic is the default language of the app and the command line; docs are Arabic with English copies.
 - 750+ automated tests, a CI workflow and publish scripts.
