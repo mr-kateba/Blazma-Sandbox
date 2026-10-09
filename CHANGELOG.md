@@ -32,7 +32,28 @@ All notable changes to this project are listed here. The format follows
 - Comparing two analyses.
 - Ask Blazma: deterministic questions and answers over a report, citing the evidence.
 - Demo mode with three scenarios.
-- 104 automated tests, a CI workflow and publish scripts.
+- More environments: VirtualBox and Hyper-V virtual machines restored from a clean snapshot
+  around every run, for Windows Home users and longer analyses.
+- Simulated internet (the new default): names resolve to a fake server inside the sandbox
+  that records HTTP requests, TLS server names and uploads, with no real network.
+- Screenshots of the sandbox screen, shown live and in the report; interactive mode with
+  "two more minutes" and "finish now"; automatic clicking through installers.
+- Files the sample creates are copied out (under neutral names), hashed and analyzed;
+  memory regions with injected or unpacked code are dumped and scanned; optional pcapng.
+- Static analysis: imphash, 95 capability rules, extracted values (URLs, wallets, tokens,
+  Base64), Office/PDF detection, archive listing (ZIP/7z/RAR/TAR/GZip, common sample
+  passwords tried) and extraction of one entry in a helper process.
+- Built-in managed YARA engine and a YARA rules section on the Intelligence page.
+- Web address analysis: look-alike brands, punycode, shorteners; opened in Edge inside the
+  sandbox when the real network is allowed.
+- Opt-in hash-only reputation (VirusTotal, MalwareBazaar) with keys protected by DPAPI.
+- Optional local AI (Ollama, LM Studio, llama.cpp) in Ask Blazma, loopback-only by default.
+- Report tabs for screenshots, created files and memory, code (capabilities, YARA, extracted
+  values) and an ATT&CK matrix; seven new rules (31 in total).
+- Exports to STIX 2.1, MISP, draft Sigma and YARA rules, and an encrypted ZIP of created files.
+- `blazma` command line: static, analyze, batch, list, export, envs, with verdict exit codes.
+- Optional "Analyze with Blazma Sandbox" entry in the Explorer right-click menu.
+- 750+ automated tests, a CI workflow and publish scripts.
 
 ### Fixed
 - Loading a saved analysis no longer changes the score of another analysis that is already
@@ -40,5 +61,7 @@ All notable changes to this project are listed here. The format follows
   change the built-in default thresholds.
 
 ### Known limitations
-- The Windows Sandbox provider and ETW agent have not been validated on real Windows yet.
+- The Windows Sandbox provider, the virtual machine providers and the agent (ETW, screen
+  capture, simulated internet, installer clicking, memory dumps, pktmon) have not been
+  validated on real Windows yet.
 - License not chosen yet.

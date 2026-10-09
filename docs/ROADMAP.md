@@ -23,11 +23,23 @@ Planned features appear in the app as **Planned** and are disabled; nothing pret
 | | Behavior chains, 24 built-in rules with ATT&CK IDs, JSON rule packs | ✅ |
 | | Explainable additive score with category caps, editable thresholds | ✅ |
 | | Watchlist, trusted publishers, rule overrides | ✅ |
-| Reports | Report view (11 tabs), history, full-text search | ✅ |
+| Reports | Report view (15 tabs), history, full-text search | ✅ |
 | | JSON (with integrity hash), HTML (CSP, no scripts), CSV/TXT indicators, redaction | ✅ |
 | | Compare two analyses | ✅ |
 | Intelligence | Ask Blazma (deterministic, cites evidence) | ✅ |
-| | Local history reputation | ✅ |
+| | Local history reputation; opt-in hash-only VirusTotal and MalwareBazaar | ✅ |
+| | Optional local AI (Ollama, LM Studio, llama.cpp), loopback-only by default | ✅ |
+| Environments | VirtualBox and Hyper-V providers with snapshot restore | 🧪 |
+| Monitoring+ | Simulated internet (fake DNS/HTTP/TLS inside the sandbox) | 🧪 |
+| | Screenshots, interactive mode (extend/finish), installer clicking | 🧪 |
+| | Created files and memory regions collected and analyzed; pcapng via pktmon | 🧪 |
+| Static+ | Imphash, 95 capability rules, extracted values, Office/PDF detection | ✅ |
+| | Managed YARA engine for the sample, created files and memory | ✅ |
+| | Archives (ZIP/7z/RAR/TAR/GZip, common passwords), URL analysis | ✅ |
+| Sharing | STIX 2.1, MISP, Sigma and YARA drafts, encrypted ZIP of created files | ✅ |
+| | ATT&CK matrix view | ✅ |
+| Tools | `blazma` command line (static, analyze, batch, export) | ✅ |
+| | Explorer right-click entry (opt-in) | 🧪 |
 
 ## Before v1.0
 
@@ -44,10 +56,9 @@ Planned features appear in the app as **Planned** and are disabled; nothing pret
 | Item | Notes | Status |
 |---|---|---|
 | PDF report | Printing the HTML report works today | 📋 |
-| YARA scanning | Static + dropped files, user rule folders | 📋 |
-| VM provider (Hyper-V) | Longer runs, snapshots, harder to fingerprint | 📋 |
-| Network capture | PCAP export, optional simulated internet (fake DNS/HTTP) | 📋 |
-| Local AI explanations | Local models only; must cite evidence like Ask Blazma | 📋 |
+| YARA modules | `pe`, `math` and `include` are not supported by the built-in engine yet | 📋 |
+| Family configuration extractors | Per-family config parsers on memory dumps | 📋 |
 | Community intelligence | Strictly opt-in, hashes only, never the file | 📋 |
 | Plugin API | Third-party analyzers and exporters | 📋 |
-| Interactive mode | Click through installers inside the sandbox | 📋 |
+| Single instance | A second launch (e.g. from Explorer) hands the file to the running app | 📋 |
+| Linux / macOS samples | Different sandbox technology | 📋 |
