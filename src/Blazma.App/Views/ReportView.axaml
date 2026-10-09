@@ -60,6 +60,7 @@
               </Button.Flyout>
             </Button>
             <Button Content="JSON" Command="{Binding ExportJsonCommand}" />
+            <Button Content="PDF" Command="{Binding ExportPdfCommand}" ToolTip.Tip="{l:T ExportPdfTip}" />
             <Button Classes="primary" Command="{Binding ExportHtmlCommand}">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Path Classes="icon fixed" Data="{StaticResource IconExport}" Stroke="{DynamicResource OnAccentBrush}" Width="14" Height="14" />

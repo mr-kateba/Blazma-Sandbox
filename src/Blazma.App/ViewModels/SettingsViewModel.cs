@@ -293,7 +293,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     public bool RedactExports { get => S.Privacy.RedactExports; set { S.Privacy.RedactExports = value; Changed(); } }
 
     // Reports
-    public IReadOnlyList<EnumOption<ReportFormat>> Formats { get; } = [new(ReportFormat.Html, "FormatHtml"), new(ReportFormat.Json, "FormatJson")];
+    public IReadOnlyList<EnumOption<ReportFormat>> Formats { get; } = [new(ReportFormat.Html, "FormatHtml"), new(ReportFormat.Pdf, "FormatPdf"), new(ReportFormat.Json, "FormatJson")];
     public EnumOption<ReportFormat> DefaultFormat { get => Formats.First(f => f.Value == S.Reports.DefaultFormat); set { if (value is null) return; S.Reports.DefaultFormat = value.Value; Changed(); } }
     public bool IncludeRawEvents { get => S.Reports.IncludeRawEvents; set { S.Reports.IncludeRawEvents = value; Changed(); } }
     public bool IncludeTimeline { get => S.Reports.IncludeTimeline; set { S.Reports.IncludeTimeline = value; Changed(); } }

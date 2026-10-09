@@ -464,6 +464,7 @@ public sealed partial class ReportViewModel : PageViewModel
     }
 
     [RelayCommand] private Task ExportHtml() => Result is null ? Task.CompletedTask : _export.ExportAsync(Result, Core.Settings.ReportFormat.Html);
+    [RelayCommand] private Task ExportPdf() => Result is null ? Task.CompletedTask : _export.ExportAsync(Result, Core.Settings.ReportFormat.Pdf);
     [RelayCommand] private Task ExportJson() => Result is null ? Task.CompletedTask : _export.ExportAsync(Result, Core.Settings.ReportFormat.Json);
     [RelayCommand] private Task ExportInterop(string? kind) => Result is null || kind is null ? Task.CompletedTask : _export.ExportInteropAsync(Result, kind);
     [RelayCommand] private Task ExportIndicators() => Result is null ? Task.CompletedTask : _export.ExportIndicatorsAsync(Result);

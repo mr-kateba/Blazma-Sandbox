@@ -115,7 +115,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
               يحلل كل ملفات المجلد واحدًا بعد الآخر.
           blazma list    [--limit 20] [--json]
               آخر التحليلات من السجل (نفس سجل البرنامج).
-          blazma export  <analysis-id> --format html|json|stix|misp|sigma|yara --out <path>
+          blazma export  <analysis-id> --format html|pdf|json|stix|misp|sigma|yara --out <path>
               يصدّر تحليلًا محفوظًا بصيغة أخرى. يكفي جزء من رقم التحليل.
           blazma envs    [--json]
               بيئات التحليل الجاهزة على هذا الجهاز.
@@ -128,7 +128,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
           --network simulated|offline|internet           (الافتراضي simulated: إنترنت وهمي)
           --allow-internet      مطلوب مع --network internet؛ يستطيع الملف الوصول لخوادم حقيقية
           --duration <seconds>  مدة التشغيل بدل مدة الملف التعريفي (15-1800)
-          --report <path>       يكتب تقريرًا أيضًا (.html أو .json حسب الامتداد)
+          --report <path>       يكتب تقريرًا أيضًا (.html أو .pdf أو .json حسب الامتداد)
           --lookup              فحص السمعة بالبصمة فقط عبر الخدمات المفعّلة في الإعدادات
           --pcap                يسجّل حركة الشبكة داخل البيئة (pcapng)
           --no-screenshots      بدون لقطات لشاشة البيئة
@@ -155,7 +155,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
               Analyzes every file in a folder, one after another.
           blazma list    [--limit 20] [--json]
               Recent analyses from the history (shared with the desktop app).
-          blazma export  <analysis-id> --format html|json|stix|misp|sigma|yara --out <path>
+          blazma export  <analysis-id> --format html|pdf|json|stix|misp|sigma|yara --out <path>
               Writes a saved analysis in another format. The id can be shortened.
           blazma envs    [--json]
               Which analysis environments are ready on this computer.
@@ -168,7 +168,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
           --network simulated|offline|internet           (default: simulated)
           --allow-internet      required with --network internet; the sample can reach real servers
           --duration <seconds>  override the profile's run time (15-1800)
-          --report <path>       also write a report (.html or .json by extension)
+          --report <path>       also write a report (.html, .pdf or .json by extension)
           --lookup              hash-only reputation lookup with the services enabled in settings
           --pcap                record the sandbox's network traffic (pcapng)
           --no-screenshots      do not capture the sandbox screen
@@ -331,7 +331,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
 
         var reportPath = command.Option("report");
         if (reportPath is not null && ReportExporterFor(reportPath) is null)
-            return (null, await UsageErrorAsync(L("--report must end in .html or .json.", "قيمة --report يجب أن تنتهي بـ ‎.html أو ‎.json.")));
+            return (null, await UsageErrorAsync(L("--report must end in .html, .pdf or .json.", "قيمة --report يجب أن تنتهي بـ ‎.html أو ‎.pdf أو ‎.json.")));
 
         return (new RunPlan(options.Normalized(), env?.ToLowerInvariant(), reportPath, command.Flag("lookup")), ExitCodes.Ok);
     }
@@ -584,6 +584,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
     {
         ".html" or ".htm" => new HtmlReportExporter(),
         ".json" => new JsonReportExporter(),
+        ".pdf" => new PdfReportExporter(),
         _ => null,
     };
 
@@ -729,8 +730,8 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         var format = command.Option("format")?.ToLowerInvariant();
         var output = command.Option("out");
         if (format is null || output is null) return await UsageErrorAsync(L("export needs --format and --out.", "الأمر export يحتاج --format و--out."));
-        if (format is not ("html" or "json" or "stix" or "misp" or "sigma" or "yara"))
-            return await UsageErrorAsync(L("--format must be html, json, stix, misp, sigma or yara.", "قيمة --format يجب أن تكون html أو json أو stix أو misp أو sigma أو yara."));
+        if (format is not ("html" or "pdf" or "json" or "stix" or "misp" or "sigma" or "yara"))
+            return await UsageErrorAsync(L("--format must be html, pdf, json, stix, misp, sigma or yara.", "قيمة --format يجب أن تكون html أو pdf أو json أو stix أو misp أو sigma أو yara."));
 
         await using var c = await OpenAsync(command, ct);
         var id = await ResolveIdAsync(c.Repository, command.Positionals[0], ct);
@@ -757,6 +758,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
             switch (format)
             {
                 case "html": await new HtmlReportExporter().ExportAsync(result, stream, options, ct); break;
+                case "pdf": await new PdfReportExporter().ExportAsync(result, stream, options, ct); break;
                 case "json": await new JsonReportExporter().ExportAsync(result, stream, options, ct); break;
                 case "stix": await new StixExporter().ExportAsync(result, stream, options, ct); break;
                 case "misp": await new MispExporter().ExportAsync(result, stream, options, ct); break;

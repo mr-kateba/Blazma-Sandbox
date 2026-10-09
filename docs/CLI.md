@@ -15,7 +15,7 @@ blazma static  <file> [--json] [--password <p>]
 blazma analyze <file> [options]
 blazma batch   <folder> [options] [--recursive] [--summary results.csv]
 blazma list    [--limit 20] [--json]
-blazma export  <analysis-id> --format html|json|stix|misp|sigma|yara --out <path>
+blazma export  <analysis-id> --format html|pdf|json|stix|misp|sigma|yara --out <path>
 blazma envs    [--json]
 blazma help | version
 ```
@@ -64,7 +64,7 @@ blazma export 31790d6c --format stix --out invoice.stix.json
 | `--allow-internet` | مطلوب مع `--network internet`. عندها تستطيع العينة الوصول إلى خوادم حقيقية. |
 | `--duration <seconds>` | يتجاوز مدة التشغيل المحددة في الملف التعريفي (من 15 إلى 1800 ثانية). |
 | `--entry <path>` / `--password <p>` | للأرشيفات: الملف الذي يُشغَّل من داخل الأرشيف، وكلمة مروره. |
-| `--report <path>` | يكتب أيضًا تقريرًا بصيغة `.html` أو `.json`. |
+| `--report <path>` | يكتب أيضًا تقريرًا بصيغة `.html` أو `.pdf` أو `.json`. |
 | `--lookup` | استعلام عن السمعة بالبصمة (hash) فقط، عبر الخدمات المفعّلة في الإعدادات (VirusTotal وMalwareBazaar). لا يُرفع الملف أبدًا. |
 | `--pcap` | يسجّل حركة الشبكة في البيئة المعزولة (pcapng). |
 | `--no-screenshots` | لا يلتقط صور شاشة البيئة المعزولة. |

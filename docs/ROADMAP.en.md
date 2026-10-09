@@ -57,7 +57,7 @@ Planned features appear in the app as **Planned** and are disabled; nothing pret
 
 | Item | Notes | Status |
 |---|---|---|
-| PDF report | Printing the HTML report works today | 📋 |
+| PDF report | A4, Arabic and English, with the embedded family fonts | ✅ |
 | YARA `pe` module | Header fields, sections, imports, exports, imphash, version info, PDB path | ✅ |
 | More YARA modules | `math`, `hash`, `dotnet` and `include` | 📋 |
 | Family configuration extractors | Per-family config parsers on memory dumps | 📋 |

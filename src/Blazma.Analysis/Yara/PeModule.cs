@@ -243,17 +243,26 @@ internal sealed class PeVersionInfoExpr(YExpr key) : YExpr(YType.String, key)
 }
 
 /// <summary>Module functions such as <c>pe.imports("kernel32.dll", "VirtualAlloc")</c>.</summary>
-internal sealed class PeCallExpr(YType type, YExpr[] args, Func<PeModuleData, YVal[], long, YVal> call) : YExpr(type, args)
+internal sealed class PeCallExpr : YExpr
 {
+    private readonly YExpr[] _args;
+    private readonly Func<PeModuleData, YVal[], long, YVal> _call;
+
+    public PeCallExpr(YType type, YExpr[] args, Func<PeModuleData, YVal[], long, YVal> call) : base(type, args)
+    {
+        _args = args;
+        _call = call;
+    }
+
     public override YVal Eval(ref YaraScanState s)
     {
         if (s.GetPe() is not { } pe) return YVal.Undefined;
-        var values = new YVal[args.Length];
-        for (var i = 0; i < args.Length; i++)
+        var values = new YVal[_args.Length];
+        for (var i = 0; i < _args.Length; i++)
         {
-            values[i] = args[i].Eval(ref s);
+            values[i] = _args[i].Eval(ref s);
             if (values[i].IsUndefined) return YVal.Undefined;
         }
-        return call(pe, values, s.Data.Length);
+        return _call(pe, values, s.Data.Length);
     }
 }
