@@ -103,7 +103,7 @@ public sealed partial class IntelligenceViewModel(MainViewModel main, SettingsSe
         var set = YaraRuleSet.LoadFolder(paths.Yara);
         YaraRules.Clear();
         foreach (var r in set.Rules.Where(r => !r.IsPrivate))
-            YaraRules.Add(new YaraRuleRow(r.Name, $"{r.Origin}:{r.Line}", string.Join(" ", r.Tags), r.Meta.TryGetValue("description", out var d) ? d : ""));
+            YaraRules.Add(new YaraRuleRow(r.Name, $"{Path.GetRelativePath(paths.Yara, r.Origin)}:{r.Line}", string.Join(" ", r.Tags), r.Meta.TryGetValue("description", out var d) ? d : ""));
         YaraErrors.Clear();
         foreach (var e in set.LoadErrors) YaraErrors.Add(e);
         YaraSummary = Loc.F("YaraSummary", set.RuleCount, set.Rules.Select(r => r.Origin).Distinct().Count());

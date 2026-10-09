@@ -145,6 +145,7 @@
  "CmpFindings": "النتائج",
  "CmpPersistence": "البقاء",
  "CmpProcesses": "العمليات",
+ "CodeCapabilitiesSection": "ما يستطيع الكود فعله",
  "CollectDropped": "نسخ الملفات المُنشأة",
  "CollectDroppedHelp": "تُنسخ الملفات التي ينشئها البرنامج وتُحلَّل. تُحفظ بدون اسمها وامتدادها حتى لا تُفتح بالخطأ.",
  "CommandLine": "سطر الأوامر",
@@ -766,6 +767,6 @@
  "YaraHelp": "ضع ملفات ‎.yar أو ‎.yara في هذا المجلد. يفحص Blazma بها الملف والملفات التي ينشئها ومناطق الذاكرة المريبة. تظهر المطابقات في التقرير وتضيف نقاطًا (القاعدة BLZ-Y001). الوحدات مثل pe والأمر include غير مدعومة بعد، والتفاصيل في docs/YARA.md.",
  "YaraMatchesTitle": "تطابقات YARA",
  "YaraRulesTitle": "قواعد YARA",
- "YaraSummary": "{0} قاعدة من {1} ملف",
+ "YaraSummary": "قواعد YARA: {0} · الملفات: {1}",
  "Yes": "نعم"
 }

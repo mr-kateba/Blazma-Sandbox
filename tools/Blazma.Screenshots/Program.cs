@@ -46,6 +46,11 @@ foreach (var name in new[] { "viewer-tool.exe", "contoso-tool-1.2.exe", "setup.e
     main = Pump(active.Completion).AnalysisId;
 }
 
+// An example YARA rule so the Intelligence page and the report show real matches.
+var paths = services.GetRequiredService<BlazmaPaths>();
+Directory.CreateDirectory(paths.Yara);
+File.WriteAllText(Path.Combine(paths.Yara, "example.yar"), IntelligenceViewModel.ExampleYara);
+
 var vm = services.GetRequiredService<MainViewModel>();
 var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
 window.Show();
@@ -101,6 +106,24 @@ Shot("16-settings-detection", () =>
     s.SelectedSection = s.Sections.First(x => x.Key == "Detection");
     return Task.CompletedTask;
 });
+Shot("20-report-screenshots", () => vm.OpenReportAsync(main, 11));
+Shot("21-report-artifacts", () => vm.OpenReportAsync(main, 12));
+Shot("22-report-code", () => vm.OpenReportAsync(main, 13));
+Shot("23-report-attack", () => vm.OpenReportAsync(main, 14));
+Shot("24-settings-integrations", () =>
+{
+    vm.Navigate("Settings");
+    var s = vm.Page<SettingsViewModel>();
+    s.SelectedSection = s.Sections.First(x => x.Key == "Integrations");
+    return Task.CompletedTask;
+});
+Shot("25-settings-ai", () =>
+{
+    var s = vm.Page<SettingsViewModel>();
+    s.SelectedSection = s.Sections.First(x => x.Key == "AI");
+    return Task.CompletedTask;
+});
+
 Shot("17-palette", () => { vm.Navigate("Dashboard"); vm.Palette.Open(); return Task.CompletedTask; });
 Shot("18-onboarding", () => { vm.Palette.Close(); vm.ShowOnboarding(); return Task.CompletedTask; });
 Shot("19-live", async () =>

@@ -126,7 +126,30 @@ public sealed class AnalysisCoordinator(
         Signature = new SignatureInfo(SignatureStatus.NotSigned),
         Entropy = 7.61,
         Warnings = ["Demo sample: these values are synthetic."],
+        ImpHash = "c3d1a2b9e8f70a65d4b3c2e1f0a9b8c7",
+        Capabilities = DemoCapabilities(),
+        Artifacts =
+        [
+            new ExtractedArtifact(ArtifactKind.Url, "https://updates.contoso-cdn.example/check", fileName),
+            new ExtractedArtifact(ArtifactKind.Domain, "updates.contoso-cdn.example", fileName),
+            new ExtractedArtifact(ArtifactKind.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ContosoUpdater/2.1", fileName),
+            new ExtractedArtifact(ArtifactKind.MutexName, "Global\\ContosoUpdaterSingleton", fileName),
+        ],
     };
+
+    /// <summary>Real catalog entries with synthetic evidence, so the demo shows the Code tab.</summary>
+    private static IReadOnlyList<Capability> DemoCapabilities()
+    {
+        var evidence = new Dictionary<string, string[]>
+        {
+            ["CAP-PER-001"] = ["import: advapi32!RegSetValueExW", "string: Software\\Microsoft\\Windows\\CurrentVersion\\Run"],
+            ["CAP-PER-004"] = ["string: schtasks /create"],
+            ["CAP-EXE-004"] = ["import: urlmon!URLDownloadToFileW", "import: shell32!ShellExecuteW"],
+            ["CAP-INJ-001"] = ["import: kernel32!VirtualAllocEx", "import: kernel32!WriteProcessMemory", "import: kernel32!CreateRemoteThread"],
+            ["CAP-ANA-001"] = ["import: kernel32!IsDebuggerPresent"],
+        };
+        return CapabilityDetector.Catalog.Where(c => evidence.ContainsKey(c.Id)).Select(c => c with { Evidence = evidence[c.Id] }).ToList();
+    }
 
     public ActiveAnalysis Start(string samplePath, StaticReport report, AnalysisOptions options, ISandboxProvider provider, IReadOnlyList<ReputationResult>? reputation = null)
     {
