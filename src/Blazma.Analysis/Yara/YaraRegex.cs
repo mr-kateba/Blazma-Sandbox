@@ -49,10 +49,11 @@ internal static class YaraRegex
         public int Alignment { get; } = alignment;
     }
 
-    public static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(5);
-
-    /// <summary>A compiled regex variant and the literal every match must contain (a cheap prefilter).</summary>
-    public sealed record Compiled(Regex Regex, BytePattern? Required);
+    /// <summary>
+    /// A compiled regex variant, the literal every match must contain (a cheap prefilter),
+    /// and whether it uses ^ or $, which only mean something over the whole data.
+    /// </summary>
+    public sealed record Compiled(Regex Regex, BytePattern? Required, bool Anchored);
 
     public static Compiled Compile(string pattern, bool nocase, bool dotAll, bool wide)
     {
@@ -60,8 +61,10 @@ internal static class YaraRegex
         var tree = parser.Parse();
         var sb = new StringBuilder();
         Emit(tree, sb);
-        var regex = new Regex(sb.ToString(), RegexOptions.NonBacktracking | RegexOptions.CultureInvariant, MatchTimeout);
-        return new Compiled(regex, RequiredLiteral(tree, nocase, wide));
+        // No match timeout: every call runs over a bounded window, and .NET's non-backtracking
+        // engine was seen to miss \b matches on large inputs when a timeout is set.
+        var regex = new Regex(sb.ToString(), RegexOptions.NonBacktracking | RegexOptions.CultureInvariant);
+        return new Compiled(regex, RequiredLiteral(tree, nocase, wide), HasEdgeAnchor(tree));
     }
 
     // ---- tree -------------------------------------------------------------------------
@@ -412,6 +415,15 @@ internal static class YaraRegex
 
     private static void AppendChar(StringBuilder sb, int b) =>
         sb.Append(CultureInfo.InvariantCulture, $"\\u{(int)MapByte(b):X4}");
+
+    private static bool HasEdgeAnchor(Node node) => node switch
+    {
+        Anchor a => a.DotNet is "\\A" or "\\z",
+        Concat c => c.Items.Any(HasEdgeAnchor),
+        Alternation a => a.Branches.Any(HasEdgeAnchor),
+        Repeat r => HasEdgeAnchor(r.Body),
+        _ => false,
+    };
 
     /// <summary>
     /// The longest run of literal bytes every match must contain (top-level only). If the data

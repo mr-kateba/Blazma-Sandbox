@@ -219,9 +219,10 @@ internal sealed class HexString(string identifier, bool isPrivate, HexProgram pr
 }
 
 /// <summary>
-/// Regular expressions, run with the .NET non-backtracking engine over the byte view. YARA
-/// reports a match at every offset where one starts (they may overlap), so the search
-/// restarts one byte after each match start.
+/// Regular expressions, run with the .NET non-backtracking engine over the byte view (or
+/// the wide views). YARA reports a match at every offset where one starts (they may
+/// overlap), so the search restarts one byte after each match start, and every call is
+/// limited to a bounded window so that restarting never rescans long matches.
 /// </summary>
 internal sealed class RegexString(string identifier, bool isPrivate, IReadOnlyList<(YaraRegex.Compiled Regex, bool Wide)> variants, bool fullword)
     : YaraString(identifier, isPrivate)
@@ -241,26 +242,18 @@ internal sealed class RegexString(string identifier, bool isPrivate, IReadOnlyLi
                 if (r == -2) { timedOut = true; continue; }
             }
             // Wide text can start at either byte alignment; each has its own view.
-            for (var alignment = 0; alignment < (wide ? 2 : 1); alignment++)
+            for (var alignment = 0; alignment < (wide ? 2 : 1) && !timedOut; alignment++)
             {
                 var text = wide ? view.GetWide(data, alignment) : view.Get(data);
-                var pos = 0;
-                try
+                var found = compiled.Anchored
+                    ? FindAnchored(compiled.Regex, text, results[v].Count, deadline, out var late)
+                    : FindWindowed(compiled.Regex, text, wide ? YaraLimits.MaxRegexMatchBytes / 2 : YaraLimits.MaxRegexMatchBytes, results[v].Count, deadline, out late);
+                timedOut |= late;
+                foreach (var (index, length) in found)
                 {
-                    while (pos <= text.Length && results[v].Count < YaraLimits.MaxHitsPerString)
-                    {
-                        var m = compiled.Regex.Match(text, pos);
-                        if (!m.Success) break;
-                        var offset = wide ? 2 * m.Index - alignment : m.Index;
-                        var length = wide ? 2 * m.Length : m.Length;
-                        if (!fullword || IsFullword(data, offset, length, wide)) results[v].Add(new YaraHit(offset, length));
-                        pos = m.Index + 1;
-                        if (YaraClock.Now > deadline) { timedOut = true; break; }
-                    }
-                }
-                catch (RegexMatchTimeoutException)
-                {
-                    timedOut = true;
+                    var offset = wide ? 2 * index - alignment : index;
+                    var bytes = wide ? 2 * length : length;
+                    if (!fullword || IsFullword(data, offset, bytes, wide)) results[v].Add(new YaraHit(offset, bytes));
                 }
             }
             if (wide) results[v].Sort((a, b) => a.Offset.CompareTo(b.Offset));
@@ -271,6 +264,72 @@ internal sealed class RegexString(string identifier, bool isPrivate, IReadOnlyLi
             return SearchOutcome.Complete;
         }, hits);
         return timedOut ? SearchOutcome.TimedOut : outcome;
+    }
+
+    /// <summary>Chars searched per call when looking for the next match start.</summary>
+    private const int Chunk = 16 * 1024;
+
+    /// <summary>
+    /// Finds match starts left to right without ever running the regex over more than one
+    /// chunk plus the match limit, so dense or long matches (/a+/ over megabytes of 'a')
+    /// stay linear. Each start is then matched in its own window of the match limit, which is
+    /// how YARA bounds regex matches. One char before each window gives \b its context.
+    /// </summary>
+    private static List<(int Index, int Length)> FindWindowed(Regex regex, string text, int limit, int already, long deadline, out bool timedOut)
+    {
+        timedOut = false;
+        var found = new List<(int, int)>();
+        var pos = 0;
+        while (pos <= text.Length && already + found.Count < YaraLimits.MaxHitsPerString)
+        {
+            if (YaraClock.Now > deadline) { timedOut = true; break; }
+            var start = FirstStart(regex, text, pos, (int)Math.Min(text.Length, (long)pos + Chunk + limit));
+            if (start < 0 || start >= pos + Chunk)
+            {
+                if ((long)pos + Chunk + limit >= text.Length) break;
+                pos += Chunk;
+                continue;
+            }
+            var length = MatchAt(regex, text, start, (int)Math.Min(text.Length, (long)start + limit));
+            if (length >= 0) found.Add((start, length));
+            pos = start + 1;
+        }
+        return found;
+    }
+
+    /// <summary>The leftmost match start in [from, end), or -1.</summary>
+    private static int FirstStart(Regex regex, string text, int from, int end)
+    {
+        var context = from > 0 ? 1 : 0;
+        foreach (var m in regex.EnumerateMatches(text.AsSpan(from - context, end - from + context), context))
+            return from - context + m.Index;
+        return -1;
+    }
+
+    /// <summary>The length of the match starting exactly at <paramref name="start"/> within [start, end), or -1.</summary>
+    private static int MatchAt(Regex regex, string text, int start, int end)
+    {
+        var context = start > 0 ? 1 : 0;
+        foreach (var m in regex.EnumerateMatches(text.AsSpan(start - context, end - start + context), context))
+            return m.Index == context ? m.Length : -1;
+        return -1;
+    }
+
+    /// <summary>Regexes using ^ or $ run over the whole view, since those anchors refer to its ends.</summary>
+    private static List<(int Index, int Length)> FindAnchored(Regex regex, string text, int already, long deadline, out bool timedOut)
+    {
+        timedOut = false;
+        var found = new List<(int, int)>();
+        var pos = 0;
+        while (pos <= text.Length && already + found.Count < YaraLimits.MaxHitsPerString)
+        {
+            if (YaraClock.Now > deadline) { timedOut = true; break; }
+            var m = regex.Match(text, pos);
+            if (!m.Success) break;
+            found.Add((m.Index, m.Length));
+            pos = m.Index + 1;
+        }
+        return found;
     }
 }
 
