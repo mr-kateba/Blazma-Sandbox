@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Text.Json;
 using System.Threading.Channels;
 using Blazma.Analysis.Engine;
 using Blazma.Analysis.Pipeline;
@@ -9,10 +7,7 @@ using Blazma.Core.Abstractions;
 using Blazma.Core.Analysis;
 using Blazma.Core.Events;
 using Blazma.Core.Samples;
-using Blazma.Sandbox.Providers.Demo;
-using Blazma.Sandbox.Providers.VirtualMachine.HyperV;
-using Blazma.Sandbox.Providers.VirtualMachine.VirtualBox;
-using Blazma.Sandbox.Providers.WindowsSandbox;
+using Blazma.Sandbox.Providers;
 using Blazma.Storage;
 using Microsoft.Extensions.Logging;
 
@@ -51,8 +46,6 @@ public sealed class AnalysisCoordinator(
 
     public event EventHandler? ActiveChanged;
 
-    public static string StaticWorkerFlag => "--static-worker";
-
     /// <summary>The rule engine with built-in rules plus the user's rule packs (if enabled).</summary>
     public RuleEngine BuildRuleEngine()
     {
@@ -67,85 +60,20 @@ public sealed class AnalysisCoordinator(
         return new RuleEngine(rules, loggers.CreateLogger<RuleEngine>());
     }
 
-    private static string AgentFolder => Path.Combine(AppContext.BaseDirectory, "agent");
+    public ISandboxProvider Provider(string? id = null) =>
+        SandboxProviders.Create(id, settings.Current, paths.Work, SandboxProviders.DefaultAgentFolder, secrets, loggers);
 
-    public ISandboxProvider Provider(string? id = null) => (id ?? settings.Current.Analysis.ProviderId) switch
-    {
-        DemoSandboxProvider.ProviderId => new DemoSandboxProvider(TimeProvider.System, settings.Current.Advanced.DemoSpeed),
-        VirtualBoxProvider.ProviderId => new VirtualBoxProvider(
-            VirtualBoxOptions.FromSettings(settings.Current.VirtualMachines, settings.Current.Advanced, paths.Work, AgentFolder, settings.Current.Analysis.StopWhenTreeExits), secrets, loggers: loggers),
-        HyperVProvider.ProviderId => new HyperVProvider(
-            HyperVOptions.FromSettings(settings.Current.VirtualMachines, settings.Current.Advanced, paths.Work, AgentFolder, settings.Current.Analysis.StopWhenTreeExits), secrets, loggers: loggers),
-        _ => new WindowsSandboxProvider(new WindowsSandboxOptions
-        {
-            WorkRoot = paths.Work,
-            AgentFolder = AgentFolder,
-            AgentLimits = new Blazma.Sandbox.Channel.AgentLimits(
-                settings.Current.Analysis.MaxDroppedFiles,
-                settings.Current.Analysis.MaxDroppedFileMb * 1024L * 1024,
-                settings.Current.Analysis.MaxMemoryDumpMb * 1024L * 1024,
-                Blazma.Sandbox.Channel.AgentLimits.Default.MaxScreenshots),
-            MemoryMb = settings.Current.Advanced.SandboxMemoryMb,
-            OutboxQuotaBytes = settings.Current.Advanced.OutboxQuotaBytes,
-            HeartbeatTimeout = TimeSpan.FromSeconds(settings.Current.Advanced.AgentHeartbeatTimeoutSeconds),
-            StopWhenTreeExits = settings.Current.Analysis.StopWhenTreeExits,
-        }, loggers),
-    };
+    /// <summary>The helper options that follow the user's detection settings.</summary>
+    public StaticWorkerOptions StaticOptions() => new(
+        settings.Current.Detection.EnableCapabilities,
+        settings.Current.Detection.EnableYara ? paths.Yara : null);
 
     /// <summary>
     /// Runs static analysis in a separate copy of this executable so a parser bug triggered
     /// by a hostile file cannot reach the UI process. Never executes the sample.
     /// </summary>
-    public async Task<StaticReport> AnalyzeStaticAsync(string path, CancellationToken ct)
-    {
-        var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Cannot locate the Blazma executable.");
-        var psi = new ProcessStartInfo(exe)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-        if (Path.GetFileNameWithoutExtension(exe).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
-            psi.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "BlazmaSandbox.dll"));
-        psi.ArgumentList.Add(StaticWorkerFlag);
-        psi.ArgumentList.Add(path);
-
-        using var process = Process.Start(psi) ?? throw new InvalidOperationException("The static analysis helper did not start.");
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(90));
-        try
-        {
-            var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
-            var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
-            await process.WaitForExitAsync(timeout.Token);
-            if (process.ExitCode != 0) throw new InvalidOperationException((await stderr).Trim());
-            return JsonSerializer.Deserialize<StaticReport>(await stdout, BlazmaJson.Options) ?? throw new InvalidDataException("Empty static report.");
-        }
-        catch (OperationCanceledException)
-        {
-            try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
-            throw;
-        }
-    }
-
-    /// <summary>Entry point used by the helper process (see Program.Main).</summary>
-    public static async Task<int> RunStaticWorkerAsync(string path)
-    {
-        try
-        {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(80));
-            var report = await new StaticAnalyzer().AnalyzeAsync(path, cts.Token);
-            await using var stdout = Console.OpenStandardOutput();
-            await JsonSerializer.SerializeAsync(stdout, report, BlazmaJson.Options, cts.Token);
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            await Console.Error.WriteLineAsync(ex.Message);
-            return 1;
-        }
-    }
+    public Task<StaticReport> AnalyzeStaticAsync(string path, CancellationToken ct) =>
+        StaticWorker.AnalyzeAsync(path, StaticOptions(), BlazmaJson.Options, "BlazmaSandbox.dll", ct);
 
     /// <summary>A synthetic sample for the demo analysis (nothing is read from disk or run).</summary>
     public static StaticReport DemoSample(string fileName = "setup.exe") => new()

@@ -1,5 +1,6 @@
 using Avalonia;
-using Blazma.App.Services;
+using Blazma.Analysis.Static;
+using Blazma.Storage;
 
 namespace Blazma.App;
 
@@ -10,8 +11,8 @@ internal static class Program
     {
         // The same executable doubles as the isolated static-analysis helper, so a parser
         // problem caused by a hostile file stays in a short-lived separate process.
-        if (args.Length == 2 && args[0] == AnalysisCoordinator.StaticWorkerFlag)
-            return AnalysisCoordinator.RunStaticWorkerAsync(args[1]).GetAwaiter().GetResult();
+        if (StaticWorker.IsWorkerInvocation(args))
+            return StaticWorker.RunAsync(args, BlazmaJson.Options).GetAwaiter().GetResult();
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) => App.LogFatal(e.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, e) => { App.LogFatal(e.Exception); e.SetObserved(); };
