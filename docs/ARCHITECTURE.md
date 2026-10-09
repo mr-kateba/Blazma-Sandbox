@@ -23,7 +23,7 @@ wire protocol and the only code the agent and the host share.
 src/
   Blazma.Core           domain model, interfaces (no dependencies)
   Blazma.Contracts      host <-> agent protocol, signed files
-  Blazma.Analysis       Static/ Engine/ Rules/ Pipeline/ Compare/ Text/
+  Blazma.Analysis       Static/ Engine/ Rules/ Pipeline/ Compare/ Text/ Yara/
   Blazma.Sandbox        Providers/WindowsSandbox  Providers/VirtualMachine (VirtualBox, Hyper-V)
                         Providers/Demo  Channel/  Isolation/  Processes/
   Blazma.Agent          in-sandbox ETW agent (win-x64, self-contained)
@@ -31,6 +31,7 @@ src/
   Blazma.Reporting      HTML, JSON, indicator CSV, redaction
   Blazma.Intelligence   Ask Blazma, AI and reputation extension points
   Blazma.App            Avalonia UI, design system, localization
+  Blazma.Cli            "blazma" command line (static, analyze, batch, export)
 tests/                  Analysis, Sandbox, Integration, App
 tools/Blazma.Screenshots  headless renderer for screenshots
 ```
@@ -169,3 +170,4 @@ packs. A plugin system is deliberately not built until the core has been validat
 | ETW in the agent | Kernel-level process/file/registry/network visibility without installing drivers. |
 | SQLite + one compressed document per analysis | Fast paging/search on events, simple loading of the derived report. |
 | No TLS interception | Out of scope for v1 by design; metadata only. |
+| Managed YARA engine instead of libyara | No native parser on the host for internet-sourced rules; every search is bounded, and anything unsupported is an error rather than a silent miss. See [YARA.md](YARA.md). |
