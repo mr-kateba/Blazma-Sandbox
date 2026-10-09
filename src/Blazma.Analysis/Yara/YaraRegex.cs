@@ -9,8 +9,8 @@ namespace Blazma.Analysis.Yara;
 /// <see cref="RegexOptions.NonBacktracking"/> (linear time, so no rule can hang a scan).
 /// The pattern is parsed into a small tree first so every construct is checked: anything
 /// YARA does not have (backreferences, lookarounds, inline options) is an error, and
-/// classes, nocase and wide are expanded over bytes here rather than trusting .NET's
-/// Unicode-aware classes.
+/// classes and nocase are expanded over bytes here rather than trusting .NET's
+/// Unicode-aware classes. Wide strings run the same pattern over a view of UTF-16 units.
 /// </summary>
 internal static class YaraRegex
 {
@@ -27,6 +27,28 @@ internal static class YaraRegex
             for (var i = 0; i < bytes.Length; i++) chars[i] = MapByte(bytes[i]);
         });
 
+    /// <summary>
+    /// Wide data viewed one char per 2-byte unit, so the same regex (and its \b, ^ and $)
+    /// works on UTF-16 text. Char j covers bytes 2j-<paramref name="alignment"/> and the
+    /// next; a unit whose second byte is not zero, or that is cut off at either end,
+    /// becomes U+FFFF, which no byte class contains.
+    /// </summary>
+    public static string WideView(ReadOnlySpan<byte> data, int alignment) =>
+        string.Create((data.Length + alignment + 1) / 2, new WideSource(data, alignment), static (chars, src) =>
+        {
+            for (var j = 0; j < chars.Length; j++)
+            {
+                var lo = 2 * j - src.Alignment;
+                chars[j] = lo < 0 || lo + 1 >= src.Data.Length || src.Data[lo + 1] != 0 ? '\uFFFF' : MapByte(src.Data[lo]);
+            }
+        });
+
+    private readonly ref struct WideSource(ReadOnlySpan<byte> data, int alignment)
+    {
+        public ReadOnlySpan<byte> Data { get; } = data;
+        public int Alignment { get; } = alignment;
+    }
+
     public static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>A compiled regex variant and the literal every match must contain (a cheap prefilter).</summary>
@@ -36,10 +58,8 @@ internal static class YaraRegex
     {
         var parser = new Parser(pattern, nocase, dotAll);
         var tree = parser.Parse();
-        if (wide && ContainsWordBoundary(tree))
-            throw new FormatException("\\b and \\B cannot be used with the wide modifier");
         var sb = new StringBuilder();
-        Emit(tree, sb, wide);
+        Emit(tree, sb);
         var regex = new Regex(sb.ToString(), RegexOptions.NonBacktracking | RegexOptions.CultureInvariant, MatchTimeout);
         return new Compiled(regex, RequiredLiteral(tree, nocase, wide));
     }
@@ -336,30 +356,28 @@ internal static class YaraRegex
 
     // ---- emitting ---------------------------------------------------------------------
 
-    private static void Emit(Node node, StringBuilder sb, bool wide)
+    private static void Emit(Node node, StringBuilder sb)
     {
         switch (node)
         {
             case ByteSet set:
-                if (wide) sb.Append("(?:");
                 EmitSet(set.Members, sb);
-                if (wide) sb.Append("\\u0000)");
                 break;
             case Concat c:
-                foreach (var item in c.Items) Emit(item, sb, wide);
+                foreach (var item in c.Items) Emit(item, sb);
                 break;
             case Alternation a:
                 sb.Append("(?:");
                 for (var i = 0; i < a.Branches.Count; i++)
                 {
                     if (i > 0) sb.Append('|');
-                    Emit(a.Branches[i], sb, wide);
+                    Emit(a.Branches[i], sb);
                 }
                 sb.Append(')');
                 break;
             case Repeat r:
                 sb.Append("(?:");
-                Emit(r.Body, sb, wide);
+                Emit(r.Body, sb);
                 sb.Append(')');
                 sb.Append(CultureInfo.InvariantCulture, $"{{{r.Min},{(r.Max < 0 ? string.Empty : r.Max.ToString(CultureInfo.InvariantCulture))}}}");
                 if (r.Lazy) sb.Append('?');
@@ -394,15 +412,6 @@ internal static class YaraRegex
 
     private static void AppendChar(StringBuilder sb, int b) =>
         sb.Append(CultureInfo.InvariantCulture, $"\\u{(int)MapByte(b):X4}");
-
-    private static bool ContainsWordBoundary(Node node) => node switch
-    {
-        Anchor a => a.DotNet is "\\b" or "\\B",
-        Concat c => c.Items.Any(ContainsWordBoundary),
-        Alternation a => a.Branches.Any(ContainsWordBoundary),
-        Repeat r => ContainsWordBoundary(r.Body),
-        _ => false,
-    };
 
     /// <summary>
     /// The longest run of literal bytes every match must contain (top-level only). If the data

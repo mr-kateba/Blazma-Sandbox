@@ -312,6 +312,19 @@ public class YaraStringTests
     }
 
     [Fact]
+    public void Regex_wide_keeps_word_boundaries_and_anchors()
+    {
+        Assert.True(Y.Matches("$a = /\\biex\\b/ wide", "$a", Y.Wide("x = iex(1)")));
+        Assert.False(Y.Matches("$a = /\\biex\\b/ wide", "$a", Y.Wide("$iexplore")));
+        Assert.True(Y.Matches("$a = /\\biex\\b/ wide", "@a[1] == 3 and !a[1] == 6", Y.Cat([0x20], Y.Wide(" iex "))));
+        Assert.True(Y.Matches("$a = /^ab/ wide", "$a", Y.Wide("ab")));
+        Assert.False(Y.Matches("$a = /^ab/ wide", "$a", Y.Cat([0x20], Y.Wide("ab"))));
+        Assert.True(Y.Matches("$a = /ab$/ wide", "$a", Y.Cat([0x20], Y.Wide("ab"))));
+        Assert.False(Y.Matches("$a = /ab$/ wide", "$a", Y.Cat(Y.Wide("ab"), [0x20])));
+        Assert.False(Y.Matches("$a = /a.c/ wide", "$a", new byte[] { 0x61, 0, 0x41, 0x41, 0x63, 0 })); // '.' is one wide char
+    }
+
+    [Fact]
     public void Regex_offsets_and_lengths()
     {
         Assert.True(Y.Matches("$a = /ab+/", "#a == 2 and @a[1] == 2 and !a[1] == 3 and @a[2] == 7", "..abb..ab"));
