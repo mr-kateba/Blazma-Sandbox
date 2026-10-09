@@ -50,7 +50,7 @@ public class YaraCompileErrorTests
         var result = YaraCompiler.Compile(source, "mixed.yar");
         Assert.Equal(["good_one", "good_two"], result.Rules.Select(r => r.Name));
         var error = Assert.Single(result.Errors);
-        Assert.Equal("mixed.yar:5: rule uses_pe: uses the 'pe' module, which is not supported", error);
+        Assert.Equal("mixed.yar:5: rule uses_pe: uses the 'pe' module without 'import \"pe\"' at the top of the file", error);
     }
 
     [Theory]
@@ -64,9 +64,12 @@ public class YaraCompileErrorTests
     [InlineData("rule r { condition: console.log(1) }", "'console' module")]
     [InlineData("rule r { condition: pe.sections[0].name == 1 }", "'pe' module")]
     [InlineData("rule r { condition: for any s in pe.sections : ( true ) }", "need modules")]
-    [InlineData("rule r { condition: entrypoint == 0 }", "'entrypoint' is not supported")]
     [InlineData("rule r { condition: my_external > 1 }", "undefined identifier 'my_external'")]
-    [InlineData("rule r { condition: \"abc\" contains \"b\" }", "not supported")]
+    [InlineData("rule r { condition: \"abc\" matches /b/ }", "not supported")]
+    [InlineData("import \"pe\" rule r { condition: pe.number_of_signatures == 0 }", "pe.number_of_signatures is not supported")]
+    [InlineData("import \"pe\" rule r { condition: pe.imports(/kernel32/i, /Virtual/) }", "regular expression is not supported")]
+    [InlineData("import \"pe\" rule r { condition: pe.sections[0].name == 1 }", "compares text with a number")]
+    [InlineData("import \"pe\" rule r { condition: pe.machine contains \"x\" }", "needs text on both sides")]
     [InlineData("rule r { strings: $a = \"x\" condition: $a and pe.is_dll() matches /x/ }", "'pe' module")]
     [InlineData("rule r { condition: later }  rule later { condition: true }", "undefined identifier 'later'")]
     public void Unsupported_features_name_the_rule_and_line(string source, string fragment)

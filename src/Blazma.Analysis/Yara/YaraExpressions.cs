@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 
 namespace Blazma.Analysis.Yara;
 
-internal enum YType { Bool, Int, Unknown }
+internal enum YType { Bool, Int, String, Unknown }
 
 /// <summary>
 /// A condition value: an integer, a boolean, or undefined (reading past the end of the data,
@@ -11,23 +11,29 @@ internal enum YType { Bool, Int, Unknown }
 /// </summary>
 internal readonly struct YVal
 {
-    private const byte UndefinedKind = 0, IntKind = 1, BoolKind = 2;
+    private const byte UndefinedKind = 0, IntKind = 1, BoolKind = 2, StringKind = 3;
 
-    private YVal(long value, byte kind)
+    private YVal(long value, byte kind, string? text = null)
     {
         Value = value;
         Kind = kind;
+        Text = text;
     }
 
     public long Value { get; }
     private byte Kind { get; }
 
+    /// <summary>For string values (module fields such as <c>pe.sections[0].name</c>).</summary>
+    public string? Text { get; }
+
     public static YVal Undefined => default;
     public static YVal Int(long v) => new(v, IntKind);
     public static YVal Bool(bool b) => new(b ? 1 : 0, BoolKind);
+    public static YVal Str(string? text) => text is null ? Undefined : new(text.Length, StringKind, text);
 
     public bool IsUndefined => Kind == UndefinedKind;
-    public bool IsTrue => Kind != UndefinedKind && Value != 0;
+    public bool IsString => Kind == StringKind;
+    public bool IsTrue => Kind == StringKind ? Text!.Length > 0 : Kind != UndefinedKind && Value != 0;
 }
 
 /// <summary>Thrown when one rule's condition runs out of evaluation steps.</summary>
@@ -48,6 +54,8 @@ internal ref struct YaraScanState
     public List<string> Warnings;
     public long ScanDeadline;
     public bool ScanBudgetReported;
+    private PeModuleData? _pe;
+    private bool _peLoaded;
 
     // Per rule being evaluated.
     public int StringBase;
@@ -55,6 +63,17 @@ internal ref struct YaraScanState
     public int CurrentString;
     public long Steps;
     public string RuleName;
+
+    /// <summary>The pe module's view of the data, parsed on first use; null when the data is not a PE.</summary>
+    public PeModuleData? GetPe()
+    {
+        if (!_peLoaded)
+        {
+            _peLoaded = true;
+            _pe = PeModuleData.TryBuild(Data);
+        }
+        return _pe;
+    }
 
     public void Step()
     {
@@ -169,6 +188,12 @@ internal sealed class CompareExpr(string op, YExpr left, YExpr right) : YExpr(YT
         if (l.IsUndefined) return l;
         var r = right.Eval(ref s);
         if (r.IsUndefined) return r;
+        if (l.IsString || r.IsString)
+        {
+            // Strings compare byte for byte (ordinal), as in YARA; the parser allows only == and !=.
+            var equal = l.IsString && r.IsString && string.Equals(l.Text, r.Text, StringComparison.Ordinal);
+            return YVal.Bool(op == "==" ? equal : !equal);
+        }
         // Booleans compare by truth, integers by value.
         long a = left.Type == YType.Bool ? (l.IsTrue ? 1 : 0) : l.Value;
         long b = right.Type == YType.Bool ? (r.IsTrue ? 1 : 0) : r.Value;
@@ -182,6 +207,31 @@ internal sealed class CompareExpr(string op, YExpr left, YExpr right) : YExpr(YT
             _ => a >= b,
         });
     }
+}
+
+/// <summary>contains, startswith, endswith, iequals and their case-insensitive forms (ASCII case only, as in YARA).</summary>
+internal sealed class StringOpExpr(string op, YExpr left, YExpr right) : YExpr(YType.Bool, left, right)
+{
+    public override YVal Eval(ref YaraScanState s)
+    {
+        var l = left.Eval(ref s);
+        if (!l.IsString) return YVal.Undefined;
+        var r = right.Eval(ref s);
+        if (!r.IsString) return YVal.Undefined;
+        string a = l.Text!, b = r.Text!;
+        var ignoreCase = op.StartsWith('i');
+        if (ignoreCase) { a = AsciiLower(a); b = AsciiLower(b); }
+        return YVal.Bool(op.TrimStart('i') switch
+        {
+            "contains" => a.Contains(b, StringComparison.Ordinal),
+            "startswith" => a.StartsWith(b, StringComparison.Ordinal),
+            "endswith" => a.EndsWith(b, StringComparison.Ordinal),
+            _ => string.Equals(a, b, StringComparison.Ordinal),
+        });
+    }
+
+    private static string AsciiLower(string text) =>
+        string.Create(text.Length, text, (span, t) => { for (var i = 0; i < t.Length; i++) span[i] = t[i] is >= 'A' and <= 'Z' ? (char)(t[i] + 32) : t[i]; });
 }
 
 internal sealed class AndExpr(List<YExpr> items) : YExpr(YType.Bool, [.. items])

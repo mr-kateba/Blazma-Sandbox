@@ -43,7 +43,7 @@ command line into a single namespace; this is the one deliberate difference.)
 | Tags (`rule name : tag1 tag2`) | ✅ |
 | Metadata: text (with escapes), integers (also negative, hex), `true`/`false` | ✅ first value wins on duplicate keys |
 | `//` and `/* */` comments, also inside hex strings | ✅ |
-| `import "module"` | ✅ accepted, but a rule that **uses** a module is skipped with an error |
+| `import "module"` | ✅ `pe` works (see [The `pe` module](#the-pe-module)); a rule that uses another module is skipped with an error |
 | `include "file"` | ❌ error (put every file in the folder instead) |
 | Duplicate rule names in one file | ❌ error |
 | Strings never used in the condition | ❌ error, as in YARA (names starting with `$_` are exempt) |
@@ -123,10 +123,13 @@ reported at every offset where one starts.
 | `defined expr` | ✅ |
 | References to earlier rules | ✅ a rule cannot reference a later one, as in YARA |
 | Anonymous strings `$ = "..."` | ✅ through `them`, `$*` and `for ... of` |
-| `entrypoint` | ❌ error (deprecated in YARA; needs the `pe` module) |
-| Modules: `pe.`, `elf.`, `math.`, `hash.`, `dotnet.`, `cuckoo.`, `magic.`, `time.`, `console.`, … | ❌ the rule is skipped with an error naming the module |
+| `entrypoint` | ✅ the entry point's file offset, the same as `pe.entry_point` (deprecated in YARA) |
+| `pe.` | ✅ see [The `pe` module](#the-pe-module) |
+| Other modules: `elf.`, `math.`, `hash.`, `dotnet.`, `cuckoo.`, `magic.`, `time.`, `console.`, … | ❌ the rule is skipped with an error naming the module |
 | External variables | ❌ error (`undefined identifier`) |
-| String operators `contains`, `icontains`, `startswith`, `endswith`, `iequals`, `matches`, … | ❌ error (they need module or external string values) |
+| Text values: `"..."` constants, `==`, `!=` | ✅ (text comes from `pe` fields such as `pe.sections[0].name`) |
+| String operators `contains`, `icontains`, `startswith`, `istartswith`, `endswith`, `iendswith`, `iequals` | ✅ the `i` forms ignore ASCII case |
+| `matches` | ❌ error |
 | `for ... in` with several variables (dictionary iteration) | ❌ error |
 
 **Undefined values** (reading past the end, `@a[5]` with two matches, division by zero)
@@ -137,6 +140,28 @@ final result treat undefined as false. This is YARA 4's behaviour.
 `N%` rounds up (`50% of` three strings needs two). A loop over an empty range (`(5..1)`, or
 `(1..#a)` when `#a` is 0) has no iterations: `any` is false, `all` is true, `none` is true. A
 loop whose bounds are undefined is undefined.
+
+
+## The `pe` module
+
+Write `import "pe"` at the top of the file. The module reads the same bounds-checked headers as
+static analysis; on data that is not a PE every `pe.*` value is undefined (false), and `pe.is_pe`
+is 0.
+
+| Supported | |
+|---|---|
+| Header fields | `is_pe`, `machine`, `number_of_sections`, `timestamp`, `characteristics`, `entry_point` (file offset), `entry_point_raw` (RVA), `image_base`, `opthdr_magic`, `subsystem`, `dll_characteristics`, `size_of_image`, `size_of_headers`, `size_of_code`, `size_of_initialized_data`, `size_of_uninitialized_data`, `base_of_code`, `base_of_data`, `section_alignment`, `file_alignment`, `checksum`, `number_of_rva_and_sizes`, `size_of_stack_reserve/commit`, `size_of_heap_reserve/commit`, `pointer_to_symbol_table`, `number_of_symbols`, `size_of_optional_header` |
+| Versions | `linker_version`, `os_version`, `image_version`, `subsystem_version` (`.major`, `.minor`) |
+| Sections | `sections[i].name`, `.virtual_address`, `.virtual_size`, `.raw_data_offset`, `.raw_data_size`, `.characteristics`, and the relocation/line-number fields |
+| Other tables | `data_directories[i].virtual_address/.size`, `version_info["CompanyName"]`, `pdb_path`, `overlay.offset/.size`, `number_of_imports`, `number_of_imported_functions`, `number_of_exports`, `number_of_resources` |
+| Functions | `imports(dll)` (count), `imports(dll, function)`, `imports(dll, ordinal)`, `exports(name)`, `imphash()`, `is_dll()`, `is_32bit()`, `is_64bit()`, `section_index(name)`, `section_index(offset)`, `rva_to_offset(rva)` |
+| Constants | `MACHINE_*`, `SUBSYSTEM_*`, file characteristics (`DLL`, `EXECUTABLE_IMAGE`, …), DLL characteristics (`DYNAMIC_BASE`, `NX_COMPAT`, `GUARD_CF`, …), `SECTION_*`, `IMAGE_DIRECTORY_ENTRY_*`, `IMAGE_NT_OPTIONAL_HDR32/64_MAGIC` |
+
+DLL and function names in `imports()` are compared without regard to case. Not supported yet
+(the rule is skipped with an error that names the field): signatures (`number_of_signatures`,
+`signatures[]`, `is_signed`), `rich_signature`, `resources[]`, delayed imports, `imports()` and
+`exports()` with regular expressions, and `for ... in pe.sections` (use an index loop instead:
+`for any i in (0 .. pe.number_of_sections - 1) : (pe.sections[i].name == ".text")`).
 
 ## Safety limits
 

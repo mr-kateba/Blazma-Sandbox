@@ -45,7 +45,7 @@
 | الوسوم (`rule name : tag1 tag2`) | ✅ |
 | البيانات الوصفية: نص (مع رموز الهروب)، أعداد صحيحة (والسالبة والست عشرية أيضًا)، `true`/`false` | ✅ القيمة الأولى هي المعتمدة عند تكرار المفاتيح |
 | التعليقات `//` و`/* */`، وكذلك داخل السلاسل الست عشرية | ✅ |
-| `import "module"` | ✅ مقبول، لكن القاعدة التي **تستخدم** وحدة تُتخطّى مع خطأ |
+| `import "module"` | ✅ الوحدة `pe` تعمل (انظر [الوحدة `pe`](#الوحدة-pe))؛ والقاعدة التي تستخدم وحدة أخرى تُتخطّى مع خطأ |
 | `include "file"` | ❌ خطأ (ضع كل الملفات في المجلد بدلًا من ذلك) |
 | تكرار أسماء القواعد في ملف واحد | ❌ خطأ |
 | سلاسل لا تُستخدم أبدًا في الشرط | ❌ خطأ، كما في YARA (تُستثنى الأسماء التي تبدأ بـ `$_`) |
@@ -125,10 +125,13 @@
 | `defined expr` | ✅ |
 | الإشارات إلى القواعد السابقة | ✅ لا يمكن لقاعدة أن تشير إلى قاعدة لاحقة، كما في YARA |
 | السلاسل المجهولة `$ = "..."` | ✅ عبر `them` و`$*` و`for ... of` |
-| `entrypoint` | ❌ خطأ (مهملة في YARA؛ وتحتاج إلى الوحدة `pe`) |
-| الوحدات: `pe.`، `elf.`، `math.`، `hash.`، `dotnet.`، `cuckoo.`، `magic.`، `time.`، `console.`، … | ❌ تُتخطّى القاعدة مع خطأ يسمّي الوحدة |
+| `entrypoint` | ✅ موضع نقطة الدخول في الملف، مثل `pe.entry_point` (مهملة في YARA) |
+| `pe.` | ✅ انظر قسم [الوحدة `pe`](#الوحدة-pe) |
+| الوحدات الأخرى: `elf.`، `math.`، `hash.`، `dotnet.`، `cuckoo.`، `magic.`، `time.`، `console.`، … | ❌ تُتخطّى القاعدة مع خطأ يسمّي الوحدة |
 | المتغيرات الخارجية (External variables) | ❌ خطأ (`undefined identifier`) |
-| عوامل السلاسل `contains`، `icontains`، `startswith`، `endswith`، `iequals`، `matches`، … | ❌ خطأ (تحتاج إلى قيم نصية من وحدة أو من متغيرات خارجية) |
+| القيم النصية: ثوابت `"..."` و`==` و`!=` | ✅ (النص يأتي من حقول `pe` مثل `pe.sections[0].name`) |
+| عوامل النصوص `contains`، `icontains`، `startswith`، `istartswith`، `endswith`، `iendswith`، `iequals` | ✅ صيغ `i` لا تميّز بين الأحرف الكبيرة والصغيرة (ASCII) |
+| `matches` | ❌ خطأ |
 | `for ... in` بعدة متغيرات (التكرار على قاموس) | ❌ خطأ |
 
 **القيم غير المعرّفة** (القراءة بعد نهاية البيانات، أو `@a[5]` مع تطابقين فقط، أو القسمة على صفر)
@@ -139,6 +142,27 @@
 `N%` تُقرَّب إلى الأعلى (`50% of` من ثلاث سلاسل تحتاج إلى اثنتين). الحلقة على مدى فارغ (`(5..1)`، أو
 `(1..#a)` عندما تكون `#a` صفرًا) ليس فيها أي تكرار: `any` تكون false، و`all` تكون true، و`none` تكون
 true. والحلقة التي حدودها غير معرّفة تكون غير معرّفة.
+
+
+## الوحدة `pe`
+
+اكتب `import "pe"` في أول الملف. تقرأ الوحدة نفس الترويسات التي يقرؤها التحليل الثابت مع فحص الحدود؛
+وفي البيانات التي ليست ملف PE تكون كل قيم `pe.*` غير معرّفة (خطأ)، وقيمة `pe.is_pe` صفر.
+
+| المدعوم | |
+|---|---|
+| حقول الترويسة | `is_pe`، `machine`، `number_of_sections`، `timestamp`، `characteristics`، `entry_point` (موضع في الملف)، `entry_point_raw` (RVA)، `image_base`، `opthdr_magic`، `subsystem`، `dll_characteristics`، `size_of_image`، `size_of_headers`، `size_of_code`، `size_of_initialized_data`، `size_of_uninitialized_data`، `base_of_code`، `base_of_data`، `section_alignment`، `file_alignment`، `checksum`، `number_of_rva_and_sizes`، `size_of_stack_reserve/commit`، `size_of_heap_reserve/commit`، `pointer_to_symbol_table`، `number_of_symbols`، `size_of_optional_header` |
+| الإصدارات | `linker_version`، `os_version`، `image_version`، `subsystem_version` (`.major`، `.minor`) |
+| الأقسام | `sections[i].name`، `.virtual_address`، `.virtual_size`، `.raw_data_offset`، `.raw_data_size`، `.characteristics`، وحقول relocation وline number |
+| جداول أخرى | `data_directories[i].virtual_address/.size`، `version_info["CompanyName"]`، `pdb_path`، `overlay.offset/.size`، `number_of_imports`، `number_of_imported_functions`، `number_of_exports`، `number_of_resources` |
+| الدوال | `imports(dll)` (العدد)، `imports(dll, function)`، `imports(dll, ordinal)`، `exports(name)`، `imphash()`، `is_dll()`، `is_32bit()`، `is_64bit()`، `section_index(name)`، `section_index(offset)`، `rva_to_offset(rva)` |
+| الثوابت | `MACHINE_*`، `SUBSYSTEM_*`، خصائص الملف (`DLL`، `EXECUTABLE_IMAGE`، …)، خصائص DLL (`DYNAMIC_BASE`، `NX_COMPAT`، `GUARD_CF`، …)، `SECTION_*`، `IMAGE_DIRECTORY_ENTRY_*`، `IMAGE_NT_OPTIONAL_HDR32/64_MAGIC` |
+
+تُقارن أسماء المكتبات والدوال في `imports()` دون تمييز بين الأحرف الكبيرة والصغيرة. غير مدعوم بعد
+(تُتخطّى القاعدة مع خطأ يسمّي الحقل): التواقيع (`number_of_signatures` و`signatures[]` و`is_signed`)،
+و`rich_signature`، و`resources[]`، والاستيرادات المؤجلة، و`imports()` و`exports()` مع التعابير النمطية،
+و`for ... in pe.sections` (استخدم حلقة بالفهرس بدلًا منها:
+`for any i in (0 .. pe.number_of_sections - 1) : (pe.sections[i].name == ".text")`).
 
 ## حدود الأمان
 

@@ -58,7 +58,8 @@ Planned features appear in the app as **Planned** and are disabled; nothing pret
 | Item | Notes | Status |
 |---|---|---|
 | PDF report | Printing the HTML report works today | 📋 |
-| YARA modules | `pe`, `math` and `include` are not supported by the built-in engine yet | 📋 |
+| YARA `pe` module | Header fields, sections, imports, exports, imphash, version info, PDB path | ✅ |
+| More YARA modules | `math`, `hash`, `dotnet` and `include` | 📋 |
 | Family configuration extractors | Per-family config parsers on memory dumps | 📋 |
 | Community intelligence | Strictly opt-in, hashes only, never the file | 📋 |
 | Plugin API | Third-party analyzers and exporters | 📋 |
