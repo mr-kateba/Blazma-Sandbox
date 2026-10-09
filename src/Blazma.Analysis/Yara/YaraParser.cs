@@ -583,7 +583,7 @@ internal sealed class YaraParser(string source, string origin)
             else if (t.IsPunct("("))
             {
                 _lex.Next();
-                if (_lex.Peek().IsPunct(")")) { _lex.Next(); continue; }
+                if (!_lex.RawNextIs('/') && _lex.Peek().IsPunct(")")) { _lex.Next(); continue; }
                 while (true)
                 {
                     if (_lex.RawNextIs('/')) _lex.ReadRegexOperand();
