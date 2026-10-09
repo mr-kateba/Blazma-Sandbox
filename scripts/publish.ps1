@@ -21,4 +21,22 @@ if ($LASTEXITCODE -ne 0) { throw "Command line publish failed" }
 dotnet publish (Join-Path $root "src/Blazma.Agent") -c $Configuration -r win-x64 -o (Join-Path $out "agent")
 if ($LASTEXITCODE -ne 0) { throw "Agent publish failed" }
 
+# Installer (Inno Setup 6, preinstalled on GitHub's Windows runners; skipped when missing).
+$version = ([xml](Get-Content (Join-Path $root "Directory.Build.props"))).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+$candidates = @(
+    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+    "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+)
+$onPath = Get-Command iscc -ErrorAction SilentlyContinue
+if ($onPath) { $candidates = @($onPath.Source) + $candidates }
+$iscc = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+if ($iscc) {
+    & $iscc "/DAppVersion=$version" "/DSourceDir=$out" "/DOutputDir=$(Join-Path $root 'publish')" (Join-Path $root "installer/BlazmaSandbox.iss")
+    if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+    Write-Host "Installer: publish/BlazmaSandbox-$version-setup.exe"
+} else {
+    Write-Host "Inno Setup 6 not found; skipping the installer (install it from https://jrsoftware.org/isinfo.php)."
+}
+
 Write-Host "Published to $out"

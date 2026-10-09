@@ -85,6 +85,15 @@ See **[docs/ARCHITECTURE.en.md](docs/ARCHITECTURE.en.md)** for the boundaries, t
 machine, the data model and the design decisions, and **[SECURITY.en.md](SECURITY.en.md)** for the
 security model and its limits.
 
+## Install
+
+1. On the repository's **Actions** page, open the latest successful run and download **BlazmaSandbox-setup**.
+2. Run `BlazmaSandbox-<version>-setup.exe`. It installs for your account only, needs no administrator rights, and offers Arabic and English.
+3. Choose the extras you want: a desktop shortcut, "Analyze with Blazma Sandbox" in the Explorer right-click menu, and the `blazma` command on the PATH.
+
+The program is not code-signed yet, so Windows SmartScreen may warn: choose **More info**, then **Run anyway**.
+Uninstalling keeps your analyses and settings in `%LocalAppData%\Blazma\Sandbox`; delete that folder yourself if you want them gone.
+
 ## Requirements
 
 - **To analyze real files with Windows Sandbox:** Windows 10 (1903+) or Windows 11, **Pro,

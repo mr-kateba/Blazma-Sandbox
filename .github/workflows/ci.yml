@@ -34,3 +34,8 @@ jobs:
         with:
           name: BlazmaSandbox-win-x64
           path: publish/BlazmaSandbox
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlazmaSandbox-setup
+          path: publish/BlazmaSandbox-*-setup.exe
+          if-no-files-found: error
