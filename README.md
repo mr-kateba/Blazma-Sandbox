@@ -92,7 +92,7 @@ Blazma.App (Avalonia UI) ──► Blazma.Analysis ──► Blazma.Core ◄─�
 
 ## التثبيت
 
-1. من صفحة **Actions** في المستودع افتح أحدث تشغيل ناجح، ونزّل **BlazmaSandbox-setup**.
+1. من صفحة [**الإصدارات (Releases)**](https://github.com/mr-kateba/Blazma-Sandbox/releases) نزّل أحدث `BlazmaSandbox-<الإصدار>-setup.exe`، أو النسخة المحمولة ZIP.
 2. شغّل `BlazmaSandbox-<الإصدار>-setup.exe`. يثبّت البرنامج لحسابك فقط ولا يطلب صلاحيات المسؤول، وواجهة التثبيت بالعربية.
 3. اختر ما تريد: اختصار على سطح المكتب، وخيار «تحليل باستخدام Blazma Sandbox» في قائمة الزر الأيمن، وإضافة الأمر `blazma` إلى سطر الأوامر.
 

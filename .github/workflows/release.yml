@@ -1,0 +1,45 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 builds Blazma on Windows and publishes a GitHub Release with the
+# installer, a portable ZIP and their SHA-256 checksums. Notes come from docs/releases/<tag>.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Build, test and package
+        run: pwsh scripts/publish.ps1
+      - name: Collect release files
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $setup = "publish/BlazmaSandbox-$version-setup.exe"
+          if (-not (Test-Path $setup)) { throw "The installer $setup was not built (does Directory.Build.props say $version?)" }
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item $setup release/
+          Compress-Archive -Path publish/BlazmaSandbox/* -DestinationPath "release/BlazmaSandbox-$version-win-x64-portable.zip"
+          Get-ChildItem release | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
+          } | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          Get-Content release/SHA256SUMS.txt
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $notes = "docs/releases/$tag.md"
+          if (-not (Test-Path $notes)) { throw "Missing release notes: $notes" }
+          $pre = if ($tag -match "-|^v0\.") { "--prerelease" } else { "" }
+          gh release create $tag (Get-ChildItem release).FullName --title "Blazma Sandbox $tag" --notes-file $notes $pre
