@@ -1,34 +1,44 @@
-# Writing rule packs
+# كتابة حزم القواعد
 
-Blazma Sandbox ships 24 built-in rules (`BLZ-*`). You can add your own detections as JSON
-files without writing or compiling code.
+**العربية** · [English](RULE-PACKS.en.md)
 
-## Where packs live
+<div dir="rtl">
 
-Put `*.json` files in:
+يأتي Blazma Sandbox مع 31 قاعدة مدمجة (`BLZ-*`). ويمكنك إضافة قواعد الكشف الخاصة بك على شكل ملفات JSON
+دون كتابة كود أو ترجمته.
+
+## مكان الحزم
+
+ضع ملفات `*.json` في:
+
+</div>
 
 ```
 %LocalAppData%\Blazma\Sandbox\rules\
 ```
 
-**Intelligence → Rules → Open rules folder** opens it. Packs are loaded again every time an analysis
-starts, so you don't need to restart the app. To turn every custom pack off, use
-the custom rule packs switch in **Settings → Detection**.
+<div dir="rtl">
 
-Limits are enforced on purpose:
+يفتح الأمر **الاستخبارات ← القواعد ← فتح مجلد القواعد** هذا المجلد. تُحمَّل الحزم من جديد في كل مرة يبدأ فيها
+تحليل، لذلك لا تحتاج إلى إعادة تشغيل التطبيق. ولتعطيل كل الحزم المخصصة، استخدم
+مفتاح حزم القواعد المخصصة في **الإعدادات ← الكشف**.
 
-| Limit | Value |
+تُفرض الحدود التالية عن قصد:
+
+| الحد | القيمة |
 |---|---|
-| Files read | the first 64 `*.json` files, in name order |
-| File size | 1 MB per file (larger files are skipped and reported) |
-| Rule ID | must start with `USR-`, at most 32 characters |
-| Weight | 0–50 |
+| الملفات المقروءة | أول 64 ملف `*.json`، بترتيب الأسماء |
+| حجم الملف | 1 MB لكل ملف (الملفات الأكبر يُتجاوز عنها ويُبلَّغ عنها) |
+| معرّف القاعدة | يجب أن يبدأ بـ `USR-`، وألا يزيد عن 32 حرفًا |
+| الوزن | 0–50 |
 | `minCount` | 1–10 000 |
 
-A broken pack never stops an analysis. Its errors are listed in the
-**Intelligence → Rules** page.
+الحزمة المعطوبة لا توقف التحليل أبدًا. وتُعرض أخطاؤها في
+صفحة **الاستخبارات ← القواعد**.
 
-## Example
+## مثال
+
+</div>
 
 ```jsonc
 {
@@ -51,51 +61,55 @@ A broken pack never stops an analysis. Its errors are listed in the
 }
 ```
 
-Comments and trailing commas are allowed, and property names are not case-sensitive.
+<div dir="rtl">
 
-## Fields
+التعليقات والفواصل الزائدة في النهاية مسموح بها، وأسماء الخصائص لا تتأثر بحالة الأحرف.
 
-| Field | Required | Meaning |
+## الحقول
+
+| الحقل | إلزامي | المعنى |
 |---|---|---|
-| `id` | yes | `USR-` + your suffix. A custom rule can never replace a built-in `BLZ-` rule. |
-| `name.en` | yes | Title shown in the report. `name.ar` is optional and falls back to English. |
-| `description` | no | Longer explanation (en/ar). Falls back to the name. |
-| `category` | no | `Persistence`, `Execution`, `FileSystem`, `Registry`, `Network`, `DefenseEvasion`, `Impact`, `Static`, `Monitoring`, `Watchlist`, `Sequence`. Default `Execution`. |
-| `severity` | no | `Informational`, `Low`, `Medium`, `High`, `Critical`. Default `Low`. |
-| `weight` | no | Points the finding adds to the risk score. Default 5. Category caps still apply. |
-| `attack` | no | MITRE ATT&CK technique IDs, shown on the finding. |
-| `match` | yes | At least one condition (see below). Every condition you set must match. |
-| `minCount` | no | Number of matching events needed before the rule fires. Default 1. |
+| `id` | نعم | `USR-` + لاحقة من اختيارك. لا يمكن لقاعدة مخصصة أن تحل أبدًا محل قاعدة `BLZ-` مدمجة. |
+| `name.en` | نعم | العنوان المعروض في التقرير. `name.ar` اختياري، وعند غيابه يُستخدم النص الإنجليزي. |
+| `description` | لا | شرح أطول (en/ar). وعند غيابه يُستخدم الاسم. |
+| `category` | لا | `Persistence`، `Execution`، `FileSystem`، `Registry`، `Network`، `DefenseEvasion`، `Impact`، `Static`، `Monitoring`، `Watchlist`، `Sequence`. القيمة الافتراضية `Execution`. |
+| `severity` | لا | `Informational`، `Low`، `Medium`، `High`، `Critical`. القيمة الافتراضية `Low`. |
+| `weight` | لا | النقاط التي تضيفها النتيجة إلى درجة الخطورة. القيمة الافتراضية 5. ويبقى الحد الأقصى لكل فئة ساريًا. |
+| `attack` | لا | معرّفات تقنيات MITRE ATT&CK، وتُعرض على النتيجة. |
+| `match` | نعم | شرط واحد على الأقل (انظر أدناه). ويجب أن يتحقق كل شرط تحدده. |
+| `minCount` | لا | عدد الأحداث المطابقة اللازم قبل أن تنطلق القاعدة. القيمة الافتراضية 1. |
 
 ### `match`
 
-| Condition | Matches |
+| الشرط | ما يطابقه |
 |---|---|
-| `action` | Event action: `ProcessStart`, `ProcessExit`, `FileCreate`, `FileWrite`, `FileDelete`, `FileRename`, `RegistryKeyCreate`, `RegistryValueSet`, `RegistryValueDelete`, `RegistryKeyDelete`, `NetworkConnect`, `NetworkListen`, `NetworkSend`, `DnsQuery`, `ServiceInstall`, `ScheduledTaskCreate` |
-| `category` | Event category: `Process`, `File`, `Registry`, `Network`, `Dns`, `Persistence`, `System` |
-| `process` | Glob on the process image name, for example `powershell.exe` |
-| `target` | Glob on the event target: a path, registry key, `host:port` or domain |
-| `detailKey` + `detailValue` | Glob on one event detail, for example `CommandLine` = `*-enc*` |
-| `analyzedTreeOnly` | `true` (default) only counts events from the sample and its descendants |
+| `action` | إجراء الحدث: `ProcessStart`، `ProcessExit`، `FileCreate`، `FileWrite`، `FileDelete`، `FileRename`، `RegistryKeyCreate`، `RegistryValueSet`، `RegistryValueDelete`، `RegistryKeyDelete`، `NetworkConnect`، `NetworkListen`، `NetworkSend`، `DnsQuery`، `ServiceInstall`، `ScheduledTaskCreate` |
+| `category` | فئة الحدث: `Process`، `File`، `Registry`، `Network`، `Dns`، `Persistence`، `System` |
+| `process` | نمط glob على اسم صورة العملية (image name)، مثل `powershell.exe` |
+| `target` | نمط glob على هدف الحدث: مسار، أو مفتاح سجل (registry)، أو `host:port`، أو نطاق |
+| `detailKey` + `detailValue` | نمط glob على أحد تفاصيل الحدث، مثل `CommandLine` = `*-enc*` |
+| `analyzedTreeOnly` | `true` (افتراضيًا): لا تُحتسب إلا الأحداث الصادرة عن العينة وأحفادها |
 
-Globs support `*` (any run of characters) and `?` (one character). They are
-case-insensitive and anchored to the whole value. Regular expressions are deliberately not
-supported, so a rule pack cannot slow the engine down with a pathological pattern; every
-match also has a 100 ms timeout.
+تدعم أنماط glob الرمز `*` (أي سلسلة من الأحرف) والرمز `?` (حرف واحد). وهي
+لا تتأثر بحالة الأحرف، ويجب أن تطابق القيمة كاملة. التعابير النمطية (regular expressions) غير
+مدعومة عن قصد، حتى لا تستطيع حزمة قواعد إبطاء المحرك بنمط مَرَضي؛ كما أن لكل
+عملية مطابقة مهلة 100 ms.
 
-## How custom findings behave
+## كيف تتصرف النتائج المخصصة
 
-- Each finding keeps up to 25 matching events as evidence, linked to the timeline.
-- The finding's origin shows the pack name, so you can always tell custom rules from
-  built-in ones.
-- The rule list in **Settings → Detection** can disable any rule or change its weight,
-  custom or built-in.
-- A custom rule adds to the score like any other rule. It is still subject to the
-  per-category caps, so one noisy rule cannot push a sample to *Critical* alone.
+- تحتفظ كل نتيجة بما يصل إلى 25 حدثًا مطابقًا كأدلة، مرتبطة بالخط الزمني.
+- يُظهر مصدر النتيجة اسم الحزمة، لذلك يمكنك دائمًا التمييز بين القواعد المخصصة
+  والقواعد المدمجة.
+- تتيح قائمة القواعد في **الإعدادات ← الكشف** تعطيل أي قاعدة أو تغيير وزنها،
+  سواء كانت مخصصة أو مدمجة.
+- القاعدة المخصصة تضيف إلى الدرجة مثل أي قاعدة أخرى. وتبقى خاضعة
+  للحد الأقصى لكل فئة، لذلك لا تستطيع قاعدة واحدة كثيرة الضجيج أن ترفع عينة إلى *Critical* بمفردها.
 
-## Sharing packs
+## مشاركة الحزم
 
-Rule packs are plain text, so you can review them before installing. To propose a rule
-for the project, open a pull request or a feature request. Include what the rule detects,
-why it is not noisy on clean software, and an event that triggers it. See
+حزم القواعد نص عادي، لذلك يمكنك مراجعتها قبل تثبيتها. ولاقتراح قاعدة
+على المشروع، افتح طلب سحب (pull request) أو طلب ميزة. واذكر ما تكشفه القاعدة،
+ولماذا لا تُحدث ضجيجًا على البرمجيات النظيفة، وحدثًا يطلقها. انظر
 [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+</div>

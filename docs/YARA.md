@@ -1,174 +1,179 @@
-# YARA rules
+# قواعد YARA
 
-Blazma Sandbox scans samples, dropped files and memory with YARA rules using its own
-managed engine (`src/Blazma.Analysis/Yara/`). There is no native libyara: rule files come
-from users and the internet, and the scanned bytes are hostile, so the engine is written in
-safe C#, bounds every search, and rejects what it cannot do exactly.
+**العربية** · [English](YARA.en.md)
 
-The rule language follows the [YARA documentation](https://yara.readthedocs.io/en/stable/writingrules.html).
-This page lists exactly what is supported. **Anything not listed here is reported as an
-error; the engine never silently evaluates a rule it does not fully understand.**
+<div dir="rtl">
 
-## How rules are loaded
+يفحص Blazma Sandbox العينات والملفات التي تُسقطها والذاكرة بقواعد YARA باستخدام محرّك مُدار خاص به
+(`src/Blazma.Analysis/Yara/`). لا توجد مكتبة libyara أصلية: فملفات القواعد تأتي من المستخدمين ومن
+الإنترنت، والبايتات المفحوصة عدائية، لذلك كُتب المحرّك بلغة C# الآمنة، ويضع حدًا لكل عملية بحث، ويرفض
+كل ما لا يستطيع تنفيذه بدقة.
 
-`YaraRuleSet.LoadFolder(folder)` reads every `*.yar` and `*.yara` file under the folder,
-recursively (symbolic links and junctions are not followed, at most 16 levels deep).
+تتبع لغة القواعد [توثيق YARA](https://yara.readthedocs.io/en/stable/writingrules.html).
+تسرد هذه الصفحة بالضبط ما هو مدعوم. **كل ما لم يُذكر هنا يُبلَّغ عنه كخطأ؛ لا يقيّم المحرّك أبدًا
+بصمت قاعدةً لا يفهمها فهمًا كاملًا.**
 
-| Limit | Value |
+## كيف تُحمَّل القواعد
+
+يقرأ `YaraRuleSet.LoadFolder(folder)` كل ملف `*.yar` و`*.yara` داخل المجلد، بشكل متكرر عبر
+المجلدات الفرعية (لا تُتبَع الروابط الرمزية ونقاط الوصل junctions، وبعمق 16 مستوى على الأكثر).
+
+| الحد | القيمة |
 |---|---|
-| Files read | the first 256, in ordinal path order |
-| File size | 2 MB per file (larger files are skipped and reported) |
+| الملفات المقروءة | أول 256 ملفًا، بترتيب المسارات الترتيبي (ordinal) |
+| حجم الملف | 2 MB لكل ملف (تُتخطّى الملفات الأكبر ويُبلَّغ عنها) |
 
-Errors never stop loading; they are listed in `LoadErrors`:
+الأخطاء لا توقف التحميل أبدًا؛ بل تُسرد في `LoadErrors`:
 
-- **Syntax error**: the whole file is rejected, as `file:line: message`.
-- **Unsupported feature or semantic error in one rule** (a module, an undefined string, a bad
-  modifier combination): only that rule is skipped, as `file:line: rule name: message`. The
-  rest of the file loads. A rule that references a skipped rule is skipped too.
+- **خطأ في الصياغة**: يُرفض الملف كله، بالشكل `file:line: message`.
+- **ميزة غير مدعومة أو خطأ دلالي في قاعدة واحدة** (وحدة module، أو سلسلة غير معرّفة، أو تركيبة
+  معدِّلات غير صالحة): تُتخطّى تلك القاعدة وحدها، بالشكل `file:line: rule name: message`. ويُحمَّل باقي
+  الملف. والقاعدة التي تشير إلى قاعدة متخطّاة تُتخطّى هي أيضًا.
 
-**Each file is its own namespace.** Rule references and `global` rules apply within the file
-they are written in, so one downloaded file's global rule cannot silence your other rules,
-and two files may both define a rule called `generic`. (libyara puts files given on one
-command line into a single namespace; this is the one deliberate difference.)
+**كل ملف هو نطاق أسماء (namespace) مستقل.** الإشارات إلى القواعد وقواعد `global` تسري داخل الملف
+الذي كُتبت فيه فقط، فلا تستطيع قاعدة global في ملف منزَّل أن تُسكت قواعدك الأخرى، ويمكن لملفين أن
+يعرّف كلاهما قاعدة باسم `generic`. (تضع libyara الملفات المعطاة في سطر أوامر واحد في نطاق أسماء
+واحد؛ وهذا هو الاختلاف المقصود الوحيد.)
 
-## Rules
+## القواعد
 
-| Feature | Support |
+| الميزة | الدعم |
 |---|---|
-| `rule name { ... }`, `meta:`, `strings:`, `condition:` | ✅ |
-| `private rule` | ✅ evaluated and referenceable, never reported |
-| `global rule` | ✅ if any global rule in the file is false, no rule in that file matches |
-| Tags (`rule name : tag1 tag2`) | ✅ |
-| Metadata: text (with escapes), integers (also negative, hex), `true`/`false` | ✅ first value wins on duplicate keys |
-| `//` and `/* */` comments, also inside hex strings | ✅ |
-| `import "module"` | ✅ accepted, but a rule that **uses** a module is skipped with an error |
-| `include "file"` | ❌ error (put every file in the folder instead) |
-| Duplicate rule names in one file | ❌ error |
-| Strings never used in the condition | ❌ error, as in YARA (names starting with `$_` are exempt) |
+| `rule name { ... }`، `meta:`، `strings:`، `condition:` | ✅ |
+| `private rule` | ✅ تُقيَّم ويمكن الإشارة إليها، ولا يُبلَّغ عنها أبدًا |
+| `global rule` | ✅ إذا كانت أي قاعدة global في الملف خاطئة، فلا تتطابق أي قاعدة في ذلك الملف |
+| الوسوم (`rule name : tag1 tag2`) | ✅ |
+| البيانات الوصفية: نص (مع رموز الهروب)، أعداد صحيحة (والسالبة والست عشرية أيضًا)، `true`/`false` | ✅ القيمة الأولى هي المعتمدة عند تكرار المفاتيح |
+| التعليقات `//` و`/* */`، وكذلك داخل السلاسل الست عشرية | ✅ |
+| `import "module"` | ✅ مقبول، لكن القاعدة التي **تستخدم** وحدة تُتخطّى مع خطأ |
+| `include "file"` | ❌ خطأ (ضع كل الملفات في المجلد بدلًا من ذلك) |
+| تكرار أسماء القواعد في ملف واحد | ❌ خطأ |
+| سلاسل لا تُستخدم أبدًا في الشرط | ❌ خطأ، كما في YARA (تُستثنى الأسماء التي تبدأ بـ `$_`) |
 
-The family shown in reports comes from the metadata keys `family`, `malware_family` or
-`malware`, in that order.
+العائلة التي تظهر في التقارير تؤخذ من مفاتيح البيانات الوصفية `family` أو `malware_family` أو
+`malware`، بهذا الترتيب.
 
-## Text strings
+## السلاسل النصية
 
-`$a = "text"`. Escapes: `\"` `\\` `\n` `\t` `\r` `\xHH`; other escapes are an error. Other
-characters are matched as their UTF-8 bytes.
+`$a = "text"`. رموز الهروب: `\"` `\\` `\n` `\t` `\r` `\xHH`؛ وأي رمز هروب آخر خطأ. وتُطابَق الأحرف
+الأخرى بوصفها بايتات UTF-8 الخاصة بها.
 
-| Modifier | Support |
+| المعدِّل | الدعم |
 |---|---|
-| `ascii`, `wide` (UTF-16LE: each byte followed by `00`), both together | ✅ |
-| `nocase` | ✅ ASCII letters only, as in YARA |
-| `fullword` | ✅ the bytes before and after (wide characters for `wide`) are not `[A-Za-z0-9]` |
-| `private` | ✅ used by the condition, never reported |
-| `xor`, `xor(n)`, `xor(a-b)` | ✅ single-byte keys; plain `xor` is keys 0-255; with `wide`, the zero bytes are xored too |
-| `base64`, `base64wide`, with optional custom 64-byte alphabet | ✅ the three offset forms YARA documents; the string must be at least 3 bytes |
+| `ascii`، `wide` (UTF-16LE: كل بايت يليه `00`)، أو كلاهما معًا | ✅ |
+| `nocase` | ✅ لأحرف ASCII فقط، كما في YARA |
+| `fullword` | ✅ البايتات قبل التطابق وبعده (أو الأحرف العريضة في حالة `wide`) ليست من `[A-Za-z0-9]` |
+| `private` | ✅ يستخدمها الشرط، ولا يُبلَّغ عنها أبدًا |
+| `xor`، `xor(n)`، `xor(a-b)` | ✅ مفاتيح ببايت واحد؛ `xor` وحدها تعني المفاتيح 0-255؛ ومع `wide` تُطبَّق xor على البايتات الصفرية أيضًا |
+| `base64`، `base64wide`، مع أبجدية مخصّصة اختيارية من 64 بايتًا | ✅ صيغ الإزاحة الثلاث الموثّقة في YARA؛ ويجب ألا يقل طول السلسلة عن 3 بايتات |
 
-Rejected combinations (error): `xor` with `nocase` (YARA rejects it); `xor` with `fullword`
-(not supported); `base64`/`base64wide` with `xor`, `nocase` or `fullword` (YARA rejects them);
-`base64`/`base64wide` with `ascii` or `wide` (not supported); an empty string.
+التركيبات المرفوضة (خطأ): `xor` مع `nocase` (ترفضها YARA)؛ `xor` مع `fullword` (غير مدعومة)؛
+`base64`/`base64wide` مع `xor` أو `nocase` أو `fullword` (ترفضها YARA)؛ `base64`/`base64wide` مع
+`ascii` أو `wide` (غير مدعومة)؛ السلسلة الفارغة.
 
-## Hex strings
+## السلاسل الست عشرية (Hex strings)
 
-| Syntax | Support |
+| الصياغة | الدعم |
 |---|---|
-| `4D 5A`, wildcards `??`, nibble wildcards `4?` `?A` | ✅ |
-| Negation `~4D`, `~4?` | ✅ |
-| Jumps `[n]`, `[n-m]` | ✅ up to 65 535 bytes |
-| Unbounded jumps `[n-]`, `[-]` | ✅ **capped at 65 535 bytes** past the previous token |
-| Alternatives `( 41 \| 42 43 \| 4? [2] 44 )`, nested | ✅ up to 64 levels |
+| `4D 5A`، أحرف البدل `??`، أحرف البدل لنصف البايت `4?` `?A` | ✅ |
+| النفي `~4D`، `~4?` | ✅ |
+| القفزات `[n]`، `[n-m]` | ✅ حتى 65 535 بايتًا |
+| القفزات غير المحدودة `[n-]`، `[-]` | ✅ **محدودة بـ 65 535 بايتًا** بعد الرمز السابق |
+| البدائل `( 41 \| 42 43 \| 4? [2] 44 )`، والمتداخلة منها | ✅ حتى 64 مستوى |
 
-Jumps are lazy (the shortest match is reported) and alternatives are tried in order, as in
-YARA. A hex string cannot start or end with a jump. Only `private` may follow a hex string.
+القفزات كسولة (يُبلَّغ عن أقصر تطابق)، والبدائل تُجرَّب بالترتيب، كما في YARA. لا يمكن أن تبدأ
+السلسلة الست عشرية بقفزة أو تنتهي بها. ولا يُسمح بعد السلسلة الست عشرية إلا بالمعدِّل `private`.
 
-## Regular expressions
+## التعابير النمطية (Regular expressions)
 
-`$a = /pattern/is` — `i` is nocase, `s` makes `.` match a newline. Modifiers: `nocase`,
-`ascii`, `wide`, `fullword`, `private`.
+`$a = /pattern/is` — `i` تعني nocase، و`s` تجعل `.` تطابق سطرًا جديدًا. المعدِّلات: `nocase`،
+`ascii`، `wide`، `fullword`، `private`.
 
-Supported syntax: literals, `.`, `[...]` and `[^...]` classes with ranges, `\w \W \s \S \d \D`
-(ASCII definitions, also inside classes), `\b \B`, `^` and `$` (start and end of the data),
-groups `( )`, alternation `|`, quantifiers `* + ? {n} {n,} {,m} {n,m}` and their lazy forms
-(`*?` …), escapes `\n \t \r \f \a \xHH` and escaped punctuation.
+الصياغة المدعومة: الحروف الحرفية، `.`، الفئات `[...]` و`[^...]` مع النطاقات، `\w \W \s \S \d \D`
+(بتعريفات ASCII، وداخل الفئات أيضًا)، `\b \B`، `^` و`$` (بداية البيانات ونهايتها)،
+المجموعات `( )`، البديل `|`، المكمِّمات `* + ? {n} {n,} {,m} {n,m}` وصيغها الكسولة
+(`*?` …)، رموز الهروب `\n \t \r \f \a \xHH` وعلامات الترقيم المهرَّبة.
 
-Errors: backreferences (`\1`), anything starting with `(?` (lookarounds, non-capturing or
-named groups, inline options), POSIX classes, unknown escapes, non-ASCII characters (write
-`\xHH`), repetition bounds above 32 767, nesting deeper than 64.
+الأخطاء: الإشارات الخلفية (`\1`)، وكل ما يبدأ بـ `(?` (التحقق الأمامي والخلفي lookarounds،
+والمجموعات غير الملتقِطة أو المسمّاة، والخيارات المضمّنة)، وفئات POSIX، ورموز الهروب غير المعروفة،
+والأحرف غير ASCII (اكتبها بالشكل `\xHH`)، وحدود التكرار التي تتجاوز 32 767، والتداخل الأعمق من 64.
 
-Regexes run on the .NET non-backtracking engine, which takes linear time, so no pattern can
-hang a scan. Like YARA, **a regex match is at most 4096 bytes long**: each match is what the
-regex finds in the 4 KB after its start. (Regexes that use `^` or `$` are matched over the
-whole data instead, because those anchors refer to its ends.) Matches may overlap: a match is
-reported at every offset where one starts.
+تعمل التعابير النمطية على محرّك .NET عديم التراجع (non-backtracking)، الذي يستغرق وقتًا خطيًا، فلا
+يمكن لأي نمط أن يعلّق عملية فحص. وكما في YARA، **لا يتجاوز طول تطابق التعبير النمطي 4096 بايتًا**:
+كل تطابق هو ما يجده التعبير في الـ 4 KB التي تلي بدايته. (أما التعابير التي تستخدم `^` أو `$` فتُطابَق
+على البيانات كلها بدلًا من ذلك، لأن هاتين المرساتين تشيران إلى طرفيها.) يمكن أن تتداخل التطابقات:
+يُبلَّغ عن تطابق عند كل إزاحة يبدأ عندها تطابق.
 
-## Conditions
+## الشروط (Conditions)
 
-| Feature | Support |
+| الميزة | الدعم |
 |---|---|
-| `true`, `false`, `and`, `or`, `not`, parentheses | ✅ |
-| Integers: decimal, `0x` hex, `0o` octal, `KB` and `MB` suffixes | ✅ floats are an error |
-| `+ - * \ %`, `& \| ^ ~ << >>`, unary `-` | ✅ 64-bit, wrapping; `\` and `%` by zero are undefined |
+| `true`، `false`، `and`، `or`، `not`، الأقواس | ✅ |
+| الأعداد الصحيحة: عشرية، ست عشرية `0x`، ثمانية `0o`، اللاحقتان `KB` و`MB` | ✅ الأعداد العشرية الكسرية (floats) خطأ |
+| `+ - * \ %`، `& \| ^ ~ << >>`، `-` الأحادي | ✅ 64 بت، مع الالتفاف (wrapping)؛ `\` و`%` على صفر غير معرّفتين |
 | `== != < <= > >=` | ✅ |
-| `filesize` | ✅ the length of the scanned data |
-| `$a`, `$a at x`, `$a in (a..b)` | ✅ |
-| `#a`, `#a in (a..b)` | ✅ |
-| `@a`, `@a[i]`, `!a`, `!a[i]` | ✅ 1-based; undefined outside 1..`#a` |
-| `uint8/16/32`, `int8/16/32`, and their `be` forms | ✅ undefined past the end of the data |
-| `any/all/none of them`, `N of (...)`, `N% of (...)` | ✅ with `$a*` and `$*` wildcards |
-| `... of (...) at x`, `... of (...) in (a..b)` | ✅ |
-| `N of (rule1, rule_prefix*)` | ✅ earlier rules of the same file |
+| `filesize` | ✅ طول البيانات المفحوصة |
+| `$a`، `$a at x`، `$a in (a..b)` | ✅ |
+| `#a`، `#a in (a..b)` | ✅ |
+| `@a`، `@a[i]`، `!a`، `!a[i]` | ✅ يبدأ الترقيم من 1؛ وغير معرّفة خارج المدى 1..`#a` |
+| `uint8/16/32`، `int8/16/32`، وصيغها `be` | ✅ غير معرّفة بعد نهاية البيانات |
+| `any/all/none of them`، `N of (...)`، `N% of (...)` | ✅ مع أحرف البدل `$a*` و`$*` |
+| `... of (...) at x`، `... of (...) in (a..b)` | ✅ |
+| `N of (rule1, rule_prefix*)` | ✅ القواعد السابقة من الملف نفسه |
 | `for any/all/none/N/N% of (...) : ( ... $ # @ ! ... )` | ✅ |
-| `for any/all/none/N i in (a..b) : (...)`, `... in (x, y, z)` | ✅ nested loops too |
+| `for any/all/none/N i in (a..b) : (...)`، `... in (x, y, z)` | ✅ والحلقات المتداخلة أيضًا |
 | `defined expr` | ✅ |
-| References to earlier rules | ✅ a rule cannot reference a later one, as in YARA |
-| Anonymous strings `$ = "..."` | ✅ through `them`, `$*` and `for ... of` |
-| `entrypoint` | ❌ error (deprecated in YARA; needs the `pe` module) |
-| Modules: `pe.`, `elf.`, `math.`, `hash.`, `dotnet.`, `cuckoo.`, `magic.`, `time.`, `console.`, … | ❌ the rule is skipped with an error naming the module |
-| External variables | ❌ error (`undefined identifier`) |
-| String operators `contains`, `icontains`, `startswith`, `endswith`, `iequals`, `matches`, … | ❌ error (they need module or external string values) |
-| `for ... in` with several variables (dictionary iteration) | ❌ error |
+| الإشارات إلى القواعد السابقة | ✅ لا يمكن لقاعدة أن تشير إلى قاعدة لاحقة، كما في YARA |
+| السلاسل المجهولة `$ = "..."` | ✅ عبر `them` و`$*` و`for ... of` |
+| `entrypoint` | ❌ خطأ (مهملة في YARA؛ وتحتاج إلى الوحدة `pe`) |
+| الوحدات: `pe.`، `elf.`، `math.`، `hash.`، `dotnet.`، `cuckoo.`، `magic.`، `time.`، `console.`، … | ❌ تُتخطّى القاعدة مع خطأ يسمّي الوحدة |
+| المتغيرات الخارجية (External variables) | ❌ خطأ (`undefined identifier`) |
+| عوامل السلاسل `contains`، `icontains`، `startswith`، `endswith`، `iequals`، `matches`، … | ❌ خطأ (تحتاج إلى قيم نصية من وحدة أو من متغيرات خارجية) |
+| `for ... in` بعدة متغيرات (التكرار على قاموس) | ❌ خطأ |
 
-**Undefined values** (reading past the end, `@a[5]` with two matches, division by zero)
-propagate through arithmetic and comparisons; `not undefined` is undefined; `and`/`or` and the
-final result treat undefined as false. This is YARA 4's behaviour.
+**القيم غير المعرّفة** (القراءة بعد نهاية البيانات، أو `@a[5]` مع تطابقين فقط، أو القسمة على صفر)
+تنتشر عبر العمليات الحسابية والمقارنات؛ و`not undefined` غير معرّفة؛ أما `and`/`or` والنتيجة
+النهائية فتعامل غير المعرّف على أنه false. وهذا هو سلوك YARA 4.
 
-**Quantifiers:** `N of` and `for N` mean *at least* N. `none` and `0 of` mean *exactly zero*.
-`N%` rounds up (`50% of` three strings needs two). A loop over an empty range (`(5..1)`, or
-`(1..#a)` when `#a` is 0) has no iterations: `any` is false, `all` is true, `none` is true. A
-loop whose bounds are undefined is undefined.
+**المكمِّمات:** `N of` و`for N` تعنيان N *على الأقل*. و`none` و`0 of` تعنيان *صفرًا بالضبط*.
+`N%` تُقرَّب إلى الأعلى (`50% of` من ثلاث سلاسل تحتاج إلى اثنتين). الحلقة على مدى فارغ (`(5..1)`، أو
+`(1..#a)` عندما تكون `#a` صفرًا) ليس فيها أي تكرار: `any` تكون false، و`all` تكون true، و`none` تكون
+true. والحلقة التي حدودها غير معرّفة تكون غير معرّفة.
 
-## Safety limits
+## حدود الأمان
 
-| Limit | Value | What happens |
+| الحد | القيمة | ما يحدث |
 |---|---|---|
-| Matches recorded per string | 1 000 | the search stops; `#a` saturates at 1 000, and `@a[i]`, `$a at`/`in` only see the first 1 000 matches |
-| Regex match length | 4 096 bytes | as in YARA |
-| Hex jump | 65 535 bytes | unbounded jumps stop there; larger explicit jumps are an error |
-| Nesting (parentheses, `not`, unary operators, loops, hex alternatives, regex groups) | 64 levels | compile error; only that rule is skipped |
-| Condition tree height | 256 | compile error (e.g. 300 additions in a row); `and`/`or` chains are flat and unlimited |
-| Values per `for` loop | 1 000 000 | the loop is undefined, with a scan warning |
-| Evaluation steps per rule | 20 000 000 | the rule counts as not matching, with a scan warning |
-| Search time per string | 5 s | the search stops, with a scan warning |
-| Search time per scan | 60 s | later strings count as not found, with a scan warning |
-| Reported per match | 10 strings × 3 matches | the match itself is unaffected |
-| Match preview | 32 bytes | text if mostly printable (wide text without its zero bytes), otherwise hex |
+| التطابقات المسجّلة لكل سلسلة | 1 000 | يتوقف البحث؛ تتشبّع `#a` عند 1 000، ولا ترى `@a[i]` و`$a at`/`in` إلا أول 1 000 تطابق |
+| طول تطابق التعبير النمطي | 4 096 بايتًا | كما في YARA |
+| القفزة الست عشرية | 65 535 بايتًا | تتوقف القفزات غير المحدودة عندها؛ والقفزات الصريحة الأكبر خطأ |
+| التداخل (الأقواس، `not`، العوامل الأحادية، الحلقات، البدائل الست عشرية، مجموعات التعابير النمطية) | 64 مستوى | خطأ ترجمة؛ تُتخطّى تلك القاعدة وحدها |
+| ارتفاع شجرة الشرط | 256 | خطأ ترجمة (مثلًا 300 عملية جمع متتالية)؛ سلاسل `and`/`or` مسطّحة وغير محدودة |
+| القيم لكل حلقة `for` | 1 000 000 | تصبح الحلقة غير معرّفة، مع تحذير فحص |
+| خطوات التقييم لكل قاعدة | 20 000 000 | تُعدّ القاعدة غير متطابقة، مع تحذير فحص |
+| وقت البحث لكل سلسلة | 5 ثوانٍ | يتوقف البحث، مع تحذير فحص |
+| وقت البحث لكل عملية فحص | 60 ثانية | تُعدّ السلاسل اللاحقة غير موجودة، مع تحذير فحص |
+| ما يُبلَّغ عنه لكل تطابق | 10 سلاسل × 3 تطابقات | لا يتأثر التطابق نفسه |
+| معاينة التطابق | 32 بايتًا | نص إذا كان معظمه قابلًا للطباعة (النص العريض بدون بايتاته الصفرية)، وإلا فبالست عشري |
 
-`YaraRuleSet.ScanDetailed` returns the matches together with these warnings; `Scan` (the
-`IYaraScanner` method) returns only the matches.
+تُعيد `YaraRuleSet.ScanDetailed` التطابقات مع هذه التحذيرات؛ بينما تُعيد `Scan` (دالة
+`IYaraScanner`) التطابقات فقط.
 
-## How matching works
+## كيف تعمل المطابقة
 
-- Strings are searched lazily, the first time a condition needs them, and each at most once
-  per scan. Put cheap checks first (`uint16(0) == 0x5A4D and ...`) and most data is never
-  searched.
-- Text and hex strings without jumps become masked byte patterns. The engine picks the most
-  selective part (a run of exact bytes, or the byte with the fewest allowed values) and finds
-  candidates with vectorised `IndexOf`/`IndexOfAny`, then verifies each candidate.
-- `xor` with a wide key range scans once using the fact that XOR of two neighbouring bytes does
-  not depend on the key.
-- Hex strings with jumps or alternatives run on a small matcher that remembers every
-  (position, pattern step) it has tried, so jumps cannot cause exponential backtracking.
-- Regexes skip the data entirely when a literal every match must contain is absent. They run
-  over a view of the bytes as text in which bytes `0x80`-`0xFF` become symbols, so `\b` and
-  `\w` keep YARA's ASCII meaning. `wide` regexes run over a view with one character per UTF-16
-  unit (at both byte alignments), so `\b`, `^` and `$` keep their meaning in wide text.
-- A compiled rule set is immutable and can scan from several threads at once.
+- يُبحث عن السلاسل بشكل كسول، في أول مرة يحتاجها فيها شرط، ومرة واحدة على الأكثر لكل سلسلة في كل
+  عملية فحص. ضع الفحوص الرخيصة أولًا (`uint16(0) == 0x5A4D and ...`) فلا يُبحث في معظم البيانات أبدًا.
+- السلاسل النصية والست عشرية التي لا تحتوي على قفزات تتحول إلى أنماط بايتات مقنَّعة. يختار المحرّك
+  الجزء الأكثر انتقائية (سلسلة من البايتات الدقيقة، أو البايت الذي له أقل عدد من القيم المسموحة) ويجد
+  المرشّحين باستخدام `IndexOf`/`IndexOfAny` المتّجهة (vectorised)، ثم يتحقق من كل مرشّح.
+- `xor` مع نطاق مفاتيح واسع تفحص البيانات مرة واحدة، مستفيدةً من أن ناتج XOR لبايتين متجاورين لا
+  يعتمد على المفتاح.
+- السلاسل الست عشرية التي تحتوي على قفزات أو بدائل تعمل على مُطابِق صغير يتذكّر كل زوج (الموضع، خطوة
+  النمط) جرّبه، فلا يمكن للقفزات أن تسبب تراجعًا أسيًا.
+- تتخطى التعابير النمطية البيانات كليًا إذا غاب نص حرفي يجب أن يحتويه كل تطابق. وهي تعمل على عرض
+  للبايتات بوصفها نصًا تتحول فيه البايتات `0x80`-`0xFF` إلى رموز، فتحتفظ `\b` و`\w` بمعناهما في
+  ASCII كما في YARA. وتعمل تعابير `wide` على عرض فيه حرف واحد لكل وحدة UTF-16 (عند محاذاتَي البايت
+  كلتيهما)، فتحتفظ `\b` و`^` و`$` بمعناها في النص العريض.
+- مجموعة القواعد المترجَمة غير قابلة للتغيير، ويمكنها الفحص من عدة خيوط في آن واحد.
+
+</div>

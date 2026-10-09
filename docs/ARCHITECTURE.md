@@ -1,23 +1,29 @@
-# Blazma Sandbox architecture
+# بنية Blazma Sandbox
 
-## Goals, in priority order
+**العربية** · [English](ARCHITECTURE.en.md)
 
-Security > Correctness > Stability > UX > Performance > Extra features.
+<div dir="rtl">
 
-## Boundaries
+## الأهداف، مرتبة حسب الأولوية
 
-There are five roles, kept in separate assemblies so the boundaries are visible in code:
+الأمان > الصحة > الاستقرار > تجربة المستخدم > الأداء > الميزات الإضافية.
 
-| Role | Assembly | Runs where | May touch |
+## الحدود
+
+هناك خمسة أدوار، كل منها في تجميعة (assembly) منفصلة حتى تكون الحدود واضحة في الكود:
+
+| الدور | التجميعة | أين يعمل | ما يُسمح له بالتعامل معه |
 |---|---|---|---|
-| **UI** | `Blazma.App` | Host, normal user rights (`asInvoker`) | View models, services. Never parses samples itself. |
-| **Analysis engine** | `Blazma.Analysis` | Host | Pure logic over events. Reads the sample only for static analysis, and only in a helper process. |
-| **Host side of the sandbox** | `Blazma.Sandbox` | Host | Creates the work folders, starts Windows Sandbox, reads `out/` as untrusted input. |
-| **Sandbox** | Windows Sandbox | Hypervisor-isolated VM | Disposable. Gone after every analysis. |
-| **Agent** | `Blazma.Agent` | **Inside the sandbox only** | ETW tracing, snapshots, writing signed output. References only `Blazma.Contracts`. |
+| **الواجهة** | `Blazma.App` | الجهاز المضيف، بصلاحيات مستخدم عادية (`asInvoker`) | نماذج العرض (view models) والخدمات. لا يحلّل العينات بنفسه أبدًا. |
+| **محرك التحليل** | `Blazma.Analysis` | الجهاز المضيف | منطق بحت يعمل على الأحداث. لا يقرأ العينة إلا للتحليل الثابت، وفي عملية مساعدة فقط. |
+| **جانب المضيف من البيئة المعزولة** | `Blazma.Sandbox` | الجهاز المضيف | ينشئ مجلدات العمل، ويشغّل Windows Sandbox، ويقرأ `out/` على أنه مدخلات غير موثوقة. |
+| **البيئة المعزولة** | Windows Sandbox | آلة افتراضية معزولة بالـ hypervisor | تُستخدم مرة واحدة، وتُحذف بعد كل تحليل. |
+| **الوكيل (Agent)** | `Blazma.Agent` | **داخل البيئة المعزولة فقط** | تتبّع ETW، واللقطات (snapshots)، وكتابة المخرجات الموقّعة. لا يشير إلا إلى `Blazma.Contracts`. |
 
-`Blazma.Core` holds models and interfaces with no dependencies. `Blazma.Contracts` is the
-wire protocol and the only code the agent and the host share.
+يحتوي `Blazma.Core` على النماذج والواجهات (interfaces) دون أي اعتماديات. أما `Blazma.Contracts`
+فهو بروتوكول الاتصال، وهو الكود الوحيد المشترك بين الوكيل والمضيف.
+
+</div>
 
 ```
 src/
@@ -36,23 +42,27 @@ tests/                  Analysis, Sandbox, Integration, App
 tools/Blazma.Screenshots  headless renderer for screenshots
 ```
 
-### Why this structure differs from the first sketch
+<div dir="rtl">
 
-- **`Blazma.Contracts` was added** so the agent never references host code. Everything the host
-  reads from the agent goes through one small set of DTOs, parsed defensively.
-- **Static analysis runs out of process.** Parsing a hostile file is attack surface. The app
-  starts a second copy of its own executable with `--static-worker <path>`, which prints a JSON
-  report and exits; a crash or hang there cannot take down the UI (90 s timeout, killed on cancel).
-- **The demo is a real provider** (`DemoSandboxProvider`), not a fake screen. Synthetic events go
-  through the same state machine, engine, storage and reports, so the demo tests the product.
-  Every demo result is labelled DEMO in the UI, History and exports.
-- **One test project per area** instead of a single `Blazma.Tests`.
+### لماذا تختلف هذه البنية عن التصور الأول
 
-## Analysis pipeline
+- **أُضيف `Blazma.Contracts`** حتى لا يشير الوكيل أبدًا إلى كود المضيف. كل ما يقرؤه المضيف من الوكيل
+  يمر عبر مجموعة صغيرة واحدة من كائنات نقل البيانات (DTOs)، ويُحلَّل بحذر.
+- **التحليل الثابت يعمل خارج العملية الرئيسية.** تحليل ملف عدائي هو سطح هجوم بحد ذاته. يشغّل التطبيق
+  نسخة ثانية من ملفه التنفيذي نفسه باستخدام `--static-worker <path>`، فتطبع تقرير JSON
+  ثم تنتهي؛ وأي انهيار أو تعليق فيها لا يمكن أن يُسقط الواجهة (مهلة 90 ثانية، وتُنهى عند الإلغاء).
+- **العرض التجريبي مزوّد حقيقي** (`DemoSandboxProvider`)، وليس شاشة وهمية. تمر الأحداث الاصطناعية
+  عبر آلة الحالات نفسها، والمحرك نفسه، والتخزين والتقارير نفسها، لذلك يختبر العرض التجريبي المنتج فعليًا.
+  وكل نتيجة تجريبية تحمل علامة DEMO في الواجهة وفي السجل وفي الملفات المصدَّرة.
+- **مشروع اختبار لكل مجال** بدلًا من مشروع `Blazma.Tests` واحد.
 
-`AnalysisRunner` drives one analysis through an explicit state machine
-(`AnalysisStateMachine`): the happy path is strictly linear and any active stage can move to
-`Failed` or `Cancelled`. Terminal states never move.
+## مسار التحليل
+
+يقود `AnalysisRunner` كل تحليل عبر آلة حالات صريحة
+(`AnalysisStateMachine`): المسار الطبيعي خطي تمامًا، ويمكن لأي مرحلة نشطة أن تنتقل إلى
+`Failed` أو `Cancelled`. الحالات النهائية لا تتغير أبدًا.
+
+</div>
 
 ```
 Preparing → CreatingSandbox → Booting → DeployingAgent → Ready → TransferringSample
@@ -60,114 +70,118 @@ Preparing → CreatingSandbox → Booting → DeployingAgent → Ready → Trans
                                    (any active stage) → Failed | Cancelled
 ```
 
-| Stage | Windows Sandbox provider |
+<div dir="rtl">
+
+| المرحلة | مزوّد Windows Sandbox |
 |---|---|
-| Preparing | Static report already done; provider availability check (OS, feature, agent, no other instance). |
-| CreatingSandbox | `work/<id>/in` (agent, `session.json` with a fresh HMAC key) and `work/<id>/out`; generate `blazma.wsb`. |
-| Booting | Start `WindowsSandbox.exe blazma.wsb`. |
-| DeployingAgent | The sandbox's LogonCommand starts the agent from the read-only folder; wait for `hello.json`, check protocol version, then **delete the key from `session.json`**. |
-| TransferringSample | Copy the sample into `in/sample/`, re-check its SHA-256, write `go.json`. The agent copies it out of the share, checks the hash again, takes the baseline snapshot, starts ETW, runs it. |
-| Analyzing | Read new signed event chunks every 500 ms, stream them to the Live screen, watch heartbeats, recompute a live score every 2 s. |
-| CollectingEvents | Wait for `done.json`, read the last chunks and the after-snapshot. |
-| Finalizing | Kill the sandbox processes, delete the work folder. Also done in `finally`, so failures and cancellation always clean up. |
-| GeneratingReport | `AnalysisEngine.Process`, then save to SQLite. |
+| Preparing | التقرير الثابت جاهز مسبقًا؛ التحقق من توفر المزوّد (نظام التشغيل، والميزة، والوكيل، وعدم وجود نسخة أخرى قيد التشغيل). |
+| CreatingSandbox | `work/<id>/in` (الوكيل، و`session.json` بمفتاح HMAC جديد) و`work/<id>/out`؛ وإنشاء `blazma.wsb`. |
+| Booting | تشغيل `WindowsSandbox.exe blazma.wsb`. |
+| DeployingAgent | يشغّل أمر LogonCommand في البيئة المعزولة الوكيلَ من المجلد المخصص للقراءة فقط؛ ننتظر `hello.json`، ونتحقق من إصدار البروتوكول، ثم **نحذف المفتاح من `session.json`**. |
+| TransferringSample | نسخ العينة إلى `in/sample/`، وإعادة التحقق من بصمة SHA-256، وكتابة `go.json`. ينسخ الوكيل العينة خارج المجلد المشترك، ويتحقق من البصمة مرة أخرى، ويأخذ لقطة الأساس، ويبدأ ETW، ثم يشغّلها. |
+| Analyzing | قراءة أجزاء الأحداث الموقّعة الجديدة كل 500 ms، وبثّها إلى شاشة العرض المباشر، ومراقبة نبضات الوكيل (heartbeats)، وإعادة حساب درجة مباشرة كل ثانيتين. |
+| CollectingEvents | انتظار `done.json`، وقراءة آخر الأجزاء واللقطة اللاحقة. |
+| Finalizing | إنهاء عمليات البيئة المعزولة، وحذف مجلد العمل. ويُنفَّذ هذا أيضًا في `finally`، لذلك يتم التنظيف دائمًا عند الفشل أو الإلغاء. |
+| GeneratingReport | `AnalysisEngine.Process`، ثم الحفظ في SQLite. |
 
-Failed and cancelled analyses are still saved, with the reason, so History shows what happened.
+التحليلات الفاشلة والملغاة تُحفظ أيضًا مع سببها، حتى يُظهر السجل ما حدث.
 
-## Unified event model
+## نموذج الأحداث الموحّد
 
-Every collector produces `AnalysisEvent`: `Sequence`, `Timestamp`, `RelativeTime`, `Category`,
-`Action`, `ProcessId`, `ParentProcessId`, `Process` (a `ProcessKey` = PID + start time, because
-Windows reuses PIDs), `ProcessName`, `Target`, `Details`, `Severity`, `Source`, `CorrelationId`.
+كل أداة جمع تُنتج `AnalysisEvent`: `Sequence`، `Timestamp`، `RelativeTime`، `Category`،
+`Action`، `ProcessId`، `ParentProcessId`، `Process` (وهو `ProcessKey` = PID + وقت البدء، لأن
+Windows يعيد استخدام أرقام PID)، `ProcessName`، `Target`، `Details`، `Severity`، `Source`، `CorrelationId`.
 
-The host re-numbers sequences as it reads, so evidence references are always unique even if the
-agent misbehaves.
+يعيد المضيف ترقيم التسلسلات أثناء القراءة، لذلك تبقى مراجع الأدلة فريدة دائمًا حتى لو
+أساء الوكيل التصرف.
 
-## Analysis engine
+## محرك التحليل
 
-`AnalysisEngine.Process` is deterministic:
+`AnalysisEngine.Process` حتمي (deterministic):
 
-1. **Order** events by relative time, then sequence.
-2. **Process graph** (`ProcessGraph`): resolves which process instance an event belongs to, even
-   with PID reuse. The *analyzed tree* is the sample, its descendants, and any process started
-   from a file the tree dropped (e.g. a service launched by `services.exe`), iterated to a fixpoint.
-3. **Noise filter**: events outside the analyzed tree are hidden as Windows background activity,
-   except writes to persistence locations, which are kept whoever made them. If no sample process
-   was identified, nothing is filtered (safe default). Users can add an allowlist.
-4. **Persistence detection** against a catalog of autostart locations, each with a human
-   explanation. Detections by unrelated system processes are shown but only scored when they point
-   at a file the sample dropped.
-5. **Correlation**: behavior chains from the sample to each process that did something
-   significant (persisted, connected, ran a dropped file), written as readable steps.
-6. **Rules** (`IRule`): 24 built-in rules plus user JSON rule packs. Each rule returns at most one
-   finding with all its evidence, so repeated behavior is not double-counted. A failing rule is
-   logged and skipped, never fatal.
-7. **Risk**: the score is the sum of finding points with a cap per category, clamped to 0–100.
-   Every point is listed in "Why this score?". Verdict thresholds are user-configurable.
-8. **Indicators**: graded only by the findings that cite their events, or by the user's watchlist.
-9. **Snapshot diff**: files, registry values, services, scheduled tasks, startup items.
+1. **الترتيب**: تُرتَّب الأحداث حسب الوقت النسبي، ثم حسب التسلسل.
+2. **مخطط العمليات** (`ProcessGraph`): يحدد نسخة العملية التي ينتمي إليها كل حدث، حتى
+   مع إعادة استخدام أرقام PID. *الشجرة المحلَّلة* هي العينة، وأحفادها، وأي عملية بدأت
+   من ملف أسقطته الشجرة (مثل خدمة يشغّلها `services.exe`)، مع التكرار حتى الوصول إلى نقطة ثابتة.
+3. **مرشّح الضجيج**: الأحداث خارج الشجرة المحلَّلة تُخفى على أنها نشاط خلفية لـ Windows،
+   باستثناء الكتابة في مواقع الاستمرارية، فهي تُحفظ أيًّا كان من قام بها. وإذا لم تُحدَّد
+   أي عملية للعينة، فلا يُرشَّح شيء (الخيار الآمن افتراضيًا). ويمكن للمستخدمين إضافة قائمة استثناء.
+4. **كشف الاستمرارية** بالمقارنة مع فهرس لمواقع التشغيل التلقائي، ولكل منها شرح
+   مفهوم للبشر. الاكتشافات الصادرة عن عمليات نظام لا علاقة لها بالعينة تُعرض، لكنها لا تُحتسب في الدرجة إلا إذا أشارت
+   إلى ملف أسقطته العينة.
+5. **الربط**: سلاسل سلوك من العينة إلى كل عملية قامت بشيء
+   مهم (حققت الاستمرارية، أو اتصلت بالشبكة، أو شغّلت ملفًا مُسقطًا)، مكتوبة على شكل خطوات مقروءة.
+6. **القواعد** (`IRule`): 31 قاعدة مدمجة، إضافة إلى حزم قواعد JSON من المستخدم. كل قاعدة تُرجع نتيجة
+   واحدة على الأكثر مع كل أدلتها، حتى لا يُحتسب السلوك المتكرر مرتين. القاعدة التي تفشل
+   تُسجَّل ويُتجاوز عنها، ولا يكون فشلها قاتلًا أبدًا.
+7. **الخطورة**: الدرجة هي مجموع نقاط النتائج مع حد أقصى لكل فئة، وتُحصر بين 0 و100.
+   كل نقطة مذكورة في «لماذا هذه الدرجة؟». وحدود الحكم قابلة للتعديل من المستخدم.
+8. **المؤشرات**: تُقيَّم فقط بناءً على النتائج التي تستشهد بأحداثها، أو بناءً على قائمة المراقبة لدى المستخدم.
+9. **مقارنة اللقطات**: الملفات، وقيم السجل (registry)، والخدمات، والمهام المجدولة، وعناصر بدء التشغيل.
 
-### Contextual scoring
+### التقييم حسب السياق
 
-Single behaviors weigh little; combinations weigh more. PowerShell started by an installer is
-`BLZ-E001` (5 points, Low). The same installer dropping an executable into AppData, running it,
-that process adding a Run key and connecting out triggers `F001`, `F002`, `P001`, `N001`, `N002`
-**and** the sequence rule `C001`. The tests cover both cases.
+السلوكيات المنفردة وزنها قليل؛ أما التركيبات فوزنها أكبر. تشغيل PowerShell من قِبل برنامج تثبيت هو
+`BLZ-E001` (5 نقاط، Low). أما إذا أسقط برنامج التثبيت نفسه ملفًا تنفيذيًا في AppData، ثم شغّله،
+ثم أضافت تلك العملية مفتاح Run واتصلت بالخارج، فإن ذلك يطلق `F001` و`F002` و`P001` و`N001` و`N002`
+**إضافة إلى** قاعدة التسلسل `C001`. والاختبارات تغطي الحالتين.
 
-## Storage
+## التخزين
 
-SQLite (WAL) in `%LOCALAPPDATA%\Blazma\Sandbox\blazma-sandbox.db`, versioned migrations.
+SQLite (WAL) في `%LOCALAPPDATA%\Blazma\Sandbox\blazma-sandbox.db`، مع ترحيلات (migrations) ذات إصدارات.
 
-| Table | Purpose | Indexes |
+| الجدول | الغرض | الفهارس |
 |---|---|---|
-| `samples` | One row per SHA-256; first/last seen, times analyzed | PK sha256 |
-| `analyses` | History rows (stage, score, verdict, provider, counts, options) | started_at, sha256, verdict |
-| `events` | The unified event stream (file, registry and network activity are categories of it) | (analysis, time), (analysis, category, time), (analysis, pid) |
-| `events_fts` | FTS5 full-text search for global search | — |
-| `processes`, `findings`, `indicators` | Searchable/listable derived rows | name, rule_id, value |
-| `report_documents` | The full derived result as one gzip JSON document per analysis | PK |
+| `samples` | صف واحد لكل بصمة SHA-256؛ أول وآخر ظهور، وعدد مرات التحليل | PK sha256 |
+| `analyses` | صفوف السجل (المرحلة، الدرجة، الحكم، المزوّد، الأعداد، الخيارات) | started_at, sha256, verdict |
+| `events` | تدفق الأحداث الموحّد (نشاط الملفات والسجل والشبكة فئات منه) | (analysis, time), (analysis, category, time), (analysis, pid) |
+| `events_fts` | بحث نصي كامل FTS5 للبحث العام | — |
+| `processes`، `findings`، `indicators` | صفوف مشتقة قابلة للبحث والعرض في قوائم | name, rule_id, value |
+| `report_documents` | النتيجة المشتقة كاملة، كمستند JSON واحد مضغوط بـ gzip لكل تحليل | PK |
 
-Events are inserted with prepared statements in one transaction; the 100k-event test stores and
-pages them in a few seconds. Lists in the UI are virtualised; Raw Events pages from the database.
+تُدرج الأحداث باستخدام عبارات مُعدّة مسبقًا (prepared statements) داخل معاملة واحدة؛ واختبار المئة ألف حدث يخزّنها
+ويقسّمها إلى صفحات في بضع ثوانٍ. القوائم في الواجهة افتراضية (virtualised)، وشاشة الأحداث الخام تجلب صفحاتها من قاعدة البيانات.
 
-Settings are a single JSON document written atomically; a corrupt file is backed up and replaced
-with defaults.
+الإعدادات مستند JSON واحد يُكتب بشكل ذري (atomic)؛ وإذا تلف الملف، تُحفظ منه نسخة احتياطية ويُستبدل
+بالقيم الافتراضية.
 
-## UI
+## الواجهة
 
-Avalonia 12 (the same framework as Blazma Crosshair), MVVM with CommunityToolkit.Mvvm, DI with
-Microsoft.Extensions.DependencyInjection, structured logs with Serilog (compact JSON, no sample
-contents).
+Avalonia 12 (الإطار نفسه المستخدم في Blazma Crosshair)، وMVVM باستخدام CommunityToolkit.Mvvm، وحقن الاعتماديات (DI) باستخدام
+Microsoft.Extensions.DependencyInjection، وسجلات منظّمة باستخدام Serilog (JSON مضغوط، دون أي محتوى
+من العينات).
 
-- **Design system** (`Styles/Tokens.axaml`, `Styles/Controls.axaml`): Blazma family tokens (graphite
-  surfaces, Blazma orange `#FF6D00`, hexagon logo), typography classes, cards, keys (buttons),
-  chips, badges, tabs; `RiskBadge`, `ScoreRing`, `LogoMark` controls. Orange is identity only; risk
-  uses amber/red/green **with shapes and words**, never colour alone.
-- **ThemeService** swaps token brushes for Dark / Midnight / Light, derives the accent ramp, density
-  and corner radii.
-- **Motion** transitions only apply under `.motion`, so turning off animations or enabling reduced
-  motion removes them everywhere.
-- **Localization**: `Loc` loads `en.json` / `ar.json` (600 keys each, tested for parity, placeholders
-  and usage). Switching language re-binds every string and flips `FlowDirection`. Arabic section
-  headings switch to the body font without letter-spacing so Arabic letters stay joined.
-- **Errors**: global handlers log and show an in-window dialog (reason, Retry, Diagnostics) instead
-  of crashing.
+- **نظام التصميم** (`Styles/Tokens.axaml`، `Styles/Controls.axaml`): رموز التصميم (tokens) الخاصة بعائلة Blazma (أسطح
+  بلون الجرافيت، وبرتقالي Blazma `#FF6D00`، وشعار سداسي)، وأصناف الطباعة، والبطاقات، والمفاتيح (الأزرار)،
+  والرقاقات (chips)، والشارات، والتبويبات؛ وعناصر التحكم `RiskBadge` و`ScoreRing` و`LogoMark`. البرتقالي للهوية فقط؛ أما الخطورة
+  فتستخدم الكهرماني والأحمر والأخضر **مع أشكال وكلمات**، ولا تعتمد على اللون وحده أبدًا.
+- **ThemeService** يبدّل فُرَش الرموز بين السمات الداكنة (Dark) ومنتصف الليل (Midnight) والفاتحة (Light)، ويشتق تدرّج لون التمييز، والكثافة،
+  وأنصاف أقطار الزوايا.
+- **الحركة**: انتقالات الحركة لا تُطبَّق إلا تحت `.motion`، لذلك فإن إيقاف الرسوم المتحركة أو تفعيل تقليل
+  الحركة يزيلها من كل مكان.
+- **الترجمة**: يحمّل `Loc` الملفين `en.json` و`ar.json` (600 مفتاح في كل منهما، مع اختبار تطابقهما، والعناصر النائبة (placeholders)
+  والاستخدام). تبديل اللغة يعيد ربط كل نص ويقلب `FlowDirection`. عناوين الأقسام بالعربية
+  تنتقل إلى خط النص الأساسي دون تباعد بين الأحرف حتى تبقى الحروف العربية متصلة.
+- **الأخطاء**: معالجات عامة تسجّل الخطأ وتعرض مربع حوار داخل النافذة (السبب، وإعادة المحاولة، والتشخيص) بدلًا
+  من الانهيار.
 
-## Extension points
+## نقاط التوسعة
 
-`ISandboxProvider` (VirtualBox and Hyper-V are built in, see [VIRTUAL-MACHINES.md](VIRTUAL-MACHINES.md); remote providers), `IReportExporter` (PDF), `IAiProvider` (local AI that
-receives the structured result, never the sample), `IReputationProvider` (opt-in only), JSON rule
-packs. A plugin system is deliberately not built until the core has been validated.
+`ISandboxProvider` (VirtualBox وHyper-V مدمجان، انظر [VIRTUAL-MACHINES.md](VIRTUAL-MACHINES.md)؛ والمزوّدات البعيدة)، و`IReportExporter` (PDF)، و`IAiProvider` (ذكاء اصطناعي محلي
+يستقبل النتيجة المنظَّمة، وليس العينة أبدًا)، و`IReputationProvider` (بالاشتراك الاختياري فقط)، وحزم قواعد
+JSON. نظام الإضافات (plugins) لم يُبنَ عن قصد إلى أن يتم التحقق من النواة.
 
-## Decision log
+## سجل القرارات
 
-| Decision | Why |
+| القرار | السبب |
 |---|---|
-| Avalonia over WinUI 3 / WPF | Full control of the look (Blazma identity), real RTL, headless testing and screenshots in CI, single-file deployment, and Blazma Crosshair already uses it. |
-| Windows Sandbox as the first provider | Built into Windows, hypervisor-isolated, disposable, no images to manage. |
-| File-based channel instead of networking | Keeps the sandbox network-free. `out/` is the only writable path and is parsed as hostile. |
-| HMAC-signed output, key removed before the sample runs | A sample that wants to forge monitoring data must first extract the key from the agent's memory. |
-| ETW in the agent | Kernel-level process/file/registry/network visibility without installing drivers. |
-| SQLite + one compressed document per analysis | Fast paging/search on events, simple loading of the derived report. |
-| No TLS interception | Out of scope for v1 by design; metadata only. |
-| Managed YARA engine instead of libyara | No native parser on the host for internet-sourced rules; every search is bounded, and anything unsupported is an error rather than a silent miss. See [YARA.md](YARA.md). |
+| Avalonia بدلًا من WinUI 3 / WPF | تحكم كامل في المظهر (هوية Blazma)، ودعم حقيقي للكتابة من اليمين إلى اليسار (RTL)، واختبارات ولقطات شاشة دون واجهة رسومية (headless) في CI، ونشر كملف واحد، كما أن Blazma Crosshair يستخدمه بالفعل. |
+| Windows Sandbox كأول مزوّد | مدمج في Windows، ومعزول بالـ hypervisor، ويُستخدم مرة واحدة، ولا توجد صور (images) تحتاج إلى إدارة. |
+| قناة قائمة على الملفات بدلًا من الشبكة | تبقي البيئة المعزولة بلا شبكة. `out/` هو المسار الوحيد القابل للكتابة، ويُحلَّل على أنه عدائي. |
+| مخرجات موقّعة بـ HMAC، مع حذف المفتاح قبل تشغيل العينة | العينة التي تريد تزوير بيانات المراقبة يجب أن تستخرج المفتاح أولًا من ذاكرة الوكيل. |
+| ETW داخل الوكيل | رؤية على مستوى النواة (kernel) لنشاط العمليات والملفات والسجل والشبكة دون تثبيت برامج تشغيل (drivers). |
+| SQLite + مستند مضغوط واحد لكل تحليل | تقسيم سريع إلى صفحات وبحث سريع في الأحداث، وتحميل بسيط للتقرير المشتق. |
+| لا اعتراض لاتصالات TLS | خارج نطاق الإصدار v1 عن قصد؛ البيانات الوصفية (metadata) فقط. |
+| محرك YARA مُدار (managed) بدلًا من libyara | لا يوجد محلّل أصلي (native) على المضيف لقواعد مصدرها الإنترنت؛ وكل عملية بحث محدودة، وأي شيء غير مدعوم يُعد خطأً بدلًا من أن يُفوَّت بصمت. انظر [YARA.md](YARA.md). |
+
+</div>

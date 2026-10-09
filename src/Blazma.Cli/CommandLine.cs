@@ -22,6 +22,15 @@ public sealed class CommandLine
         "json", "allow-internet", "lookup", "recursive", "interactive", "pcap", "no-screenshots", "help", "verbose",
     };
 
+    /// <summary>The Arabic form of a parse error from <see cref="Parse"/>.</summary>
+    public static string Arabic(string? error)
+    {
+        if (error is null) return "";
+        if (error.StartsWith("Unknown option ", StringComparison.Ordinal)) return "خيار غير معروف: " + error["Unknown option ".Length..].TrimEnd('.');
+        if (error.EndsWith(" needs a value.", StringComparison.Ordinal)) return $"الخيار {error[..^" needs a value.".Length]} يحتاج قيمة.";
+        return error;
+    }
+
     /// <summary>Parses arguments; returns an error message instead of throwing on bad input.</summary>
     public static (CommandLine? Command, string? Error) Parse(IReadOnlyList<string> args)
     {

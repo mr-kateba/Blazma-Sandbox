@@ -1,24 +1,28 @@
-# Contributing
+# المساهمة
 
-Thanks for helping. These rules keep Blazma Sandbox safe and honest.
+**العربية** · [English](CONTRIBUTING.en.md)
 
-## Ground rules
+<div dir="rtl">
 
-1. **Priority order:** Security > Correctness > Stability > UX > Performance > extra features.
-2. **Never fake a feature.** If something isn't implemented, it appears as *Planned* and is
-   disabled.
-3. **No verdict from one indicator.** New detections add weighted, evidence-backed findings.
-   They never decide a verdict alone.
-4. **Local-first.** No network calls unless the user opted in, and a sample never leaves the
-   machine.
-5. **Treat agent output as hostile.** Anything from inside the sandbox is validated, limited
-   in size and never executed.
+شكرًا على مساعدتك. هذه القواعد تحافظ على أمان Blazma Sandbox وصدقه.
 
-## Setup
+## القواعد الأساسية
 
-- .NET SDK 10.0.100 or newer (see `global.json`)
-- Windows 10/11 Pro or Enterprise with *Windows Sandbox* enabled to test real analyses.
-  Everything else, including demo mode and all tests, also runs on Linux and macOS.
+1. **ترتيب الأولويات:** الأمان > الصحة > الاستقرار > تجربة المستخدم > الأداء > الميزات الإضافية.
+2. **لا تزيّف ميزة أبدًا.** إذا لم يكن شيء ما منفَّذًا، فإنه يظهر بوسم *مخطط له* ويكون معطلًا.
+3. **لا حكم بناءً على مؤشر واحد.** الاكتشافات الجديدة تضيف نتائج موزونة مدعومة بالأدلة، ولا تقرر
+   الحكم وحدها أبدًا.
+4. **محلي أولًا.** لا اتصالات بالشبكة ما لم يوافق المستخدم على ذلك، ولا تغادر العيّنة الجهاز أبدًا.
+5. **عامِل مخرجات الوكيل كمدخلات معادية.** كل ما يأتي من داخل البيئة المعزولة يُتحقق منه، ويُقيَّد
+   حجمه، ولا يُنفَّذ أبدًا.
+
+## الإعداد
+
+- .NET SDK 10.0.100 أو أحدث (راجع `global.json`)
+- Windows 10/11 Pro أو Enterprise مع تفعيل *Windows Sandbox* لاختبار التحليلات الحقيقية.
+  كل ما عدا ذلك، بما فيه الوضع التجريبي وكل الاختبارات، يعمل أيضًا على Linux وmacOS.
+
+<div dir="ltr">
 
 ```bash
 dotnet build Blazma.Sandbox.slnx
@@ -26,49 +30,57 @@ dotnet test Blazma.Sandbox.slnx
 dotnet run --project src/Blazma.App          # demo mode works without Windows Sandbox
 ```
 
-UI screenshots (headless, no display needed):
+</div>
+
+لقطات شاشة الواجهة (دون واجهة رسومية، ولا حاجة إلى شاشة):
+
+<div dir="ltr">
 
 ```bash
 dotnet run --project tools/Blazma.Screenshots -- out en        # or: out ar · out en Report Light
 ```
 
-## Where things go
+</div>
 
-| Change | Project |
+## أين يوضع كل شيء
+
+| التغيير | المشروع |
 |---|---|
-| Models, settings, interfaces | `src/Blazma.Core` |
-| Agent ↔ host messages | `src/Blazma.Contracts` (keep it small and versioned) |
-| Static analysis, rules, scoring, correlation | `src/Blazma.Analysis` |
-| Sandbox providers, channel, demo | `src/Blazma.Sandbox` |
-| Code running *inside* the sandbox | `src/Blazma.Agent` |
-| Database | `src/Blazma.Storage` |
-| Exports | `src/Blazma.Reporting` |
-| Ask Blazma, reputation | `src/Blazma.Intelligence` |
-| UI | `src/Blazma.App` |
+| النماذج، والإعدادات، والواجهات البرمجية (interfaces) | `src/Blazma.Core` |
+| الرسائل بين الوكيل والمضيف | `src/Blazma.Contracts` (أبقِه صغيرًا ومُرقّم الإصدارات) |
+| التحليل الثابت، والقواعد، وحساب الدرجة، والربط | `src/Blazma.Analysis` |
+| مزوّدو البيئة المعزولة، والقناة، والوضع التجريبي | `src/Blazma.Sandbox` |
+| الشيفرة التي تعمل *داخل* البيئة المعزولة | `src/Blazma.Agent` |
+| قاعدة البيانات | `src/Blazma.Storage` |
+| التصدير | `src/Blazma.Reporting` |
+| Ask Blazma، والسمعة | `src/Blazma.Intelligence` |
+| الواجهة | `src/Blazma.App` |
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+راجع [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Checklist for a pull request
+## قائمة التحقق لطلب الدمج (pull request)
 
-- [ ] `dotnet build` has no warnings and `dotnet test` passes.
-- [ ] New logic has tests. Rules need a positive test and a test on clean activity.
-- [ ] Every user-facing string is in **both** `Localization/en.json` and `ar.json`. The
-      `LocalizationTests` check this.
-- [ ] UI changes look right in Arabic (RTL) and in the Light theme. Attach screenshots.
-- [ ] No new network access, telemetry or outbound calls.
-- [ ] `CHANGELOG.md` is updated under *Unreleased*.
+- [ ] لا يُظهر `dotnet build` أي تحذيرات، وينجح `dotnet test`.
+- [ ] للمنطق الجديد اختبارات. تحتاج القواعد إلى اختبار إيجابي واختبار على نشاط نظيف.
+- [ ] كل نص يظهر للمستخدم موجود في **كلٍّ من** `Localization/en.json` و`ar.json`. وتتحقق
+      `LocalizationTests` من ذلك.
+- [ ] تبدو تغييرات الواجهة صحيحة بالعربية (RTL) وفي السمة Light. أرفق لقطات شاشة.
+- [ ] لا وصول جديد إلى الشبكة، ولا قياس عن بُعد (telemetry)، ولا اتصالات صادرة.
+- [ ] حُدِّث `CHANGELOG.md` تحت قسم *Unreleased*.
 
-## Detection rules
+## قواعد الكشف
 
-The quickest way to contribute detection is a JSON rule pack: see
-[docs/RULE-PACKS.md](docs/RULE-PACKS.md). Built-in C# rules live in
-`src/Blazma.Analysis/Rules` and need:
+أسرع طريقة للمساهمة في الكشف هي حزمة قواعد بصيغة JSON: راجع
+[docs/RULE-PACKS.md](docs/RULE-PACKS.md). توجد قواعد C# المدمجة في
+`src/Blazma.Analysis/Rules` وتحتاج إلى:
 
-- an ID (`BLZ-<category letter><number>`)
-- an English and an Arabic name
-- a weight
-- ATT&CK IDs where they apply
+- معرّف (`BLZ-<category letter><number>`)
+- اسم بالإنجليزية واسم بالعربية
+- وزن
+- معرّفات ATT&CK حيثما تنطبق
 
-## Security issues
+## المشكلات الأمنية
 
-Do not open a public issue. Follow [SECURITY.md](SECURITY.md).
+لا تفتح بلاغًا (issue) عامًا. اتبع [SECURITY.md](SECURITY.md).
+
+</div>

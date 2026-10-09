@@ -336,6 +336,8 @@
             <TextBlock Classes="mono"><Run Text="v" /><Run Text="{Binding Version}" /></TextBlock>
             <TextBlock Classes="body" Text="{l:T AboutBody}" />
             <TextBlock Classes="body" Text="{l:T AboutPurpose}" Foreground="{DynamicResource MutedBrush}" />
+            <TextBlock Classes="body"><Run Text="{l:T AboutDeveloper}" /><Run Text=" " /><Run Text="mr-kateba" FontWeight="SemiBold" Foreground="{DynamicResource AccentTextBrush}" /></TextBlock>
+            <Button Classes="ghost" Content="github.com/mr-kateba" Command="{Binding OpenDeveloperCommand}" HorizontalAlignment="Left" Padding="0,2" />
             <TextBlock Classes="caption" Text="{l:T AboutFonts}" />
           </StackPanel>
         </Border>

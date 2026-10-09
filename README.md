@@ -1,72 +1,77 @@
 <p align="center">
-  <img src="assets/blazma-sandbox-256.png" width="96" alt="Blazma Sandbox logo" />
+  <img src="assets/blazma-sandbox-256.png" width="96" alt="شعار Blazma Sandbox" />
 </p>
 
 <h1 align="center">Blazma Sandbox</h1>
-<p align="center"><b>Analyze. Observe. Understand.</b></p>
-<p align="center">Part of the Blazma family · Windows · English / العربية</p>
+<p align="center" dir="rtl"><b>حلّل. راقب. افهم.</b></p>
+<p align="center" dir="rtl">من عائلة Blazma · Windows · العربية / English</p>
+
+**العربية** · [English](README.en.md)
+
+<div dir="rtl">
 
 <p align="center">
-  <img src="docs/screenshots/03-report-overview-en.png" alt="Blazma Sandbox report overview" />
+  <img src="docs/screenshots/03-report-overview-ar.png" alt="نظرة عامة على تقرير Blazma Sandbox" />
 </p>
 
-Blazma Sandbox analyzes suspicious files, archives and web addresses on Windows. It inspects
-a file without running it, runs it inside an isolated, disposable **Windows Sandbox** (or a
-VirtualBox / Hyper-V virtual machine), watches
-what it does, links the events together, and turns them into a report anyone can read:
+يحلّل Blazma Sandbox الملفات والملفات المضغوطة وعناوين الويب المشبوهة على Windows. يفحص الملف
+دون تشغيله، ثم يشغّله داخل **Windows Sandbox** معزولة تُحذف بعد الاستخدام (أو داخل جهاز افتراضي
+VirtualBox أو Hyper-V)، ويراقب ما يفعله، ويربط الأحداث بعضها ببعض، ثم يحوّلها إلى تقرير يستطيع أي
+شخص قراءته:
 
-- **What happened?** A timeline, a process tree and behavior chains.
-- **Why does it matter?** Plain-language explanations and an explainable risk score.
-- **What evidence supports this?** Every finding links back to the events it is based on.
+- **ماذا حدث؟** خط زمني، وشجرة عمليات، وسلاسل سلوك.
+- **لماذا يهم ذلك؟** شروحات بلغة واضحة ودرجة خطورة قابلة للتفسير.
+- **ما الأدلة على ذلك؟** كل نتيجة ترتبط بالأحداث التي بُنيت عليها.
 
-Blazma is **not an antivirus**. It never calls a file "malware" from one indicator. The
-score describes observed behavior; *a high score does not by itself prove that a file is
-malicious*.
+Blazma **ليس برنامج مكافحة فيروسات**. ولا يصف ملفًا بأنه "برمجية خبيثة" بناءً على مؤشر واحد أبدًا.
+الدرجة تصف السلوك الذي رُصد؛ *والدرجة المرتفعة لا تثبت وحدها أن الملف خبيث*.
 
-> Blazma Sandbox is intended for defensive analysis and **authorized** security research.
+> Blazma Sandbox مخصص للتحليل الدفاعي ولأبحاث الأمان **المصرّح بها**.
 
-## Features
+## الميزات
 
-| Area | What you get |
+| المجال | ما تحصل عليه |
 |---|---|
-| **Static analysis** | SHA-256/SHA-1, file type (including Office/PDF documents and archives), PE headers, sections and entropy, imports/exports, **imphash**, version info, offline Authenticode check, meaningful strings, **95 capability rules** in the style of capa (keylogging, injection, anti-debugging, crypto, credential access...), **extracted values** (URLs, IPs, domains, e-mails, registry paths, crypto wallets, tokens, Base64 blobs). Runs in a separate helper process and never executes the file. |
-| **YARA** | Your own `.yar` files, scanned by a built-in managed engine against the sample, the files it creates and suspicious memory regions. Text, hex and regex strings with the common modifiers. No native library needed. [docs/YARA.md](docs/YARA.md) |
-| **Archives** | ZIP (ZipCrypto and AES), 7z, RAR, TAR and GZip are listed without running anything. The usual sample passwords (`infected`, `malware`, `virus`) are tried automatically; the file you pick is extracted in a helper process. |
-| **Web addresses** | Analyze a URL: look-alike brands, punycode, shorteners, risky domains, embedded credentials, then open it in Edge inside the sandbox (needs the real network and your consent). |
-| **Isolated execution** | **Windows Sandbox** with every optional channel off, or your own **VirtualBox** or **Hyper-V** virtual machine restored from a clean snapshot before and after each run. [docs/VIRTUAL-MACHINES.md](docs/VIRTUAL-MACHINES.md) |
-| **Simulated internet** | The default: no real network, but names resolve to a fake server inside the sandbox that answers HTTP and records requests, TLS server names and uploads, so downloaders and C2 check-ins show what they wanted. |
-| **Monitoring** | In-sandbox agent using ETW: processes, files, registry, TCP/UDP, DNS, scheduled tasks, plus before/after snapshots, **screenshots** of the sandbox screen, **files the sample created** (copied out and analyzed), **memory regions** with injected or unpacked code, and an optional **pcapng** network capture. |
-| **Interactive and user simulation** | Watch the sandbox screen live, add two minutes or finish early. Installers are clicked through automatically (Next, Install, Finish; never Cancel). |
-| **Unified timeline** | One event model for everything, ordered and filterable by category, severity, process, time range and text. Virtualised for 100k+ events. |
-| **Correlation** | PID-reuse-safe process tree, "dropped then executed" detection, behavior chains such as *setup.exe → created updater.exe → ran it → startup entry → contacted endpoint*. |
-| **Persistence detection** | Run keys, Startup folder, scheduled tasks, services, Winlogon, IFEO, AppInit, Active Setup, each with a human explanation and the technical details. |
-| **Risk engine** | 31 contextual rules with ATT&CK IDs, an **ATT&CK matrix** view, per-category caps, a "Why this score?" breakdown, sequence rules that weigh combinations, and noise suppression for Windows background activity. |
-| **Reputation (opt-in)** | Local history always. **VirusTotal** and **MalwareBazaar** only if you turn them on and enter a key: the **SHA-256 is sent, never the file**. Keys are encrypted with Windows DPAPI. |
-| **Reports and sharing** | Self-contained HTML (no scripts, CSP-locked), JSON with an integrity hash, indicator CSV, **STIX 2.1**, **MISP**, draft **Sigma** and **YARA** rules, and an encrypted ZIP (password `infected`) of the created files. Personal details are redacted by default. |
-| **Ask Blazma** | Ask questions about a report ("Why is the score high?", "ليش أعطيت الملف High Risk؟"). Answers come from the data and cite it. Optionally a **local AI model** (Ollama, LM Studio, llama.cpp) on this computer adds a summary, labelled as AI interpretation. |
-| **Command line** | `blazma static`, `analyze`, `batch`, `list`, `export`, `envs`, with exit codes that follow the verdict, for scripts and pipelines. [docs/CLI.md](docs/CLI.md) |
-| **Compare analyses** | Version 1.2 vs 1.3 of the same installer: new processes, connections, domains, persistence, dropped files, score difference. |
-| **Customisation** | Themes (Dark, Midnight, Light), accent colour (Blazma family shades), density, UI scale, reduced motion, dashboard cards, analysis profiles (Quick, Standard, Deep, Interactive, your own), verdict thresholds, per-rule enable/weight, JSON rule packs, YARA rules, a local watchlist, noise allowlist, editable shortcuts, report contents, retention, an optional Explorer right-click entry. |
-| **Bilingual** | Full English and Arabic with real right-to-left layout. Technical terms (SHA-256, PID, IP, Registry) stay recognisable. |
-| **Local first** | No telemetry and no uploads. Online lookups and AI are off until you turn them on; even then only a hash or the redacted report leaves the computer, never the file. |
+| **التحليل الثابت** | SHA-256/SHA-1، ونوع الملف (بما في ذلك مستندات Office/PDF والملفات المضغوطة)، وترويسات PE، والأقسام والإنتروبيا، والدوال المستوردة والمصدّرة، و**imphash**، ومعلومات الإصدار، والتحقق من Authenticode دون اتصال، والنصوص ذات الدلالة، و**95 قاعدة قدرات** على نمط capa (تسجيل ضغطات المفاتيح، والحقن، ومقاومة التنقيح، والتشفير، والوصول إلى بيانات الاعتماد...)، و**القيم المستخرجة** (عناوين URL، وعناوين IP، والنطاقات، وعناوين البريد الإلكتروني، ومسارات السجل، ومحافظ العملات الرقمية، والرموز المميزة (tokens)، وكتل Base64). يعمل في عملية مساعدة منفصلة ولا ينفّذ الملف أبدًا. |
+| **YARA** | ملفات `.yar` الخاصة بك، يفحص بها محرك مُدار مدمج العيّنةَ والملفات التي تنشئها ومناطق الذاكرة المشبوهة. يدعم النصوص والقيم الست عشرية والتعابير النمطية مع المعدِّلات الشائعة. لا حاجة إلى مكتبة أصلية. [docs/YARA.md](docs/YARA.md) |
+| **الملفات المضغوطة** | تُعرض محتويات ZIP (ZipCrypto وAES) و7z وRAR وTAR وGZip دون تشغيل أي شيء. تُجرَّب كلمات مرور العيّنات المعتادة (`infected` و`malware` و`virus`) تلقائيًا؛ ويُستخرج الملف الذي تختاره في عملية مساعدة. |
+| **عناوين الويب** | حلّل عنوان URL: العلامات التجارية المقلَّدة، وpunycode، وخدمات اختصار الروابط، والنطاقات الخطرة، وبيانات الاعتماد المضمّنة، ثم افتحه في Edge داخل البيئة المعزولة (يتطلب الشبكة الحقيقية وموافقتك). |
+| **التشغيل المعزول** | **Windows Sandbox** مع إيقاف كل القنوات الاختيارية، أو جهازك الافتراضي الخاص على **VirtualBox** أو **Hyper-V** يُستعاد من لقطة نظيفة قبل كل تشغيل وبعده. [docs/VIRTUAL-MACHINES.md](docs/VIRTUAL-MACHINES.md) |
+| **إنترنت محاكى** | الوضع الافتراضي: لا شبكة حقيقية، لكن الأسماء تُحل إلى خادم وهمي داخل البيئة المعزولة يجيب على طلبات HTTP ويسجّل الطلبات وأسماء خوادم TLS والملفات المرفوعة، فتكشف برامج التنزيل واتصالات C2 عمّا كانت تريده. |
+| **المراقبة** | وكيل داخل البيئة المعزولة يستخدم ETW: العمليات، والملفات، والسجل (Registry)، وTCP/UDP، وDNS، والمهام المجدولة، إضافة إلى لقطات حالة قبل التشغيل وبعده، و**لقطات شاشة** للبيئة المعزولة، و**الملفات التي أنشأتها العيّنة** (تُنسخ إلى الخارج وتُحلَّل)، و**مناطق الذاكرة** التي تحوي شيفرة محقونة أو مفكوكة الحزم، والتقاط اختياري لحركة الشبكة بصيغة **pcapng**. |
+| **الوضع التفاعلي ومحاكاة المستخدم** | شاهد شاشة البيئة المعزولة مباشرة، وأضف دقيقتين أو أنهِ التحليل مبكرًا. يُضغط على أزرار برامج التثبيت تلقائيًا (Next وInstall وFinish؛ ولا يُضغط Cancel أبدًا). |
+| **خط زمني موحَّد** | نموذج أحداث واحد لكل شيء، مرتب وقابل للتصفية حسب الفئة والخطورة والعملية والفترة الزمنية والنص. يعرض أكثر من 100 ألف حدث بفضل العرض الافتراضي (virtualization). |
+| **الربط** | شجرة عمليات آمنة من إعادة استخدام PID، وكشف "أُسقط ثم نُفّذ"، وسلاسل سلوك مثل *setup.exe ← أنشأ updater.exe ← شغّله ← مدخل بدء تشغيل ← اتصل بنقطة نهاية*. |
+| **كشف الاستمرارية** | مفاتيح Run، ومجلد Startup، والمهام المجدولة، والخدمات، وWinlogon، وIFEO، وAppInit، وActive Setup، ولكل منها شرح مفهوم للإنسان مع التفاصيل التقنية. |
+| **محرك الخطورة** | 31 قاعدة سياقية مع معرّفات ATT&CK، وعرض **مصفوفة ATT&CK**، وحدود قصوى لكل فئة، وتفصيل "لماذا هذه الدرجة؟"، وقواعد تسلسل تزن التركيبات، وكتم الضجيج الناتج عن نشاط Windows في الخلفية. |
+| **السمعة (اختيارية)** | السجل المحلي دائمًا. **VirusTotal** و**MalwareBazaar** فقط إذا فعّلتهما وأدخلت مفتاحًا: **يُرسل SHA-256، ولا يُرسل الملف أبدًا**. تُشفَّر المفاتيح باستخدام Windows DPAPI. |
+| **التقارير والمشاركة** | HTML مستقل بذاته (دون نصوص برمجية، ومقيَّد بـ CSP)، وJSON مع بصمة سلامة، وCSV للمؤشرات، و**STIX 2.1**، و**MISP**، ومسودات قواعد **Sigma** و**YARA**، وملف ZIP مشفّر (كلمة المرور `infected`) للملفات المُنشأة. تُحجب البيانات الشخصية افتراضيًا. |
+| **Ask Blazma** | اطرح أسئلة عن تقرير ("لماذا الدرجة مرتفعة؟"، "ليش أعطيت الملف High Risk؟"). تأتي الإجابات من البيانات وتستشهد بها. ويمكن اختياريًا أن يضيف **نموذج ذكاء اصطناعي محلي** (Ollama أو LM Studio أو llama.cpp) على هذا الحاسوب ملخصًا، مع وسمه بأنه تفسير من الذكاء الاصطناعي. |
+| **سطر الأوامر** | `blazma static` و`analyze` و`batch` و`list` و`export` و`envs`، مع رموز خروج تتبع الحكم، للاستخدام في النصوص البرمجية وخطوط المعالجة. [docs/CLI.md](docs/CLI.md) |
+| **مقارنة التحليلات** | الإصدار 1.2 مقابل 1.3 من برنامج التثبيت نفسه: العمليات الجديدة، والاتصالات، والنطاقات، والاستمرارية، والملفات المُسقطة، وفرق الدرجة. |
+| **التخصيص** | السمات (Dark وMidnight وLight)، ولون التمييز (درجات عائلة Blazma)، والكثافة، وحجم الواجهة، وتقليل الحركة، وبطاقات لوحة المعلومات، وملفات تعريف التحليل (Quick وStandard وDeep وInteractive، أو ملفاتك الخاصة)، وعتبات الحكم، وتفعيل كل قاعدة ووزنها، وحزم القواعد بصيغة JSON، وقواعد YARA، وقائمة مراقبة محلية، وقائمة سماح للضجيج، واختصارات قابلة للتعديل، ومحتوى التقرير، ومدة الاحتفاظ، ومدخل اختياري في قائمة النقر بزر الفأرة الأيمن في Explorer. |
+| **ثنائي اللغة** | العربية والإنجليزية بالكامل، مع تخطيط حقيقي من اليمين إلى اليسار. تبقى المصطلحات التقنية (SHA-256 وPID وIP وRegistry) قابلة للتعرّف. |
+| **محلي أولًا** | لا قياس عن بُعد (telemetry) ولا رفع للملفات. عمليات البحث عبر الإنترنت والذكاء الاصطناعي معطلة حتى تفعّلها؛ وحتى عندئذٍ لا يغادر الحاسوبَ إلا البصمة أو التقرير بعد حجب البيانات، ولا يغادره الملف أبدًا. |
 
-## Screenshots
+## لقطات الشاشة
 
 | | |
 |---|---|
-| ![Dashboard](docs/screenshots/01-dashboard-en.png) | ![Live analysis](docs/screenshots/19-live-en.png) |
-| ![Timeline](docs/screenshots/04-report-timeline-en.png) | ![Process tree](docs/screenshots/05-report-processes-en.png) |
-| ![Network](docs/screenshots/06-report-network-en.png) | ![Finding panel](docs/screenshots/10-finding-panel-en.png) |
-| ![Ask Blazma](docs/screenshots/09-report-ask-en.png) | ![Compare](docs/screenshots/12-compare-en.png) |
-| ![Sandbox screenshots](docs/screenshots/20-report-screenshots-en.png) | ![Created files and memory](docs/screenshots/21-report-artifacts-en.png) |
-| ![Capabilities](docs/screenshots/22-report-code-en.png) | ![ATT&CK matrix](docs/screenshots/23-report-attack-en.png) |
-| ![Settings](docs/screenshots/16-settings-detection-en.png) | ![Security Center](docs/screenshots/14-security-center-en.png) |
-| ![Arabic dashboard](docs/screenshots/01-dashboard-ar.png) | ![Arabic report](docs/screenshots/03-report-overview-ar.png) |
+| ![لوحة المعلومات](docs/screenshots/01-dashboard-ar.png) | ![التحليل المباشر](docs/screenshots/19-live-ar.png) |
+| ![الخط الزمني](docs/screenshots/04-report-timeline-ar.png) | ![شجرة العمليات](docs/screenshots/05-report-processes-ar.png) |
+| ![الشبكة](docs/screenshots/06-report-network-ar.png) | ![لوحة النتيجة](docs/screenshots/10-finding-panel-ar.png) |
+| ![Ask Blazma](docs/screenshots/09-report-ask-ar.png) | ![المقارنة](docs/screenshots/12-compare-ar.png) |
+| ![لقطات شاشة البيئة المعزولة](docs/screenshots/20-report-screenshots-ar.png) | ![الملفات المُنشأة والذاكرة](docs/screenshots/21-report-artifacts-ar.png) |
+| ![القدرات](docs/screenshots/22-report-code-ar.png) | ![مصفوفة ATT&CK](docs/screenshots/23-report-attack-ar.png) |
+| ![الإعدادات](docs/screenshots/16-settings-detection-ar.png) | ![مركز الأمان](docs/screenshots/14-security-center-ar.png) |
+| ![لوحة المعلومات بالإنجليزية](docs/screenshots/01-dashboard-en.png) | ![التقرير بالإنجليزية](docs/screenshots/03-report-overview-en.png) |
 
-All screenshots use the built-in **demo analysis**: synthetic events, clearly labelled DEMO,
-processed by the real engine. No sample was run to make them.
+تستخدم كل لقطات الشاشة **التحليل التجريبي** المدمج: أحداث اصطناعية، موسومة بوضوح بـ DEMO،
+عالجها المحرك الحقيقي. لم تُشغَّل أي عيّنة لإنتاجها.
 
-## Architecture
+## البنية
+
+<div dir="ltr">
 
 ```
 Blazma.App (Avalonia UI) ──► Blazma.Analysis ──► Blazma.Core ◄── Blazma.Storage (SQLite)
@@ -79,21 +84,25 @@ Blazma.App (Avalonia UI) ──► Blazma.Analysis ──► Blazma.Core ◄─�
              Blazma.Agent  (runs ONLY inside the sandbox, shares only Blazma.Contracts)
 ```
 
-See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for the boundaries, the analysis state
-machine, the data model and the design decisions, and **[SECURITY.md](SECURITY.md)** for the
-security model and its limits.
+</div>
 
-## Requirements
+راجع **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** لمعرفة الحدود بين المكوّنات، وآلة حالات
+التحليل، ونموذج البيانات، وقرارات التصميم، وراجع **[SECURITY.md](SECURITY.md)** لمعرفة نموذج
+الأمان وحدوده.
 
-- **To analyze real files with Windows Sandbox:** Windows 10 (1903+) or Windows 11, **Pro,
-  Enterprise or Education**, with virtualization enabled in firmware and the *Windows Sandbox*
-  optional feature turned on (`optionalfeatures.exe`).
-- **On Windows Home** (no Windows Sandbox): use a VirtualBox virtual machine you prepare once;
-  see [docs/VIRTUAL-MACHINES.md](docs/VIRTUAL-MACHINES.md). Hyper-V needs Pro or higher.
-- **To build:** .NET 10 SDK. Builds on Windows, Linux and macOS; the demo analysis and all tests
-  run everywhere.
+## المتطلبات
 
-## Build from source
+- **لتحليل ملفات حقيقية باستخدام Windows Sandbox:** Windows 10 (1903 أو أحدث) أو Windows 11، بإصدار
+  **Pro أو Enterprise أو Education**، مع تفعيل المحاكاة الافتراضية (virtualization) في البرنامج الثابت
+  (firmware) وتشغيل الميزة الاختيارية *Windows Sandbox* (`optionalfeatures.exe`).
+- **على Windows Home** (لا يتوفر Windows Sandbox): استخدم جهازًا افتراضيًا على VirtualBox تجهّزه مرة
+  واحدة؛ راجع [docs/VIRTUAL-MACHINES.md](docs/VIRTUAL-MACHINES.md). يتطلب Hyper-V إصدار Pro أو أعلى.
+- **للبناء:** .NET 10 SDK. يُبنى على Windows وLinux وmacOS؛ ويعمل التحليل التجريبي وكل الاختبارات
+  على جميع هذه الأنظمة.
+
+## البناء من المصدر
+
+<div dir="ltr">
 
 ```bash
 git clone https://github.com/mr-kateba/Blazma-Sandbox
@@ -103,67 +112,70 @@ dotnet test  Blazma.Sandbox.slnx          # 750+ tests, synthetic data only
 dotnet run --project src/Blazma.App       # use "Try demo analysis" without Windows Sandbox
 ```
 
-Package for Windows (self-contained, no .NET install needed on the target):
+</div>
+
+الحزمة الخاصة بـ Windows (مستقلة بذاتها، ولا تحتاج إلى تثبيت .NET على الجهاز الهدف):
+
+<div dir="ltr">
 
 ```powershell
 pwsh scripts/publish.ps1        # → publish/BlazmaSandbox/BlazmaSandbox.exe, blazma.exe (CLI), agent/Blazma.Agent.exe
 ```
 
-`scripts/publish.sh` produces the same package from Linux or macOS.
+</div>
 
-Regenerate the screenshots (headless, no display needed):
+ينتج `scripts/publish.sh` الحزمة نفسها من Linux أو macOS.
+
+إعادة توليد لقطات الشاشة (دون واجهة رسومية، ولا حاجة إلى شاشة):
+
+<div dir="ltr">
 
 ```bash
 dotnet run --project tools/Blazma.Screenshots -- docs/screenshots en
 dotnet run --project tools/Blazma.Screenshots -- docs/screenshots ar
 ```
 
-## Security model in one paragraph
+</div>
 
-The sample never runs on your computer. Static parsing, archive listing and extraction happen
-in short-lived helper processes. Execution happens only in Windows Sandbox (every optional
-channel disabled) or in a virtual machine restored from a clean snapshot. The host shares two
-folders: `in/` is read-only inside the sandbox; `out/` is the only writable one, and everything
-in it is treated as hostile input: exact file names only, no links, size quotas, strict parsing,
-HMAC verification, nothing executed, screenshots re-encoded by the host, created files stored
-under neutral names. By default the sandbox has **no real network**: a simulated internet inside
-it answers instead. The real network, online lookups and AI are off by default and need explicit
-consent. Details and known limitations: [SECURITY.md](SECURITY.md).
+## نموذج الأمان في فقرة واحدة
 
-## Roadmap
+لا تعمل العيّنة على حاسوبك أبدًا. يجري التحليل الثابت، وعرض محتويات الملفات المضغوطة، والاستخراج في
+عمليات مساعدة قصيرة العمر. ولا يحدث التشغيل إلا في Windows Sandbox (مع تعطيل كل القنوات الاختيارية)
+أو في جهاز افتراضي يُستعاد من لقطة نظيفة. يشارك الحاسوب المضيف مجلدين: `in/` للقراءة فقط داخل البيئة
+المعزولة؛ و`out/` هو المجلد الوحيد القابل للكتابة، وكل ما فيه يُعامل كمدخلات معادية: أسماء ملفات
+محددة بدقة فقط، ولا روابط، وحصص للحجم، وتحليل صارم، وتحقق HMAC، ولا يُنفَّذ أي شيء، ويعيد المضيف
+ترميز لقطات الشاشة، وتُخزَّن الملفات المُنشأة بأسماء محايدة. افتراضيًا **لا تملك البيئة المعزولة شبكة
+حقيقية**: بل يجيب بدلًا منها إنترنت محاكى داخلها. الشبكة الحقيقية وعمليات البحث عبر الإنترنت والذكاء
+الاصطناعي معطلة افتراضيًا وتتطلب موافقة صريحة. التفاصيل والقيود المعروفة: [SECURITY.md](SECURITY.md).
 
-| Phase | Status |
+## خارطة الطريق
+
+| المرحلة | الحالة |
 |---|---|
-| 1. Foundation: UI shell, design system, localization, database, models, demo mode | ✅ Done |
-| 2. Static analysis: hashes, PE, signatures, imphash, capabilities, YARA, archives, URLs | ✅ Done |
-| 3. Sandbox: Windows Sandbox, VirtualBox, Hyper-V, signed agent channel | 🧪 Implemented, needs validation on real Windows |
-| 4. Monitoring: ETW events, screenshots, created files, memory, pcap, simulated internet, user simulation | 🧪 Implemented, needs validation on real Windows |
-| 5. Analysis: rules, risk, correlation, persistence, snapshots, ATT&CK matrix | ✅ Done |
-| 6. Reporting: report, history, search, HTML, JSON, STIX, MISP, Sigma, YARA | ✅ Done (PDF planned) |
-| 7. Intelligence: Ask Blazma, opt-in hash reputation, optional local AI | ✅ Done |
-| 8. Advanced: compare ✅ · command line ✅ · community intelligence, plugins | Planned |
+| 1. الأساس: هيكل الواجهة، ونظام التصميم، والتعريب، وقاعدة البيانات، والنماذج، والوضع التجريبي | ✅ مكتملة |
+| 2. التحليل الثابت: البصمات، وPE، والتواقيع، وimphash، والقدرات، وYARA، والملفات المضغوطة، وعناوين URL | ✅ مكتملة |
+| 3. البيئة المعزولة: Windows Sandbox، وVirtualBox، وHyper-V، وقناة وكيل موقّعة | 🧪 مُنفَّذة، وتحتاج إلى تحقق على Windows حقيقي |
+| 4. المراقبة: أحداث ETW، ولقطات الشاشة، والملفات المُنشأة، والذاكرة، وpcap، والإنترنت المحاكى، ومحاكاة المستخدم | 🧪 مُنفَّذة، وتحتاج إلى تحقق على Windows حقيقي |
+| 5. التحليل: القواعد، والخطورة، والربط، والاستمرارية، ولقطات الحالة، ومصفوفة ATT&CK | ✅ مكتملة |
+| 6. التقارير: التقرير، والسجل، والبحث، وHTML، وJSON، وSTIX، وMISP، وSigma، وYARA | ✅ مكتملة (PDF مخطط له) |
+| 7. الاستخبارات: Ask Blazma، وسمعة البصمات الاختيارية، والذكاء الاصطناعي المحلي الاختياري | ✅ مكتملة |
+| 8. متقدم: المقارنة ✅ · سطر الأوامر ✅ · استخبارات المجتمع، والإضافات | مخطط لها |
 
-Full list: [docs/ROADMAP.md](docs/ROADMAP.md). Features that are not built yet appear in the
-app as *Planned* and are disabled; nothing pretends to work.
+القائمة الكاملة: [docs/ROADMAP.md](docs/ROADMAP.md). تظهر الميزات التي لم تُبنَ بعد في التطبيق بوسم
+*مخطط لها* وتكون معطلة؛ ولا شيء يتظاهر بأنه يعمل.
 
-## Contributing
+## المساهمة
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Detection rules can be contributed without code as
-JSON rule packs: [docs/RULE-PACKS.md](docs/RULE-PACKS.md).
+راجع [CONTRIBUTING.md](CONTRIBUTING.md). يمكن المساهمة بقواعد الكشف دون كتابة شيفرة، على شكل حزم
+قواعد بصيغة JSON: [docs/RULE-PACKS.md](docs/RULE-PACKS.md).
 
-## License
+## المطوّر
 
-The license has not been chosen yet; see [LICENSE](LICENSE). Bundled fonts (IBM Plex Sans
-Arabic, IBM Plex Mono) are under the SIL Open Font License ([assets/fonts/OFL.txt](assets/fonts/OFL.txt)).
+Blazma Sandbox من تطوير **[mr-kateba](https://github.com/mr-kateba)**.
 
----
+## الترخيص
 
-### بالعربية
+لم يُختر الترخيص بعد؛ راجع [LICENSE](LICENSE). الخطوط المضمّنة (IBM Plex Sans Arabic وIBM Plex Mono)
+مرخّصة بموجب SIL Open Font License ([assets/fonts/OFL.txt](assets/fonts/OFL.txt)).
 
-**Blazma Sandbox** أداة لتحليل الملفات والملفات المضغوطة والروابط المشبوهة على Windows: تفحص الملف
-دون تشغيله (البصمات، imphash، القدرات، قواعد YARA، القيم المستخرجة)، ثم تشغّله داخل Windows Sandbox
-معزولة تُحذف بعد الاستخدام أو داخل جهاز افتراضي (VirtualBox أو Hyper-V)، وتراقب سلوكه مع لقطات للشاشة
-وإنترنت وهمي يكشف ما يحاول الاتصال به دون شبكة حقيقية، ثم تشرح النتيجة بلغة مفهومة: ماذا حدث، ولماذا
-يهم، وما الأدلة. يمكن التصدير إلى STIX وMISP وSigma وYARA، ويوجد سطر أوامر للتحليل الآلي. الواجهة بالعربية
-والإنجليزية مع دعم كامل للكتابة من اليمين إلى اليسار. لا يُرفع أي ملف أبدًا؛ الفحص عبر الإنترنت والذكاء
-الاصطناعي اختياريان ومعطلان افتراضيًا. النتيجة المرتفعة تصف السلوك ولا تثبت وحدها أن الملف خبيث.
+</div>

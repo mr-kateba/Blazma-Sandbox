@@ -1,5 +1,6 @@
 {
  "AboutBody": "Blazma Sandbox analyzes suspicious files in an isolated environment and turns raw activity into an explainable report.",
+ "AboutDeveloper": "Developed by",
  "AboutFonts": "Fonts: IBM Plex Sans Arabic and IBM Plex Mono (SIL Open Font License).",
  "AboutPurpose": "Built for defense, analysis and authorized security research. A high score describes behavior; it does not by itself prove a file is malicious.",
  "AccentAmber": "Amber",
