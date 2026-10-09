@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Blazma.Analysis.Rules;
+using Blazma.Analysis.Yara;
 using Blazma.App.Localization;
 using Blazma.App.Services;
 using Blazma.Core.Settings;
@@ -20,9 +21,11 @@ public sealed record RuleRow(string Id, string Name, string Category, string Sev
     public string Meta => string.Join(" · ", new[] { Category, Severity, Attack, Origin == "built-in" ? null : Origin }.Where(x => !string.IsNullOrEmpty(x)));
 }
 
+public sealed record YaraRuleRow(string Name, string Origin, string Tags, string Description);
+
 /// <summary>
 /// Intelligence that stays on this computer: the watchlist, detection rules and custom
-/// rule packs. Local AI and community intelligence are shown as planned and disabled.
+/// rule packs and YARA rules. Community intelligence is shown as planned and disabled.
 /// </summary>
 public sealed partial class IntelligenceViewModel(MainViewModel main, SettingsService settings, AnalysisCoordinator coordinator, BlazmaPaths paths, ToastService toasts) : PageViewModel
 {
@@ -32,6 +35,31 @@ public sealed partial class IntelligenceViewModel(MainViewModel main, SettingsSe
     public ObservableCollection<WatchTypeOption> WatchTypes { get; } = [];
     public ObservableCollection<RuleRow> Rules { get; } = [];
     public ObservableCollection<string> RuleErrors { get; } = [];
+    public ObservableCollection<YaraRuleRow> YaraRules { get; } = [];
+    public ObservableCollection<string> YaraErrors { get; } = [];
+
+    [ObservableProperty] private string _yaraSummary = string.Empty;
+    public string YaraFolder => paths.Yara;
+    public bool HasYaraErrors => YaraErrors.Count > 0;
+    public bool YaraEnabled => settings.Current.Detection.EnableYara;
+
+    /// <summary>A small, valid starting point the user can edit.</summary>
+    public const string ExampleYara = """
+        // Blazma Sandbox scans the sample, files it created and memory regions with every
+        // rule in this folder. Supported syntax and limits: docs/YARA.md
+        rule Example_PowerShell_Download_Cradle : example
+        {
+            meta:
+                description = "PowerShell that downloads and runs code"
+                author = "you"
+            strings:
+                $iwr = "Invoke-WebRequest" ascii wide nocase
+                $iex = "IEX" ascii wide nocase fullword
+                $dl  = "DownloadString" ascii wide nocase
+            condition:
+                $iex and ($iwr or $dl)
+        }
+        """;
 
     [ObservableProperty] private WatchTypeOption? _newType;
     [ObservableProperty] private string _newValue = string.Empty;
@@ -66,7 +94,36 @@ public sealed partial class IntelligenceViewModel(MainViewModel main, SettingsSe
         foreach (var e in coordinator.RulePackErrors) RuleErrors.Add(e);
         RulesSummary = Loc.F("RulesSummary", Rules.Count(r => r.Origin == "built-in"), Rules.Count(r => r.Origin != "built-in"));
         OnPropertyChanged(nameof(HasRuleErrors));
+        ReloadYara();
     }
+
+    private void ReloadYara()
+    {
+        // The user's own rule files (not sample bytes); the engine has hard limits and never throws.
+        var set = YaraRuleSet.LoadFolder(paths.Yara);
+        YaraRules.Clear();
+        foreach (var r in set.Rules.Where(r => !r.IsPrivate))
+            YaraRules.Add(new YaraRuleRow(r.Name, $"{r.Origin}:{r.Line}", string.Join(" ", r.Tags), r.Meta.TryGetValue("description", out var d) ? d : ""));
+        YaraErrors.Clear();
+        foreach (var e in set.LoadErrors) YaraErrors.Add(e);
+        YaraSummary = Loc.F("YaraSummary", set.RuleCount, set.Rules.Select(r => r.Origin).Distinct().Count());
+        OnPropertyChanged(nameof(HasYaraErrors));
+        OnPropertyChanged(nameof(YaraEnabled));
+    }
+
+    [RelayCommand] private void OpenYaraFolder() { Directory.CreateDirectory(paths.Yara); main.OpenFolder(paths.Yara); }
+
+    [RelayCommand]
+    private async Task CreateExampleYara()
+    {
+        Directory.CreateDirectory(paths.Yara);
+        var path = Path.Combine(paths.Yara, "example.yar");
+        if (!File.Exists(path)) await File.WriteAllTextAsync(path, ExampleYara);
+        toasts.Show(ToastKind.Success, Loc.T("ExampleCreated"), Path.GetFileName(path));
+        ReloadYara();
+    }
+
+    [RelayCommand] private void OpenAiSettings() => main.Navigate("Settings");
 
     [RelayCommand]
     private void AddWatch()

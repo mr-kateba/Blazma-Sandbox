@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Blazma.Core.Abstractions;
+using Blazma.Analysis.Yara;
 using Blazma.Core.Samples;
 
 namespace Blazma.Analysis.Static;
@@ -106,8 +107,11 @@ public static class StaticWorker
         try
         {
             using var cts = new CancellationTokenSource(Timeout - TimeSpan.FromSeconds(10));
-            var yara = p.Options.YaraFolder is { } folder && loadYara is not null ? loadYara(folder) : null;
+            loadYara ??= folder => YaraRuleSet.LoadFolder(folder);
+            var yara = p.Options.YaraFolder is { } folder && Directory.Exists(folder) ? loadYara(folder) : null;
             var report = await new StaticAnalyzer(yara, p.Options.DetectCapabilities).AnalyzeAsync(p.Path, cts.Token).ConfigureAwait(false);
+            if (yara is { LoadErrors.Count: > 0 })
+                report = report with { Warnings = [.. report.Warnings, $"{yara.LoadErrors.Count} YARA rule(s) could not be loaded; see the Intelligence page."] };
             await using var stdout = Console.OpenStandardOutput();
             await JsonSerializer.SerializeAsync(stdout, report, json, cts.Token).ConfigureAwait(false);
             return 0;
