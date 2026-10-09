@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.IO.Compression;
+using Blazma.Analysis.Archives;
 using Blazma.Analysis.Static;
 using Blazma.Analysis.Yara;
 using Blazma.Cli;
@@ -37,6 +39,7 @@ public sealed class CliRunTests : IDisposable
         {
             AnalyzeStatic = (path, options, ct) =>
                 new StaticAnalyzer(options.YaraFolder is { } y && Directory.Exists(y) ? YaraRuleSet.LoadFolder(y) : null, options.DetectCapabilities).AnalyzeAsync(path, ct),
+            ExtractEntry = (archive, entry, password, folder, _) => Task.FromResult(ArchiveReader.ExtractEntry(archive, entry, password, folder)),
         };
         var code = await app.RunAsync([.. args, "--data", _data], CancellationToken.None);
         return (code, stdout.ToString(), stderr.ToString());
@@ -154,6 +157,43 @@ public sealed class CliRunTests : IDisposable
         var (code, output, _) = await Run("static", Sample("one.ps1"));
         Assert.Equal(ExitCodes.Ok, code);
         Assert.Contains("PowerShell_Download_Cradle", output);
+    }
+
+    private string Zip()
+    {
+        var path = Path.Combine(_root, "bundle.zip");
+        using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
+        zip.CreateEntryFromFile(Sample("one.ps1"), "tools/one.ps1");
+        zip.CreateEntryFromFile(Sample("two.bat"), "readme.txt");
+        return path;
+    }
+
+    [Fact]
+    public async Task Static_lists_the_files_inside_an_archive()
+    {
+        var (code, output, _) = await Run("static", Zip());
+        Assert.Equal(ExitCodes.Ok, code);
+        Assert.Contains("tools/one.ps1", output);
+        Assert.Contains("--entry", output);
+    }
+
+    [Fact]
+    public async Task Analyze_runs_one_entry_of_an_archive_and_records_where_it_came_from()
+    {
+        var (code, output, _) = await Run("analyze", Zip(), "--entry", "tools/one.ps1", "--env", "demo", "--json");
+        Assert.NotEqual(ExitCodes.Error, code);
+        using var doc = JsonDocument.Parse(output);
+        Assert.Equal("one.ps1", doc.RootElement.GetProperty("file").GetString());
+    }
+
+    [Fact]
+    public async Task Analyze_refuses_an_archive_without_entry_and_an_unknown_entry()
+    {
+        var zip = Zip();
+        Assert.Equal(ExitCodes.Error, (await Run("analyze", zip, "--env", "demo")).Code);
+        var (code, _, err) = await Run("analyze", zip, "--entry", "nope.exe", "--env", "demo");
+        Assert.Equal(ExitCodes.Usage, code);
+        Assert.Contains("no file", err);
     }
 
     [Fact]

@@ -1,9 +1,13 @@
 using System.Collections.ObjectModel;
 using Blazma.App.Localization;
+using Blazma.Analysis.Archives;
+using Blazma.Analysis.Static;
+using Blazma.Analysis.Url;
 using Blazma.App.Services;
 using Blazma.Core.Abstractions;
 using Blazma.Core.Analysis;
 using Blazma.Core.Samples;
+using Blazma.Core.Text;
 using Blazma.Sandbox.Providers.Demo;
 using Blazma.Sandbox.Providers.WindowsSandbox;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,6 +26,15 @@ public sealed record ProfileOption(AnalysisProfile Profile)
 }
 
 public sealed record ProviderOption(string Id, string Name);
+
+/// <summary>One file inside an archive. Only runnable entries can be analyzed.</summary>
+public sealed record ArchiveEntryRow(ArchiveEntry Entry)
+{
+    public string Path => Entry.Path;
+    public string Detail => $"{Fmt.Size(Entry.Size)} · {Loc.T("Kind" + Entry.Kind)}{(Entry.Encrypted ? " · " + Loc.T("Encrypted") : "")}";
+    public bool Runnable => SampleInfo.IsRunnable(Entry.Kind);
+    public double Dim => Runnable ? 1 : 0.5;
+}
 
 /// <summary>One hash-reputation answer, shown before the run.</summary>
 public sealed record ReputationRow(string Provider, string Verdict, string Detail, bool Bad, string? Link);
@@ -59,6 +72,13 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     [ObservableProperty] private bool _providerReady;
     [ObservableProperty] private bool _checkingProvider;
     [ObservableProperty] private string _newProfileName = string.Empty;
+    [ObservableProperty] private string _urlText = string.Empty;
+    [ObservableProperty] private string? _urlError;
+    [ObservableProperty] private string _archivePassword = string.Empty;
+    [ObservableProperty] private ArchiveEntryRow? _selectedArchiveEntry;
+    [ObservableProperty] private bool _extracting;
+    private string? _archivePath;
+    private SampleInfo? _archiveSample;
 
     public ObservableCollection<InfoRow> FileRows { get; } = [];
     public ObservableCollection<InfoRow> PeRows { get; } = [];
@@ -67,6 +87,9 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     public ObservableCollection<ProfileOption> Profiles { get; } = [];
     public ObservableCollection<ProviderOption> Providers { get; } = [];
     public ObservableCollection<ReputationRow> ReputationRows { get; } = [];
+    public ObservableCollection<ArchiveEntryRow> ArchiveEntries { get; } = [];
+    public ObservableCollection<InfoRow> UrlRows { get; } = [];
+    public ObservableCollection<string> UrlNotes { get; } = [];
 
     public bool NetworkOffMode { get => !NetworkEnabled && !NetworkSimulated; set { if (value) { NetworkEnabled = false; NetworkSimulated = false; } } }
     public bool NetworkSimulatedMode { get => NetworkSimulated && !NetworkEnabled; set { if (value) { NetworkEnabled = false; NetworkSimulated = true; } } }
@@ -78,13 +101,25 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     public bool HasNoReport => Report is null && !IsLoading;
     public bool HasError => !string.IsNullOrEmpty(Error);
     public bool IsRunnable => Report?.Sample.IsExecutableKind == true;
+    public bool IsUrl => Report?.Sample.Kind == FileKind.Url;
+    public bool IsArchive => Report?.Sample.Kind == FileKind.Archive && !IsLoading;
+    public bool ArchiveNeedsPassword => IsArchive && Report?.Archive is null;
+    public bool HasArchiveEntries => ArchiveEntries.Count > 0;
+    public bool HasUrlError => !string.IsNullOrEmpty(UrlError);
+    public bool CanAnalyzeEntry => SelectedArchiveEntry?.Runnable == true && !Extracting;
+    public bool FromArchive => Report?.Sample.Origin is not null;
+    public string OriginText => Report?.Sample.Origin is { } o ? Loc.F("FromArchive", o.EntryPath, o.ArchiveName) : "";
+    public bool UrlNeedsNetwork => IsUrl && !NetworkEnabled;
     public string DurationText => Fmt.Duration(TimeSpan.FromSeconds(DurationSeconds));
-    public bool CanStart => HasReport && IsRunnable && ProviderReady && (!NetworkEnabled || NetworkConsent) && !IsLoading;
+    public bool CanStart => HasReport && IsRunnable && ProviderReady && (!NetworkEnabled || NetworkConsent) && !IsLoading && !UrlNeedsNetwork;
     public bool ShowNetworkWarning => NetworkEnabled;
 
     partial void OnReportChanged(StaticReport? value) { BuildRows(); Notify(); }
     partial void OnIsLoadingChanged(bool value) => Notify();
     partial void OnErrorChanged(string? value) => OnPropertyChanged(nameof(HasError));
+    partial void OnUrlErrorChanged(string? value) => OnPropertyChanged(nameof(HasUrlError));
+    partial void OnSelectedArchiveEntryChanged(ArchiveEntryRow? value) => OnPropertyChanged(nameof(CanAnalyzeEntry));
+    partial void OnExtractingChanged(bool value) => OnPropertyChanged(nameof(CanAnalyzeEntry));
     partial void OnDurationSecondsChanged(double value) => OnPropertyChanged(nameof(DurationText));
     partial void OnNetworkEnabledChanged(bool value) { if (!value) { NetworkConsent = false; CapturePcap = false; } Notify(); NotifyNetwork(); _ = CheckProviderAsync(); }
     partial void OnNetworkSimulatedChanged(bool value) => NotifyNetwork();
@@ -120,6 +155,9 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
     {
         OnPropertyChanged(nameof(HasReport)); OnPropertyChanged(nameof(HasNoReport)); OnPropertyChanged(nameof(IsRunnable));
         OnPropertyChanged(nameof(CanStart)); OnPropertyChanged(nameof(ShowNetworkWarning)); OnPropertyChanged(nameof(CanLookupOnline));
+        OnPropertyChanged(nameof(IsUrl)); OnPropertyChanged(nameof(IsArchive)); OnPropertyChanged(nameof(ArchiveNeedsPassword));
+        OnPropertyChanged(nameof(HasArchiveEntries)); OnPropertyChanged(nameof(FromArchive)); OnPropertyChanged(nameof(OriginText));
+        OnPropertyChanged(nameof(UrlNeedsNetwork));
     }
 
     public override async Task OnShownAsync()
@@ -147,18 +185,30 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         _ = CheckProviderAsync();
     }
 
-    public async Task LoadAsync(string path)
+    public Task LoadAsync(string path) => LoadAsync(path, null, null);
+
+    private async Task LoadAsync(string path, string? archivePassword, ArchiveOrigin? origin)
     {
         IsDemoSample = false;
         SamplePath = path;
         Report = null;
         Error = null;
+        UrlError = null;
         IsLoading = true;
         ClearReputation();
+        if (origin is null) ArchivePassword = archivePassword ?? settings.Current.Analysis.DefaultArchivePassword;
         try
         {
-            Report = await coordinator.AnalyzeStaticAsync(path, CancellationToken.None);
-            if (!Report.Sample.IsExecutableKind) Error = Loc.T("NotRunnable");
+            var report = await coordinator.AnalyzeStaticAsync(path, CancellationToken.None, archivePassword);
+            if (origin is not null) report = report with { Sample = report.Sample with { Origin = origin } };
+            Report = report;
+            if (report.Sample.Kind == FileKind.Archive)
+            {
+                _archivePath = path;
+                _archiveSample = report.Sample;
+                Error = report.Archive is null ? Loc.T("ArchiveNeedsPassword") : Loc.T("ArchivePickEntry");
+            }
+            else if (!report.Sample.IsExecutableKind) Error = Loc.T("NotRunnable");
             await LookupAsync(includeRemote: settings.Current.Integrations.LookupAutomatically);
         }
         catch (Exception ex)
@@ -168,11 +218,72 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
         finally { IsLoading = false; }
     }
 
+    /// <summary>Re-lists the current archive with the password typed by the user.</summary>
+    [RelayCommand]
+    private Task RetryArchivePassword() =>
+        _archivePath is null ? Task.CompletedTask : LoadAsync(_archivePath, ArchivePassword, null);
+
+    /// <summary>Extracts the chosen entry in the helper process, then prepares it like any file.</summary>
+    [RelayCommand]
+    private async Task AnalyzeEntry()
+    {
+        if (_archivePath is null || _archiveSample is null || SelectedArchiveEntry is not { Runnable: true } row) return;
+        Extracting = true;
+        try
+        {
+            var encrypted = Report?.Archive?.Encrypted == true || row.Entry.Encrypted;
+            IEnumerable<string?> passwords = encrypted
+                ? new[] { ArchivePassword }.Concat(ArchiveReader.DefaultPasswords).Where(p => !string.IsNullOrEmpty(p)).Distinct(StringComparer.Ordinal)
+                : [null];
+            string? extracted = null;
+            Exception? last = null;
+            foreach (var password in passwords)
+            {
+                try { extracted = await coordinator.ExtractArchiveEntryAsync(_archivePath, row.Path, password, CancellationToken.None); break; }
+                catch (InvalidOperationException ex) { last = ex; }
+            }
+            if (extracted is null) throw last ?? new InvalidOperationException();
+            await LoadAsync(extracted, null, new ArchiveOrigin(_archiveSample.FileName, _archiveSample.Sha256, row.Path));
+        }
+        catch (Exception ex)
+        {
+            Error = Loc.T("ExtractFailed") + " " + ex.Message;
+        }
+        finally { Extracting = false; }
+    }
+
+    /// <summary>Prepares a web address: opened in the sandbox's browser, which needs the real network.</summary>
+    [RelayCommand]
+    private async Task AnalyzeUrl()
+    {
+        UrlError = null;
+        if (!UrlAnalyzer.TryCreateSample(UrlText, out var sample, out LocalizedText? error) || sample is null)
+        {
+            UrlError = error?.Get(Loc.Instance.Code) ?? Loc.T("UrlInvalid");
+            return;
+        }
+        IsDemoSample = false;
+        Error = null;
+        ClearReputation();
+        _archivePath = null;
+        SamplePath = await coordinator.WriteUrlSampleAsync(sample.Url!, CancellationToken.None);
+        Report = new StaticReport
+        {
+            Sample = sample,
+            Url = UrlAnalyzer.Analyze(sample.Url!),
+            Artifacts = ArtifactExtractor.Extract([sample.Url!], sample.FileName),
+        };
+        NetworkRealMode = true;
+        NotifyNetwork();
+        await LookupAsync(includeRemote: settings.Current.Integrations.LookupAutomatically);
+    }
+
     public void LoadDemo()
     {
         IsDemoSample = true;
         SamplePath = null;
         Error = null;
+        _archivePath = null;
         ClearReputation();
         Report = AnalysisCoordinator.DemoSample();
     }
@@ -215,10 +326,25 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
 
     private void BuildRows()
     {
-        FileRows.Clear(); PeRows.Clear(); Warnings.Clear();
+        FileRows.Clear(); PeRows.Clear(); Warnings.Clear(); ArchiveEntries.Clear(); UrlRows.Clear(); UrlNotes.Clear();
+        SelectedArchiveEntry = null;
         if (Report is not { } r) return;
+        if (r.Archive is { } archive)
+        {
+            foreach (var e in archive.Entries) ArchiveEntries.Add(new ArchiveEntryRow(e));
+            SelectedArchiveEntry = ArchiveEntries.FirstOrDefault(e => e.Runnable);
+            if (archive.LimitNote is { } note) Warnings.Add(note);
+        }
+        if (r.Url is { } url)
+        {
+            UrlRows.Add(new(Loc.T("UrlHost"), url.UnicodeHost is { } u ? $"{u}  ({url.Host})" : url.Host, true));
+            UrlRows.Add(new(Loc.T("UrlAddress"), url.Url, true));
+            if (url.LooksLike is { } brand) UrlNotes.Add(Loc.F("UrlLooksLike", brand));
+            foreach (var n in url.Notes) UrlNotes.Add(n.Get(Loc.Instance.Code));
+        }
         var s = r.Sample;
         FileRows.Add(new(Loc.T("File"), s.FileName));
+        if (s.Origin is { } origin) FileRows.Add(new(Loc.T("ArchiveSource"), $"{origin.ArchiveName} → {origin.EntryPath}"));
         FileRows.Add(new(Loc.T("Size"), $"{Fmt.Size(s.Size)} ({s.Size:N0} B)"));
         FileRows.Add(new(Loc.T("Type"), Loc.T("Kind" + s.Kind)));
         FileRows.Add(new("SHA-256", s.Sha256, true));
@@ -243,6 +369,9 @@ public sealed partial class NewAnalysisViewModel(MainViewModel main, AnalysisCoo
                 if (pe.VersionInfo.TryGetValue(key, out var v)) PeRows.Add(new(key, v));
             PeRows.Add(new(Loc.T("Entropy"), $"{r.Entropy:0.00} / 8"));
         }
+        if (r.ImpHash is { } imp) PeRows.Add(new("Imphash", imp, true));
+        if (r.Capabilities.Count > 0) PeRows.Add(new(Loc.T("CapabilitiesTitle"), string.Join(" · ", r.Capabilities.Take(6).Select(c => c.Name.Get(Loc.Instance.Code))) + (r.Capabilities.Count > 6 ? $" (+{r.Capabilities.Count - 6})" : "")));
+        if (r.YaraMatches.Count > 0) PeRows.Add(new("YARA", string.Join(", ", r.YaraMatches.Select(m => m.Rule)), true));
         foreach (var w in r.Warnings) Warnings.Add(w);
         foreach (var str in r.Strings.Take(12)) Warnings.Add($"{Loc.T("String")} ({str.Kind}): {str.Value}");
     }

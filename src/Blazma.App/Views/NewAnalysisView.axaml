@@ -23,6 +23,19 @@
         </StackPanel>
       </Border>
 
+      <!-- Or a web address, opened in the sandbox's browser -->
+      <Border Classes="card" IsVisible="{Binding !IsLoading}">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="h3" Text="{l:T AnalyzeUrlTitle}" />
+          <TextBlock Classes="caption" Text="{l:T AnalyzeUrlHelp}" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Text="{Binding UrlText}" PlaceholderText="https://" FlowDirection="LeftToRight" />
+            <Button Grid.Column="1" Content="{l:T AnalyzeUrl}" Command="{Binding AnalyzeUrlCommand}" Margin="8,0,0,0" />
+          </Grid>
+          <TextBlock Text="{Binding UrlError}" IsVisible="{Binding HasUrlError}" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
       <Border Classes="card" IsVisible="{Binding IsLoading}">
         <StackPanel Spacing="10">
           <TextBlock Text="{l:T ReadingFile}" />
@@ -50,6 +63,62 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </Border>
+          <!-- Archive: pick one entry; it is extracted by the helper process, never opened here -->
+          <TextBlock Classes="section" Text="{l:T ArchiveContents}" IsVisible="{Binding IsArchive}" />
+          <Border Classes="card" IsVisible="{Binding IsArchive}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="caption" Text="{l:T ArchiveHelp}" TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Classes="caption" Text="{l:T ArchivePassword}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBox Grid.Column="1" Text="{Binding ArchivePassword}" FlowDirection="LeftToRight" />
+                <Button Grid.Column="2" Content="{l:T TryPassword}" Command="{Binding RetryArchivePasswordCommand}" Margin="8,0,0,0" />
+              </Grid>
+              <ListBox ItemsSource="{Binding ArchiveEntries}" SelectedItem="{Binding SelectedArchiveEntry}" MaxHeight="260" IsVisible="{Binding HasArchiveEntries}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ArchiveEntryRow">
+                    <StackPanel Opacity="{Binding Dim}">
+                      <TextBlock Classes="mono" Text="{Binding Path}" TextWrapping="Wrap" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                      <TextBlock Classes="caption" Text="{Binding Detail}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Classes="primary" Content="{l:T AnalyzeEntry}" Command="{Binding AnalyzeEntryCommand}" IsEnabled="{Binding CanAnalyzeEntry}" />
+                <ProgressBar IsIndeterminate="True" Width="120" IsVisible="{Binding Extracting}" VerticalAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="banner" IsVisible="{Binding FromArchive}">
+            <TextBlock Text="{Binding OriginText}" TextWrapping="Wrap" />
+          </Border>
+
+          <!-- Web address -->
+          <TextBlock Classes="section" Text="{l:T UrlDetails}" IsVisible="{Binding IsUrl}" />
+          <Border Classes="card" IsVisible="{Binding IsUrl}">
+            <StackPanel Spacing="8">
+              <ItemsControl ItemsSource="{Binding UrlRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:InfoRow">
+                    <Grid ColumnDefinitions="120,*" Margin="0,4">
+                      <TextBlock Classes="caption" Text="{Binding Label}" />
+                      <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes="mono" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <ItemsControl ItemsSource="{Binding UrlNotes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{Binding}" Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" Margin="0,2" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="caption" Text="{l:T UrlNeedsInternet}" TextWrapping="Wrap" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding UrlNeedsNetwork}" />
+            </StackPanel>
+          </Border>
+
           <TextBlock Classes="section" Text="{l:T StaticDetails}" />
           <Border Classes="card">
             <StackPanel Spacing="10">

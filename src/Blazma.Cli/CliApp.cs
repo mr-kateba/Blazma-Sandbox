@@ -32,6 +32,10 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
     internal Func<string, StaticWorkerOptions, CancellationToken, Task<StaticReport>> AnalyzeStatic { get; init; } =
         (path, options, ct) => StaticWorker.AnalyzeAsync(path, options, BlazmaJson.Options, "blazma.dll", ct);
 
+    /// <summary>Archive extraction; replaced in tests (the default uses the isolated helper process).</summary>
+    internal Func<string, string, string?, string, CancellationToken, Task<string>> ExtractEntry { get; init; } =
+        (archive, entry, password, folder, ct) => StaticWorker.ExtractAsync(archive, entry, password, folder, "blazma.dll", ct);
+
     /// <summary>Hook for tests to replace the analysis environment.</summary>
     internal Func<string?, BlazmaSettings, BlazmaPaths, ISandboxProvider>? ProviderFactory { get; init; }
 
@@ -80,8 +84,9 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         Blazma Sandbox - behavior analysis of Windows files in an isolated environment.
 
         Usage:
-          blazma static  <file> [--json]
-              Hashes, type, PE details, imphash, capabilities and YARA matches. Never runs the file.
+          blazma static  <file> [--json] [--password <p>]
+              Hashes, type, PE details, imphash, capabilities, YARA matches and the files
+              inside an archive. Never runs the file.
           blazma analyze <file> [options]
               Runs the file in the analysis environment and prints the verdict.
           blazma batch   <folder> [options] [--recursive] [--summary results.csv]
@@ -94,6 +99,8 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
               Which analysis environments are ready on this computer.
 
         Analysis options:
+          --entry <path>        for an archive: the file inside it to analyze
+          --password <p>        archive password (default: from settings, then infected/malware/virus)
           --env windows-sandbox|virtualbox|hyperv|demo   (default: from settings)
           --profile quick|standard|deep|interactive      (default: standard)
           --network simulated|offline|internet           (default: simulated)
@@ -153,9 +160,10 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         return new Context(paths, settings, repository);
     }
 
-    private static StaticWorkerOptions StaticOptions(Context c) => new(
+    private static StaticWorkerOptions StaticOptions(Context c, string? archivePassword = null) => new(
         c.Settings.Detection.EnableCapabilities,
-        c.Settings.Detection.EnableYara ? c.Paths.Yara : null);
+        c.Settings.Detection.EnableYara ? c.Paths.Yara : null,
+        archivePassword ?? c.Settings.Analysis.DefaultArchivePassword);
 
     private static string Language(CommandLine command) =>
         (command.Option("lang") ?? "en").StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? "ar" : "en";
@@ -168,7 +176,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         var path = Path.GetFullPath(command.Positionals[0]);
         if (!File.Exists(path)) return await UsageErrorAsync("File not found: " + path);
         await using var c = await OpenAsync(command, ct);
-        var report = await AnalyzeStatic(path, StaticOptions(c), ct);
+        var report = await AnalyzeStatic(path, StaticOptions(c, command.Option("password")), ct);
         if (command.Flag("json"))
         {
             await stdout.WriteLineAsync(JsonSerializer.Serialize(report, PrettyJson));
@@ -204,6 +212,19 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         {
             sb.AppendLine().AppendLine(CultureInfo.InvariantCulture, $"Interesting strings ({report.Strings.Count})");
             foreach (var str in report.Strings.Take(20)) sb.AppendLine(CultureInfo.InvariantCulture, $"  {str.Kind,-12} {str.Value}");
+        }
+        if (report.Archive is { } archive)
+        {
+            sb.AppendLine().AppendLine(CultureInfo.InvariantCulture, $"Archive {archive.Format}{(archive.Encrypted ? ", encrypted" : "")} ({archive.Entries.Count} files; analyze one with --entry)");
+            foreach (var e in archive.Entries.Take(50))
+                sb.AppendLine(CultureInfo.InvariantCulture, $"  {(SampleInfo.IsRunnable(e.Kind) ? "*" : " ")} {e.Size,12:N0}  {e.Kind,-11} {e.Path}");
+            if (archive.Entries.Count > 50) sb.AppendLine(CultureInfo.InvariantCulture, $"  ... and {archive.Entries.Count - 50} more");
+            if (archive.LimitNote is { } note) sb.AppendLine("  " + note);
+        }
+        if (report.Artifacts.Count > 0)
+        {
+            sb.AppendLine().AppendLine(CultureInfo.InvariantCulture, $"Extracted values ({report.Artifacts.Count})");
+            foreach (var a in report.Artifacts.Take(20)) sb.AppendLine(CultureInfo.InvariantCulture, $"  {a.Kind,-14} {a.Value}");
         }
         foreach (var w in report.Warnings) sb.AppendLine("Warning: " + w);
         return sb.ToString().TrimEnd();
@@ -268,7 +289,21 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         var provider = Provider(plan, c);
         if (!await EnsureReadyAsync(provider, plan.Options.Network, ct)) return ExitCodes.EnvironmentNotReady;
 
-        var result = await RunOneAsync(path, plan, provider, c, command.Flag("json"), ct);
+        ArchiveOrigin? origin = null;
+        if (command.Option("entry") is { } entry)
+        {
+            var archive = await AnalyzeStatic(path, StaticOptions(c, command.Option("password")), ct);
+            if (archive.Sample.Kind != FileKind.Archive) return await UsageErrorAsync("--entry is only for archives.");
+            var match = archive.Archive?.Entries.FirstOrDefault(e => e.Path == entry);
+            if (match is null) return await UsageErrorAsync(archive.Archive is null
+                ? "The archive could not be opened; give the right --password."
+                : $"The archive has no file \"{entry}\". Run \"blazma static\" to list it.");
+            var folder = Path.Combine(c.Paths.Work, "extracted", Guid.NewGuid().ToString("N"));
+            origin = new ArchiveOrigin(archive.Sample.FileName, archive.Sample.Sha256, entry);
+            path = await ExtractWithPasswordsAsync(path, entry, archive.Archive!.Encrypted || match.Encrypted ? PasswordCandidates(c, command.Option("password")) : [null], folder, ct);
+        }
+
+        var result = await RunOneAsync(path, plan, provider, c, command.Flag("json"), ct, origin);
         if (result is null) return ExitCodes.Error;
         if (command.Flag("json"))
             await stdout.WriteLineAsync(JsonSerializer.Serialize(Summary(result, Language(command)), PrettyJson));
@@ -368,9 +403,42 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         return false;
     }
 
-    private async Task<AnalysisResult?> RunOneAsync(string path, RunPlan plan, ISandboxProvider provider, Context c, bool quiet, CancellationToken ct)
+    /// <summary>The typed password first, then the settings default and the common sample passwords.</summary>
+    private static IReadOnlyList<string?> PasswordCandidates(Context c, string? typed) =>
+        new[] { typed, c.Settings.Analysis.DefaultArchivePassword }
+            .Concat(Blazma.Analysis.Archives.ArchiveReader.DefaultPasswords)
+            .Where(p => !string.IsNullOrEmpty(p))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+    private async Task<string> ExtractWithPasswordsAsync(string archive, string entry, IReadOnlyList<string?> passwords, string folder, CancellationToken ct)
+    {
+        InvalidOperationException? last = null;
+        foreach (var password in passwords)
+        {
+            try
+            {
+                return await ExtractEntry(archive, entry, password, folder, ct);
+            }
+            catch (InvalidOperationException ex)
+            {
+                last = ex;
+            }
+        }
+        throw last ?? new InvalidOperationException("The file could not be extracted.");
+    }
+
+    private async Task<AnalysisResult?> RunOneAsync(string path, RunPlan plan, ISandboxProvider provider, Context c, bool quiet, CancellationToken ct, ArchiveOrigin? origin = null)
     {
         var report = await AnalyzeStatic(path, StaticOptions(c), ct);
+        if (origin is not null) report = report with { Sample = report.Sample with { Origin = origin } };
+        if (!report.Sample.IsExecutableKind)
+        {
+            await stderr.WriteLineAsync(report.Sample.Kind == FileKind.Archive
+                ? "This is an archive: choose the file to run with --entry (see \"blazma static\")."
+                : $"{report.Sample.FileName}: this kind of file ({report.Sample.Kind}) cannot be run in the sandbox.");
+            return null;
+        }
 
         IReadOnlyList<ReputationResult> reputation = [];
         if (plan.Lookup)
@@ -480,6 +548,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
         var sb = new StringBuilder();
         if (r.IsDemo) sb.AppendLine("DEMO - simulated events, not a real analysis of this file.").AppendLine();
         sb.AppendLine(CultureInfo.InvariantCulture, $"File      {r.Sample.FileName}");
+        if (r.Sample.Origin is { } origin) sb.AppendLine(CultureInfo.InvariantCulture, $"From      {origin.ArchiveName} -> {origin.EntryPath}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"SHA-256   {r.Sample.Sha256}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Score     {r.Risk.Score}/100 - {VerdictText(r.Risk.Verdict, language)}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Run       {r.ProviderId}, {r.Options.Network}, {r.Duration?.TotalSeconds ?? 0:0}s, {r.Events.Count:N0} events, {r.AllProcesses.Count()} processes");

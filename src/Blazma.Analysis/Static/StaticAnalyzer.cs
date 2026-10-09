@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Blazma.Analysis.Archives;
 using Blazma.Core.Abstractions;
 using Blazma.Core.Samples;
 
@@ -14,9 +15,15 @@ public sealed class StaticAnalyzer(ISignatureVerifier signatures, IYaraScanner? 
     /// <summary>Files above this are hashed but not parsed in depth.</summary>
     public const long MaxDeepParseBytes = 256L * 1024 * 1024;
 
+    /// <summary>Bytes given to the type detector: enough for Office package names and late PDF headers.</summary>
+    private const int TypeProbeBytes = 4096;
+
     public StaticAnalyzer() : this(new SignatureVerifier()) { }
 
     public StaticAnalyzer(IYaraScanner? yara, bool detectCapabilities) : this(new SignatureVerifier(), yara, detectCapabilities) { }
+
+    /// <summary>Passwords tried, in order, when the sample is an encrypted archive.</summary>
+    public IReadOnlyList<string> ArchivePasswords { get; init; } = ArchiveReader.DefaultPasswords;
 
     public async Task<StaticReport> AnalyzeAsync(string path, CancellationToken cancellationToken)
     {
@@ -55,7 +62,7 @@ public sealed class StaticAnalyzer(ISignatureVerifier signatures, IYaraScanner? 
 
         cancellationToken.ThrowIfCancellationRequested();
         var pe = PeParser.TryParse(content, warnings);
-        var kind = FileTypeDetector.Detect(content.AsSpan(0, Math.Min(content.Length, 64)), info.Name, pe);
+        var kind = FileTypeDetector.Detect(content.AsSpan(0, Math.Min(content.Length, TypeProbeBytes)), info.Name, pe);
         var signature = pe is null
             ? new SignatureInfo(SignatureStatus.NotSigned)
             : signatures.Verify(path, PeParser.HasSignatureDirectory(content));
@@ -83,6 +90,23 @@ public sealed class StaticAnalyzer(ISignatureVerifier signatures, IYaraScanner? 
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        var artifacts = ArtifactExtractor.Extract(content, info.Name);
+
+        ArchiveInfo? archive = null;
+        if (kind == FileKind.Archive)
+        {
+            try
+            {
+                archive = ArchiveReader.TryOpen(path, ArchivePasswords, out _);
+                if (archive is null) warnings.Add("The archive could not be opened with the known passwords; choose a password to list it.");
+            }
+            catch (Exception ex) when (ex is InvalidDataException or ArchiveLimitException or ArchivePasswordException or IOException or NotSupportedException)
+            {
+                warnings.Add("The archive could not be listed: " + ex.Message);
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         return new StaticReport
         {
             Sample = new SampleInfo
@@ -101,6 +125,8 @@ public sealed class StaticAnalyzer(ISignatureVerifier signatures, IYaraScanner? 
             ImpHash = pe is null ? null : ImpHash.Compute(pe),
             Capabilities = capabilities,
             YaraMatches = yaraMatches,
+            Artifacts = artifacts,
+            Archive = archive,
         };
     }
 

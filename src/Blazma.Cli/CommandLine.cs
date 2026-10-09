@@ -14,7 +14,7 @@ public sealed class CommandLine
     /// <summary>Options that take a value; anything else starting with "--" is a flag.</summary>
     private static readonly HashSet<string> ValueOptions = new(StringComparer.Ordinal)
     {
-        "env", "profile", "network", "duration", "report", "format", "out", "limit", "lang", "data", "summary", "password",
+        "env", "profile", "network", "duration", "report", "format", "out", "limit", "lang", "data", "summary", "password", "entry",
     };
 
     private static readonly HashSet<string> KnownFlags = new(StringComparer.Ordinal)

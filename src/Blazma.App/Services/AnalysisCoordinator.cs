@@ -64,16 +64,31 @@ public sealed class AnalysisCoordinator(
         SandboxProviders.Create(id, settings.Current, paths.Work, SandboxProviders.DefaultAgentFolder, secrets, loggers);
 
     /// <summary>The helper options that follow the user's detection settings.</summary>
-    public StaticWorkerOptions StaticOptions() => new(
+    public StaticWorkerOptions StaticOptions(string? archivePassword = null) => new(
         settings.Current.Detection.EnableCapabilities,
-        settings.Current.Detection.EnableYara ? paths.Yara : null);
+        settings.Current.Detection.EnableYara ? paths.Yara : null,
+        archivePassword ?? settings.Current.Analysis.DefaultArchivePassword);
 
     /// <summary>
     /// Runs static analysis in a separate copy of this executable so a parser bug triggered
     /// by a hostile file cannot reach the UI process. Never executes the sample.
     /// </summary>
-    public Task<StaticReport> AnalyzeStaticAsync(string path, CancellationToken ct) =>
-        StaticWorker.AnalyzeAsync(path, StaticOptions(), BlazmaJson.Options, "BlazmaSandbox.dll", ct);
+    public Task<StaticReport> AnalyzeStaticAsync(string path, CancellationToken ct, string? archivePassword = null) =>
+        StaticWorker.AnalyzeAsync(path, StaticOptions(archivePassword), BlazmaJson.Options, "BlazmaSandbox.dll", ct);
+
+    /// <summary>Extracts one archive entry in the helper process into a fresh folder under the work folder.</summary>
+    public Task<string> ExtractArchiveEntryAsync(string archivePath, string entryPath, string? password, CancellationToken ct) =>
+        StaticWorker.ExtractAsync(archivePath, entryPath, password, Path.Combine(paths.Work, "extracted", Guid.NewGuid().ToString("N")), "BlazmaSandbox.dll", ct);
+
+    /// <summary>A URL sample is a small text file holding the address; its hashes are of that text.</summary>
+    public async Task<string> WriteUrlSampleAsync(string url, CancellationToken ct)
+    {
+        var folder = Path.Combine(paths.Work, "urls");
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, Guid.NewGuid().ToString("N") + ".url.txt");
+        await File.WriteAllTextAsync(path, url, new System.Text.UTF8Encoding(false), ct);
+        return path;
+    }
 
     /// <summary>A synthetic sample for the demo analysis (nothing is read from disk or run).</summary>
     public static StaticReport DemoSample(string fileName = "setup.exe") => new()
