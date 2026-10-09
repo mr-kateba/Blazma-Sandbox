@@ -87,7 +87,7 @@ security model and its limits.
 
 ## Install
 
-1. On the repository's **Actions** page, open the latest successful run and download **BlazmaSandbox-setup**.
+1. From the [**Releases**](https://github.com/mr-kateba/Blazma-Sandbox/releases) page, download the latest `BlazmaSandbox-<version>-setup.exe` (or the portable ZIP).
 2. Run `BlazmaSandbox-<version>-setup.exe`. It installs for your account only, needs no administrator rights, and offers Arabic and English.
 3. Choose the extras you want: a desktop shortcut, "Analyze with Blazma Sandbox" in the Explorer right-click menu, and the `blazma` command on the PATH.
 

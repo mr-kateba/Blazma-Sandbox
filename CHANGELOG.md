@@ -8,7 +8,7 @@
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)، ويستخدم المشروع
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.0] - 2026-10-09
 
 ### أُضيف
 - تطبيق سطح مكتب (Avalonia) بأسلوب عائلة Blazma: أسطح بلون الغرافيت، ولون تمييز برتقالي من Blazma،
