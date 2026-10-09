@@ -107,6 +107,14 @@ internal sealed class YaraLexer(string source)
         return ReadRegex();
     }
 
+    /// <summary>Whether the next non-blank source character is <paramref name="c"/> (only with no lookahead buffered).</summary>
+    public bool RawNextIs(char c)
+    {
+        if (_buffer.Count > 0) return false;
+        SkipTrivia();
+        return _pos < source.Length && source[_pos] == c;
+    }
+
     private void EnsureNoLookahead()
     {
         if (_buffer.Count > 0) throw new InvalidOperationException("lexer lookahead is not empty");
