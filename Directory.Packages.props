@@ -26,6 +26,9 @@
     <!-- Reporting: password-protected sample archives (MIT) -->
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
 
+    <!-- Static analysis: listing and extracting ZIP, 7z, RAR, TAR and GZip samples (MIT) -->
+    <PackageVersion Include="SharpCompress" Version="0.50.4" />
+
     <!-- Agent (runs only inside the sandbox) -->
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" />
 
