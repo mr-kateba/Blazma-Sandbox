@@ -8,8 +8,11 @@ namespace Blazma.Analysis.Yara;
 internal sealed class ByteViewCache
 {
     private string? _view;
+    private readonly string?[] _wide = new string?[2];
 
     public string Get(ReadOnlySpan<byte> data) => _view ??= YaraRegex.ByteView(data);
+
+    public string GetWide(ReadOnlySpan<byte> data, int alignment) => _wide[alignment] ??= YaraRegex.WideView(data, alignment);
 }
 
 /// <summary>A string definition of a rule, compiled into something that can search bytes.</summary>
@@ -237,23 +240,30 @@ internal sealed class RegexString(string identifier, bool isPrivate, IReadOnlyLi
                 if (r == -1) continue;
                 if (r == -2) { timedOut = true; continue; }
             }
-            var text = view.Get(data);
-            var pos = 0;
-            try
+            // Wide text can start at either byte alignment; each has its own view.
+            for (var alignment = 0; alignment < (wide ? 2 : 1); alignment++)
             {
-                while (pos <= text.Length && results[v].Count < YaraLimits.MaxHitsPerString)
+                var text = wide ? view.GetWide(data, alignment) : view.Get(data);
+                var pos = 0;
+                try
                 {
-                    var m = compiled.Regex.Match(text, pos);
-                    if (!m.Success) break;
-                    if (!fullword || IsFullword(data, m.Index, m.Length, wide)) results[v].Add(new YaraHit(m.Index, m.Length));
-                    pos = m.Index + 1;
-                    if (YaraClock.Now > deadline) { timedOut = true; break; }
+                    while (pos <= text.Length && results[v].Count < YaraLimits.MaxHitsPerString)
+                    {
+                        var m = compiled.Regex.Match(text, pos);
+                        if (!m.Success) break;
+                        var offset = wide ? 2 * m.Index - alignment : m.Index;
+                        var length = wide ? 2 * m.Length : m.Length;
+                        if (!fullword || IsFullword(data, offset, length, wide)) results[v].Add(new YaraHit(offset, length));
+                        pos = m.Index + 1;
+                        if (YaraClock.Now > deadline) { timedOut = true; break; }
+                    }
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    timedOut = true;
                 }
             }
-            catch (RegexMatchTimeoutException)
-            {
-                timedOut = true;
-            }
+            if (wide) results[v].Sort((a, b) => a.Offset.CompareTo(b.Offset));
         }
         var outcome = MergeVariants(results.Length, (i, list) =>
         {
@@ -303,6 +313,7 @@ internal static class YaraStringFactory
                     var dotAll = value.Flags.Contains('s', StringComparison.Ordinal);
                     var variants = new List<(YaraRegex.Compiled, bool)>();
                     if (mods.Has("ascii") || !mods.Has("wide")) variants.Add((YaraRegex.Compile(value.Text, nocase, dotAll, wide: false), false));
+                    // The same pattern runs over the wide views; only its prefilter literal is widened.
                     if (mods.Has("wide")) variants.Add((YaraRegex.Compile(value.Text, nocase, dotAll, wide: true), true));
                     return new RegexString(id, isPrivate, variants, mods.Has("fullword"));
                 }

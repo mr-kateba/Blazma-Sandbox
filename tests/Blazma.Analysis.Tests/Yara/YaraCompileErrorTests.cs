@@ -118,7 +118,6 @@ public class YaraCompileErrorTests
     [InlineData("$a = /(ab/", "missing ')'")]
     [InlineData("$a = /ab)/", "unbalanced ')'")]
     [InlineData("$a = /a|*b/", "nothing to repeat")]
-    [InlineData("$a = /\\bx/ wide", "cannot be used with the wide modifier")]
     [InlineData("$a = /x/ xor", "cannot be used with regular expressions")]
     [InlineData("$a = /café/", "non-ASCII")]
     public void Bad_string_definitions_skip_the_rule(string strings, string fragment)
