@@ -26,11 +26,26 @@ security research. Do not use it to analyze files you are not allowed to handle.
 6. **Teardown always happens**: on success, failure and cancellation the sandbox processes are
    stopped and the work folder is deleted.
 7. **Least privilege on the host**: the app runs `asInvoker` and never asks for administrator rights.
-8. **Privacy**: no uploads, no hash lookups, no telemetry. Exports redact the user name, machine name
-   and profile path by default. Logs never contain file contents.
+8. **Privacy**: no uploads and no telemetry. Online reputation lookups (VirusTotal, MalwareBazaar)
+   are off until the user enables them and enters a key; they send the **SHA-256 only**, never the
+   file. API keys are encrypted with Windows DPAPI (current user). The optional AI provider only
+   talks to a loopback address unless the user explicitly allows a remote endpoint, and receives
+   the redacted report, never the sample. Exports redact the user name, machine name and profile
+   path by default. Logs never contain file contents.
 9. **Reports are safe to open**: HTML reports contain no scripts, have a restrictive
    Content-Security-Policy, and HTML-encode every value that came from the sample. CSV exports
    neutralise spreadsheet formulas.
+10. **Artifacts from the sandbox stay inert**: screenshots arrive as raw pixels and are re-encoded
+    as PNG by the host (no image decoder sees sandbox data); created files and memory dumps are
+    stored as numbered `.bin` files, checked against the hash in their signed sidecar, and only
+    ever read by the static helper process. The encrypted ZIP export uses the convention password
+    `infected` so the files are not opened by accident.
+11. **Archives are hostile input too**: listing and extraction happen in helper processes with
+    limits on entry count, size and compression ratio; links and paths leaving the destination
+    folder are refused; only the chosen entry is written.
+12. **Simulated internet by default**: the sandbox gets no real network adapter; the agent answers
+    DNS and HTTP inside the sandbox. A sample can tell the answers are fake, which can change its
+    behavior, but it cannot reach the internet.
 
 ## Known limitations (read these)
 
@@ -49,7 +64,12 @@ security research. Do not use it to analyze files you are not allowed to handle.
   enables the network, and its snapshot is restored before and after every run. See
   [docs/VIRTUAL-MACHINES.md](docs/VIRTUAL-MACHINES.md).
 - **Enabling network access** lets the sample reach the internet from the sandbox. It is off by
-  default and requires explicit consent per analysis.
+  default and requires explicit consent per analysis (and `--allow-internet` on the command
+  line). Analyzing a web address always needs it.
+- **Screenshots and installer clicking** use the desktop inside the sandbox; a sample can see
+  and react to the simulated user.
+- **Memory dumps** cover selected regions (executable private memory, RWX regions and images
+  with no file behind them) up to a size limit, not the whole process.
 - **Kernel registry events carry no value data**; the agent reads the value right after the event,
   which can race with a fast-changing value.
 
