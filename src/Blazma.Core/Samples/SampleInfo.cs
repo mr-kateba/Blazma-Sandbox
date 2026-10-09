@@ -43,6 +43,9 @@ public sealed record SampleInfo
     public string Extension => Path.GetExtension(FileName).ToLowerInvariant();
 
     /// <summary>Whether Blazma can run this kind of file inside the sandbox.</summary>
-    public bool IsExecutableKind => Kind is FileKind.Executable or FileKind.Dll or FileKind.Msi or FileKind.PowerShell
+    public bool IsExecutableKind => IsRunnable(Kind);
+
+    /// <summary>Kinds the sandbox knows how to start (a URL is opened in the browser).</summary>
+    public static bool IsRunnable(FileKind kind) => kind is FileKind.Executable or FileKind.Dll or FileKind.Msi or FileKind.PowerShell
         or FileKind.Batch or FileKind.VbScript or FileKind.JScript or FileKind.Shortcut or FileKind.Url;
 }
