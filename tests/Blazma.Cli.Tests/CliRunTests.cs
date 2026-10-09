@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Blazma.Analysis.Static;
+using Blazma.Analysis.Yara;
 using Blazma.Cli;
 using Blazma.Sandbox.Providers.Demo;
 
@@ -34,7 +35,8 @@ public sealed class CliRunTests : IDisposable
         using var stderr = new StringWriter();
         var app = new CliApp(stdout, stderr)
         {
-            AnalyzeStatic = (path, options, ct) => new StaticAnalyzer(null, options.DetectCapabilities).AnalyzeAsync(path, ct),
+            AnalyzeStatic = (path, options, ct) =>
+                new StaticAnalyzer(options.YaraFolder is { } y && Directory.Exists(y) ? YaraRuleSet.LoadFolder(y) : null, options.DetectCapabilities).AnalyzeAsync(path, ct),
         };
         var code = await app.RunAsync([.. args, "--data", _data], CancellationToken.None);
         return (code, stdout.ToString(), stderr.ToString());
@@ -140,6 +142,18 @@ public sealed class CliRunTests : IDisposable
         Assert.Contains("two.bat", File.ReadAllText(csv));
         Assert.Equal(3, File.ReadAllLines(csv).Length);
         Assert.Contains("/100", output);
+    }
+
+    [Fact]
+    public async Task Static_reports_matches_from_the_users_yara_folder()
+    {
+        Directory.CreateDirectory(Path.Combine(_data, "yara"));
+        File.WriteAllText(Path.Combine(_data, "yara", "cradle.yar"), """
+            rule PowerShell_Download_Cradle { strings: $a = "Invoke-WebRequest" nocase condition: $a }
+            """);
+        var (code, output, _) = await Run("static", Sample("one.ps1"));
+        Assert.Equal(ExitCodes.Ok, code);
+        Assert.Contains("PowerShell_Download_Cradle", output);
     }
 
     [Fact]
