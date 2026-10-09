@@ -32,6 +32,9 @@ public partial class App : Application
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     /// <summary>Configures services. Exposed so the screenshot tool and tests can build the same graph.</summary>
+    /// <summary>Set by Program when this process owns the single-instance lock.</summary>
+    internal static SingleInstance? Instance { get; set; }
+
     public static ServiceProvider BuildServices(BlazmaPaths paths)
     {
         paths.EnsureCreated();
@@ -131,6 +134,14 @@ public partial class App : Application
             // Keep the Explorer entry pointing at this copy of Blazma (it may have been moved or updated).
             if (settings.Current.General.ExplorerContextMenu) ShellIntegration.Apply(true, Loc.T("ExplorerMenuText"));
             if (ShellIntegration.StartupFile(desktop.Args ?? []) is { } file) await main.PrepareFileAsync(file);
+
+            // Files sent by a second launch (Explorer menu, drag onto the exe) open here.
+            Instance?.Listen(file => Dispatcher.UIThread.Post(async () =>
+            {
+                if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                window.Activate();
+                if (file is not null) await main.PrepareFileAsync(file);
+            }));
         }
         catch (Exception ex)
         {

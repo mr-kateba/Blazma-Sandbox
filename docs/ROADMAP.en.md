@@ -62,5 +62,5 @@ Planned features appear in the app as **Planned** and are disabled; nothing pret
 | Family configuration extractors | Per-family config parsers on memory dumps | 📋 |
 | Community intelligence | Strictly opt-in, hashes only, never the file | 📋 |
 | Plugin API | Third-party analyzers and exporters | 📋 |
-| Single instance | A second launch (e.g. from Explorer) hands the file to the running app | 📋 |
+| Single instance | A second launch (e.g. from Explorer) hands the file to the running app | ✅ |
 | Linux / macOS samples | Different sandbox technology | 📋 |
