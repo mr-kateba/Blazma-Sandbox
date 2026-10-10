@@ -46,6 +46,10 @@
 
       <!-- Stat cards -->
       <UniformGrid Rows="1" Columns="5">
+        <UniformGrid.Styles>
+          <!-- Labels wrap rather than clip in small windows. -->
+          <Style Selector="TextBlock.section"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+        </UniformGrid.Styles>
         <Border Classes="card" Margin="0,0,10,0" IsVisible="{Binding ShowToday}">
           <StackPanel Spacing="4">
             <TextBlock Classes="section" Text="{l:T StatToday}" />

@@ -113,6 +113,8 @@ public sealed partial class ReportViewModel : PageViewModel
     public string Sha256 => Result?.Sample.Sha256 ?? string.Empty;
     public string MetaLine => Result is null ? string.Empty : $"{Fmt.Date(Result.StartedAt)} · {Fmt.Duration(Result.Duration)} · {Fmt.Provider(Result.ProviderId)} · {Loc.F("EventsCount", Result.Events.Count)}";
     public string Disclaimer => Loc.Instance.IsArabic ? RiskAssessment.DisclaimerAr : RiskAssessment.Disclaimer;
+    public bool AiEnabled => _settings.Current.Ai.Enabled;
+    public string AiState => Loc.T(AiEnabled ? "LocalAiOn" : "LocalAiOff");
     public string NoiseNote => Result is { SuppressedNoiseEvents: > 0 } r ? Loc.F("NoiseNote", r.SuppressedNoiseEvents) : string.Empty;
     public bool HasNoiseNote => Result is { SuppressedNoiseEvents: > 0 };
     public bool HasFindings => Findings.Count > 0;
@@ -266,7 +268,7 @@ public sealed partial class ReportViewModel : PageViewModel
 
         foreach (var name in new[] { nameof(FileName), nameof(Score), nameof(Verdict), nameof(VerdictText), nameof(IsDemo), nameof(IsFailed), nameof(FailureReason),
                      nameof(MonitoringInterrupted), nameof(Sha256), nameof(MetaLine), nameof(Disclaimer), nameof(NoiseNote), nameof(HasNoiseNote), nameof(HasFindings),
-                     nameof(HasNoFindings), nameof(HasChains), nameof(HasPersistence), nameof(HasNoPersistence), nameof(HasChanges), nameof(HasNoChanges), nameof(HasNoNetwork) })
+                     nameof(HasNoFindings), nameof(HasChains), nameof(HasPersistence), nameof(HasNoPersistence), nameof(HasChanges), nameof(HasNoChanges), nameof(HasNoNetwork), nameof(AiEnabled), nameof(AiState) })
             OnPropertyChanged(name);
     }
 
