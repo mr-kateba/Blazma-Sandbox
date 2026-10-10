@@ -91,11 +91,9 @@ public sealed class StaticAnalyzerExtrasTests : IDisposable
 public class FailureLocationTests
 {
     [Fact]
-    public void Names_the_first_blazma_method_of_an_async_stack()
+    public async Task Names_the_first_blazma_method_of_an_async_stack()
     {
-        IOException caught;
-        try { ThrowInUse().GetAwaiter().GetResult(); throw new InvalidOperationException(); }
-        catch (IOException ex) { caught = ex; }
+        var caught = await Assert.ThrowsAsync<IOException>(ThrowInUse);
         Assert.Equal(" · FailureLocationTests.ThrowInUse", Blazma.Analysis.Pipeline.AnalysisRunner.Where(caught));
     }
 
