@@ -69,8 +69,9 @@ internal sealed class FakeInternet : IDisposable
             listener.Start();
             Accept(listener, port, protocol);
         }
-        catch (SocketException)
+        catch (SocketException ex)
         {
+            AgentLog.Warn($"The simulated internet cannot listen on port {port}: {ex.Message}");
             _ports.TryRemove(port, out _);
         }
     }
@@ -84,7 +85,12 @@ internal sealed class FakeInternet : IDisposable
             {
                 TcpClient client;
                 try { client = await listener.AcceptTcpClientAsync(_stop.Token).ConfigureAwait(false); }
-                catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException or SocketException) { return; }
+                catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException) { return; }
+                catch (Exception ex)
+                {
+                    AgentLog.Limited("fakenet-accept", $"The simulated server on port {port} stopped accepting connections", ex);
+                    return;
+                }
                 if (Interlocked.Increment(ref _connections) > MaxConnections) { client.Dispose(); continue; }
                 _ = Task.Run(() => HandleAsync(client, port, protocol));
             }
@@ -121,6 +127,10 @@ internal sealed class FakeInternet : IDisposable
         catch (Exception ex) when (ex is IOException or SocketException or OperationCanceledException or AuthenticationException or ObjectDisposedException or InvalidOperationException)
         {
             // The client went away, timed out or rejected the certificate: nothing more to record.
+        }
+        catch (Exception ex)
+        {
+            AgentLog.Limited("fakenet-connection", $"A simulated connection on port {port} failed", ex);
         }
     }
 

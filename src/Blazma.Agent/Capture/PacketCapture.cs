@@ -42,14 +42,20 @@ internal sealed class PacketCapture(EventSink sink, string workFolder, Action<st
             foreach (var a in args) psi.ArgumentList.Add(a);
             using var p = Process.Start(psi);
             if (p is null) return -1;
-            p.StandardOutput.ReadToEnd();
-            p.StandardError.ReadToEnd();
-            if (!p.WaitForExit(60_000)) { p.Kill(true); return -1; }
+            // Read both pipes at once: reading them one after the other can deadlock, and a blocking
+            // read would never reach the timeout below if pktmon hung.
+            var output = p.StandardOutput.ReadToEndAsync();
+            var error = p.StandardError.ReadToEndAsync();
+            if (!p.WaitForExit(60_000)) { p.Kill(true); AgentLog.Warn($"pktmon {string.Join(' ', args)} did not finish in time"); return -1; }
+            if (p.ExitCode != 0) AgentLog.Warn($"pktmon {string.Join(' ', args)} exited with {p.ExitCode}: {Clip(output.Result)} {Clip(error.Result)}");
             return p.ExitCode;
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException or AggregateException)
         {
+            AgentLog.Warn($"pktmon {string.Join(' ', args)} could not run", ex);
             return -1;
         }
     }
+
+    private static string Clip(string s) => s.Length > 500 ? s[..500] : s.Trim();
 }

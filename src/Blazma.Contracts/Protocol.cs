@@ -37,6 +37,13 @@ public static partial class Protocol
     public const string TempExtension = ".tmp";
     public const string PcapFile = "capture.pcapng";
 
+    /// <summary>
+    /// The agent's plain-text diagnostic log (UTF-8, appended, at most 1 MB). NOT signed and never
+    /// trusted: show it as text only. Deliberately not in <see cref="IsAllowedOutboxName"/>, which
+    /// lists the signed protocol files.
+    /// </summary>
+    public const string AgentLogFile = "agent.log";
+
     /// <summary>Raw screenshot: "BLZF", u16 width, u16 height, u32 relative ms, then gzip(BGRA pixels). Signed.</summary>
     public static string ScreenshotName(int index) => $"screen-{index:D6}.raw";
     public static string DroppedDataName(int index) => $"dropped-{index:D4}.bin";
