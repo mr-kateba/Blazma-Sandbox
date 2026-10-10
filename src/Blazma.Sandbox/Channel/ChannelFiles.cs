@@ -62,12 +62,36 @@ public static class ChannelFiles
 
     public static byte[] Serialize(ControlDto control) => JsonSerializer.SerializeToUtf8Bytes(control, ProtocolJson.Default.ControlDto);
 
-    /// <summary>Writes to a temporary name and renames, so the reader never sees a half-written file.</summary>
-    public static void WriteAtomic(string path, byte[] bytes)
+    /// <summary>
+    /// Writes to a temporary name and renames, so the reader never sees a half-written file.
+    /// Files in a folder shared with Windows Sandbox can stay open on the host side for a moment
+    /// after the guest reads them, so a sharing violation is retried for a while; if the rename
+    /// keeps failing, the file is overwritten in place (readers retry a half-written file).
+    /// </summary>
+    public static void WriteAtomic(string path, byte[] bytes) => WriteAtomic(path, bytes, SharedFileRetry.Default);
+
+    internal static void WriteAtomic(string path, byte[] bytes, SharedFileRetry retry)
     {
         var temp = path + Protocol.TempExtension;
-        File.WriteAllBytes(temp, bytes);
-        File.Move(temp, path, overwrite: true);
+        retry.Run(() => File.WriteAllBytes(temp, bytes));
+        if (retry.TryRun(() => File.Move(temp, path, overwrite: true))) return;
+
+        retry.Run(() =>
+        {
+            using var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+            stream.SetLength(0);
+            stream.Write(bytes);
+            stream.Flush(flushToDisk: true);
+        });
+        try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>Opens a file for reading while letting other programs keep it open, retrying sharing violations.</summary>
+    public static FileStream OpenShared(string path, SharedFileRetry? retry = null)
+    {
+        FileStream? stream = null;
+        (retry ?? SharedFileRetry.Default).Run(() => stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 81920, FileOptions.Asynchronous | FileOptions.SequentialScan));
+        return stream!;
     }
 
     /// <summary>A file name that is safe on the host and in the guest: no folders, no reserved characters, bounded length.</summary>

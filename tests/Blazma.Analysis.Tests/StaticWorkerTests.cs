@@ -87,3 +87,25 @@ public sealed class StaticAnalyzerExtrasTests : IDisposable
         Assert.Single(Directory.GetFiles(_dir));
     }
 }
+
+public class FailureLocationTests
+{
+    [Fact]
+    public void Names_the_first_blazma_method_of_an_async_stack()
+    {
+        IOException caught;
+        try { ThrowInUse().GetAwaiter().GetResult(); throw new InvalidOperationException(); }
+        catch (IOException ex) { caught = ex; }
+        Assert.Equal(" · FailureLocationTests.ThrowInUse", Blazma.Analysis.Pipeline.AnalysisRunner.Where(caught));
+    }
+
+    [Fact]
+    public void Says_nothing_without_a_stack() =>
+        Assert.Equal(string.Empty, Blazma.Analysis.Pipeline.AnalysisRunner.Where(new IOException("x")));
+
+    private static async Task ThrowInUse()
+    {
+        await Task.Yield();
+        throw new IOException("in use");
+    }
+}

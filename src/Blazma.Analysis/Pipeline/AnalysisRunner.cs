@@ -87,6 +87,28 @@ public sealed class AnalysisFailedException(string reason, Exception? inner = nu
 /// </summary>
 public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository repository, TimeProvider time, ILogger<AnalysisRunner>? logger = null)
 {
+    /// <summary>
+    /// The first Blazma method in the exception's stack, e.g. " · WindowsSandboxSession.TransferSampleAsync",
+    /// so a user's screenshot of a failure says where it happened without opening the logs.
+    /// </summary>
+    internal static string Where(Exception ex)
+    {
+        foreach (var raw in (ex.StackTrace ?? string.Empty).Split('\n'))
+        {
+            var line = raw.Trim();
+            var at = line.IndexOf("Blazma.", StringComparison.Ordinal);
+            if (!line.StartsWith("at ", StringComparison.Ordinal) || at < 0) continue;
+            var end = line.IndexOf('(', at);
+            var full = end > at ? line[at..end] : line[at..];
+            // "Blazma.Sandbox.X.WindowsSandboxSession.<TransferSampleAsync>d__12.MoveNext" -> "WindowsSandboxSession.TransferSampleAsync"
+            var parts = full.Split('.');
+            var method = parts.FirstOrDefault(p => p.StartsWith('<') && p.Contains('>'))?.Split('>')[0].TrimStart('<');
+            var type = method is null ? parts[^2] : parts[Array.FindIndex(parts, p => p.StartsWith('<')) - 1];
+            return $" · {type}.{method ?? parts[^1]}";
+        }
+        return string.Empty;
+    }
+
     private readonly ILogger _logger = logger ?? NullLogger<AnalysisRunner>.Instance;
     private static readonly TimeSpan LiveScoreInterval = TimeSpan.FromSeconds(2);
 
@@ -262,7 +284,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
         }
         catch (Exception ex)
         {
-            var reason = ex is AnalysisFailedException af ? af.Reason : $"The analysis failed: {ex.Message}";
+            var reason = ex is AnalysisFailedException af ? af.Reason : $"The analysis failed: {ex.Message} [{stage}{Where(ex)}]";
             _logger.LogError(ex, "Analysis {AnalysisId} failed in stage {Stage}", result.AnalysisId, stage);
             stage = AnalysisStage.Failed;
             await FinishUnsuccessfulAsync(result, events, AnalysisStage.Failed, reason, request).ConfigureAwait(false);

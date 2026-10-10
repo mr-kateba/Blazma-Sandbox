@@ -6,6 +6,12 @@ All notable changes to this project are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-10-10
+
+### Fixed
+- Analyses stopped with "the file is being used by another process": files shared with Windows Sandbox are now retried when busy, and the sample is read with full sharing.
+- Failure messages name the stage and the code location.
+
 ## [0.1.1] - 2026-10-10
 
 ### Fixed

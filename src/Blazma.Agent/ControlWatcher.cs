@@ -20,7 +20,7 @@ internal sealed class ControlWatcher(string inDir, int initialSeconds)
         try
         {
             if (!File.Exists(path)) return;
-            var control = JsonSerializer.Deserialize(File.ReadAllBytes(path), ProtocolJson.Default.ControlDto);
+            var control = JsonSerializer.Deserialize(SharedRead.AllBytes(path), ProtocolJson.Default.ControlDto);
             if (control is null || control.Sequence <= _sequence) return;
             _sequence = control.Sequence;
             DurationSeconds = Math.Clamp(Math.Max(DurationSeconds, control.DurationSeconds), 15, 1800);

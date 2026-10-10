@@ -121,7 +121,8 @@ public sealed class OutboxReader(string outFolder, byte[] channelKey, long quota
             }
             var folder = Directory.CreateDirectory(Path.Combine(artifactsFolder, "screenshots")).FullName;
             var path = Path.Combine(folder, $"{index:D4}.png");
-            File.WriteAllBytes(path, PngEncoder.EncodeBgra(w, h, pixels));
+            var png = PngEncoder.EncodeBgra(w, h, pixels);
+            SharedFileRetry.Default.Run(() => File.WriteAllBytes(path, png));
             result.Add(new CollectedScreenshot(TimeSpan.FromMilliseconds(ms), path, w, h));
         }
         return result;
@@ -152,7 +153,7 @@ public sealed class OutboxReader(string outFolder, byte[] channelKey, long quota
             }
             var folder = Directory.CreateDirectory(Path.Combine(artifactsFolder, "dropped")).FullName;
             var path = Path.Combine(folder, $"{index:D4}.bin");
-            File.WriteAllBytes(path, data);
+            SharedFileRetry.Default.Run(() => File.WriteAllBytes(path, data));
             result.Add(new CollectedDroppedFile(CleanText(meta.OriginalPath, 1024), CleanText(meta.ProcessName, 260), path, meta.Sha256.ToLowerInvariant(), data.Length));
         }
         return result;
@@ -186,7 +187,7 @@ public sealed class OutboxReader(string outFolder, byte[] channelKey, long quota
             }
             var folder = Directory.CreateDirectory(Path.Combine(artifactsFolder, "memory")).FullName;
             var path = Path.Combine(folder, $"{index:D4}.bin");
-            File.WriteAllBytes(path, data);
+            SharedFileRetry.Default.Run(() => File.WriteAllBytes(path, data));
             result.Add(new CollectedMemoryRegion(meta.ProcessId, CleanText(meta.ProcessName, 260), meta.BaseAddress, data.Length,
                 CleanText(meta.Protection, 64), kind.Value, path, meta.Sha256.ToLowerInvariant()));
         }
@@ -208,7 +209,7 @@ public sealed class OutboxReader(string outFolder, byte[] channelKey, long quota
         }
         Directory.CreateDirectory(artifactsFolder);
         var path = Path.Combine(artifactsFolder, "capture.pcapng");
-        File.WriteAllBytes(path, content);
+        SharedFileRetry.Default.Run(() => File.WriteAllBytes(path, content));
         return path;
     }
 
