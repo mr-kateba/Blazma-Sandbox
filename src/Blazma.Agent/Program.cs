@@ -354,7 +354,7 @@ internal static class AgentHost
         {
             try
             {
-                if (File.Exists(path)) return JsonSerializer.Deserialize(await File.ReadAllBytesAsync(path), type);
+                if (File.Exists(path)) return JsonSerializer.Deserialize(SharedRead.AllBytes(path), type);
             }
             catch (Exception ex) when (ex is IOException or JsonException) { }
             await Task.Delay(500);

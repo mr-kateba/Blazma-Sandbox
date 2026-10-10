@@ -40,7 +40,19 @@ public sealed class SettingsStore(BlazmaPaths paths, ILogger<SettingsStore>? log
             Directory.CreateDirectory(Path.GetDirectoryName(paths.Settings)!);
             var temp = paths.Settings + ".tmp";
             await File.WriteAllTextAsync(temp, JsonSerializer.Serialize(settings, BlazmaJson.Indented), cancellationToken).ConfigureAwait(false);
-            File.Move(temp, paths.Settings, overwrite: true);
+            // An antivirus scan or the search indexer can hold settings.json for a moment.
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temp, paths.Settings, overwrite: true);
+                    break;
+                }
+                catch (IOException) when (attempt < 8)
+                {
+                    await Task.Delay(150 * attempt, cancellationToken).ConfigureAwait(false);
+                }
+            }
         }
         finally
         {

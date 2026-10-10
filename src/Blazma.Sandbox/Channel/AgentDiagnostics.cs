@@ -66,7 +66,7 @@ public static class AgentDiagnostics
             {
                 Directory.CreateDirectory(destinationFolder);
                 var target = Path.Combine(destinationFolder, name);
-                File.WriteAllText(target, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                SharedFileRetry.Default.Run(() => File.WriteAllText(target, text, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)));
                 written.Add(target);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }

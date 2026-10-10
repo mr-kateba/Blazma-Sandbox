@@ -13,7 +13,7 @@
     <Authors>mr-kateba</Authors>
     <Company>Blazma</Company>
     <Copyright>Copyright (C) 2026 mr-kateba</Copyright>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Deterministic>true</Deterministic>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>

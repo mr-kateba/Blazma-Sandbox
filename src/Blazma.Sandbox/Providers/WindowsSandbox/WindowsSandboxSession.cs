@@ -189,7 +189,9 @@ internal sealed class WindowsSandboxSession : ISandboxSession, IInteractiveSessi
             throw new InvalidOperationException(WithDiagnostics("The monitoring agent is not running as an administrator inside Windows Sandbox, so it cannot observe anything.", AgentDiagnostics.Tail(Out)));
 
         // The agent has read its key. Remove it from the shared folder before the sample can run.
-        var config = JsonSerializer.Deserialize(await File.ReadAllBytesAsync(Path.Combine(In, Protocol.SessionFile), cancellationToken).ConfigureAwait(false), ProtocolJson.Default.SessionConfigDto)!;
+        SessionConfigDto config;
+        await using (var sessionFile = ChannelFiles.OpenShared(Path.Combine(In, Protocol.SessionFile)))
+            config = (await JsonSerializer.DeserializeAsync(sessionFile, ProtocolJson.Default.SessionConfigDto, cancellationToken).ConfigureAwait(false))!;
         config.ChannelKey = null;
         WriteAtomic(Path.Combine(In, Protocol.SessionFile), JsonSerializer.SerializeToUtf8Bytes(config, ProtocolJson.Default.SessionConfigDto));
         _logger.LogInformation("Agent {Version} connected (OS {Os})", Clip(hello.AgentVersion), Clip(hello.OsVersion));
@@ -238,11 +240,12 @@ internal sealed class WindowsSandboxSession : ISandboxSession, IInteractiveSessi
     {
         var name = SafeFileName(_request.Sample.FileName);
         var destination = Path.Combine(In, Protocol.SampleFolder, name);
-        await using (var source = File.OpenRead(_request.SamplePath))
+        // The user's file may still be open in another program (a download finishing, an antivirus scan).
+        await using (var source = ChannelFiles.OpenShared(_request.SamplePath))
         await using (var target = File.Create(destination))
             await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
 
-        await using (var check = File.OpenRead(destination))
+        await using (var check = ChannelFiles.OpenShared(destination))
         {
             var hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(check, cancellationToken).ConfigureAwait(false));
             if (!hash.Equals(_request.Sample.Sha256, StringComparison.OrdinalIgnoreCase))
