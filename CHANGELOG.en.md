@@ -6,6 +6,15 @@ All notable changes to this project are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-10-10
+
+### Fixed
+- Analyses stopped right away on Windows 11 24H2+: the sandbox is now tracked through the agent's heartbeats and `wsb`, not the `WindowsSandbox.exe` process.
+- The agent starts kernel tracing without native helpers, starts every kind of sample like a double-click, survives component failures and writes `out/agent.log`.
+- Three ways to start the agent, for Windows Sandbox builds where the LogonCommand does not run; longer start timeouts.
+- No crashes or freezes on samples that start many processes; a `crash-*.txt` file on any unexpected exit.
+- Failure messages explain the cause and include the last lines of the agent's log.
+
 ## [0.1.0] - 2026-10-09
 
 ### Added
