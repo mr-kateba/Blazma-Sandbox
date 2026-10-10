@@ -65,9 +65,9 @@ Preparing → CreatingSandbox → Booting → DeployingAgent → Ready → Trans
 | Stage | Windows Sandbox provider |
 |---|---|
 | Preparing | Static report already done; provider availability check (OS, feature, agent, no other instance). |
-| CreatingSandbox | `work/<id>/in` (agent, `session.json` with a fresh HMAC key) and `work/<id>/out`; generate `blazma.wsb`. |
-| Booting | Start `WindowsSandbox.exe blazma.wsb`. |
-| DeployingAgent | The sandbox's LogonCommand starts the agent from the read-only folder; wait for `hello.json`, check protocol version, then **delete the key from `session.json`**. |
+| CreatingSandbox | `work/<id>/in` (agent, `session.json` with a fresh HMAC key, the `blazma-agent.cmd` launcher), `work/<id>/out` and `work/<id>/startup` (the launcher only); generate `blazma.wsb`. |
+| Booting | Refuse to start when a sandbox is already running (`wsb list`, or the sandbox window processes on older Windows), then start `WindowsSandbox.exe blazma.wsb`. From Windows 11 24H2 that program hands the sandbox to the Store app and exits at once, so its exit means nothing: the sandbox is known to be alive from the agent's hello and heartbeats, and from `wsb list` where `wsb.exe` exists. |
+| DeployingAgent | The launcher starts the agent once, from the logon command, from the sandbox user's Startup folder (some 2026 releases skip the logon command) or, after 2 minutes without a hello, from `wsb exec`; its output goes to `out/agent-start.txt`. Wait up to 8 minutes for `hello.json` (a first start can include a Store update), check the protocol version and that the agent is elevated, then **delete the key from `session.json`**. A failure quotes the last lines of `agent-start.txt` and `agent.log`. |
 | TransferringSample | Copy the sample into `in/sample/`, re-check its SHA-256, write `go.json`. The agent copies it out of the share, checks the hash again, takes the baseline snapshot, starts ETW, runs it. |
 | Analyzing | Read new signed event chunks every 500 ms, stream them to the Live screen, watch heartbeats, recompute a live score every 2 s. |
 | CollectingEvents | Wait for `done.json`, read the last chunks and the after-snapshot. |

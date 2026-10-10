@@ -51,7 +51,8 @@ public static class SandboxProviders
                     AgentLimits.Default.MaxScreenshots),
                 MemoryMb = advanced.SandboxMemoryMb,
                 OutboxQuotaBytes = advanced.OutboxQuotaBytes,
-                HeartbeatTimeout = TimeSpan.FromSeconds(advanced.AgentHeartbeatTimeoutSeconds),
+                // At least 30 s: shorter limits report healthy runs as interrupted while a sample keeps the sandbox busy.
+                HeartbeatTimeout = TimeSpan.FromSeconds(Math.Max(30, advanced.AgentHeartbeatTimeoutSeconds)),
                 StopWhenTreeExits = analysis.StopWhenTreeExits,
             }, loggers),
         };

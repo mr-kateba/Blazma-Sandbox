@@ -14,7 +14,8 @@ namespace Blazma.Sandbox.Channel;
 /// Reads the sandbox's writable <c>out/</c> folder. This is the one place where data
 /// produced inside the sandbox enters the host, so it is deliberately strict:
 /// <list type="bullet">
-/// <item>only the exact file names in <see cref="Protocol.IsAllowedOutboxName"/> are opened;</item>
+/// <item>only the exact file names in <see cref="Protocol.IsAllowedOutboxName"/> are opened (the plain-text
+/// diagnostic logs are read separately by <see cref="AgentDiagnostics"/>);</item>
 /// <item>reparse points (symlinks, junctions) are never followed;</item>
 /// <item>per-file and per-analysis byte quotas are enforced;</item>
 /// <item>every signed file must carry a valid MAC;</item>
@@ -313,7 +314,7 @@ public sealed class OutboxReader(string outFolder, byte[] channelKey, long quota
             foreach (var file in Directory.EnumerateFiles(outFolder).Take(10_000))
             {
                 var name = Path.GetFileName(file);
-                if (Protocol.IsAllowedOutboxName(name) || name.EndsWith(Protocol.TempExtension, StringComparison.Ordinal)) continue;
+                if (Protocol.IsAllowedOutboxName(name) || AgentDiagnostics.IsDiagnosticName(name) || name.EndsWith(Protocol.TempExtension, StringComparison.Ordinal)) continue;
                 if (_reported.Add(name))
                 {
                     RejectedFiles++;
