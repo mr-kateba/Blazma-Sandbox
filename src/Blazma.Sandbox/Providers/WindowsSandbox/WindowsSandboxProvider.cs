@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using Blazma.Core.Abstractions;
-using Blazma.Sandbox.Channel;
 using Blazma.Core.Text;
+using Blazma.Sandbox.Channel;
+using Blazma.Sandbox.Processes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -17,8 +17,23 @@ public sealed record WindowsSandboxOptions
 
     public int MemoryMb { get; init; } = 4096;
     public long OutboxQuotaBytes { get; init; } = 512L * 1024 * 1024;
-    public TimeSpan HeartbeatTimeout { get; init; } = TimeSpan.FromSeconds(15);
-    public TimeSpan AgentHelloTimeout { get; init; } = TimeSpan.FromMinutes(3);
+
+    /// <summary>The agent beats every 2 s; writes to the mapped folder can stall for many seconds while a sample loads the sandbox.</summary>
+    public TimeSpan HeartbeatTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// A cold start takes 1 to 3 minutes and longer on slow disks; on Windows 11 24H2 and later the first
+    /// start can also wait up to 2 minutes while Windows Sandbox updates itself from the Microsoft Store.
+    /// </summary>
+    public TimeSpan AgentHelloTimeout { get; init; } = TimeSpan.FromMinutes(8);
+
+    /// <summary>Without a hello by then, the launcher is started again with <c>wsb exec</c> (where wsb.exe exists).</summary>
+    public TimeSpan AgentStartRetryAfter { get; init; } = TimeSpan.FromMinutes(2);
+
+    public TimeSpan PollInterval { get; init; } = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>How often <c>wsb list</c> is asked whether the sandbox still runs.</summary>
+    public TimeSpan SandboxCheckInterval { get; init; } = TimeSpan.FromSeconds(10);
     public bool StopWhenTreeExits { get; init; } = true;
     public AgentLimits AgentLimits { get; init; } = AgentLimits.Default;
 }
@@ -28,16 +43,29 @@ public sealed record WindowsSandboxOptions
 /// that is wiped when it closes. Requires Windows 10/11 Pro, Enterprise or Education with
 /// the "Windows Sandbox" feature enabled and virtualisation turned on in firmware.
 /// </summary>
-public sealed class WindowsSandboxProvider(WindowsSandboxOptions options, ILoggerFactory? loggers = null) : ISandboxProvider
+public sealed class WindowsSandboxProvider : ISandboxProvider
 {
     public const string ProviderId = "windows-sandbox";
-    internal static readonly string[] SandboxProcessNames = ["WindowsSandbox", "WindowsSandboxClient", "WindowsSandboxRemoteSession", "WindowsSandboxServer"];
+
+    private readonly WindowsSandboxOptions _options;
+    private readonly ILoggerFactory? _loggers;
+    private readonly IProcessRunner _runner;
+    private readonly IWindowsSandboxHost _host;
+
+    public WindowsSandboxProvider(WindowsSandboxOptions options, ILoggerFactory? loggers = null)
+        : this(options, loggers, ProcessRunner.Instance, WindowsSandboxHost.Instance) { }
+
+    internal WindowsSandboxProvider(WindowsSandboxOptions options, ILoggerFactory? loggers, IProcessRunner runner, IWindowsSandboxHost host)
+    {
+        _options = options;
+        _loggers = loggers;
+        _runner = runner;
+        _host = host;
+    }
 
     public string Id => ProviderId;
     public LocalizedText DisplayName { get; } = new("Windows Sandbox", "Windows Sandbox");
     public bool IsDemo => false;
-
-    public static string SandboxExecutable => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsSandbox.exe");
 
     public Task<ProviderAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken)
     {
@@ -54,7 +82,7 @@ public sealed class WindowsSandboxProvider(WindowsSandboxOptions options, ILogge
         checks.Add(Check("os", new("Windows version", "إصدار Windows"), buildOk,
             buildOk ? new("Windows 10 1903 or later.", "Windows 10 1903 أو أحدث.") : new("Windows 10 version 1903 or later is required.", "يلزم Windows 10 إصدار 1903 أو أحدث.")));
 
-        var featureOk = File.Exists(SandboxExecutable);
+        var featureOk = _host.SandboxExecutable is not null;
         var home = !featureOk && IsHomeEdition(ReadEditionId());
         checks.Add(Check("feature", new("Windows Sandbox feature", "ميزة Windows Sandbox"), featureOk,
             featureOk ? new("Installed.", "مثبتة.")
@@ -63,11 +91,11 @@ public sealed class WindowsSandboxProvider(WindowsSandboxOptions options, ILogge
                       : new("Turn on \"Windows Sandbox\" in Windows Features (optionalfeatures.exe), enable virtualization in firmware if asked, then restart.",
                             "فعّل \"Windows Sandbox\" من ميزات Windows ‏(optionalfeatures.exe)، وفعّل المحاكاة الافتراضية من BIOS إذا طُلب، ثم أعد التشغيل.")));
 
-        var agentOk = File.Exists(Path.Combine(options.AgentFolder, Contracts.Protocol.AgentExecutable));
+        var agentOk = File.Exists(Path.Combine(_options.AgentFolder, Contracts.Protocol.AgentExecutable));
         checks.Add(Check("agent", new("Monitoring agent", "وكيل المراقبة"), agentOk,
             agentOk ? new("Present.", "موجود.") : new("Blazma.Agent.exe was not found next to Blazma. Reinstall or build the agent (see README).", "لم يُعثر على Blazma.Agent.exe بجانب Blazma. أعد التثبيت أو ابنِ الوكيل (راجع README).")));
 
-        var running = SandboxProcessNames.Any(n => Process.GetProcessesByName(n).Length > 0);
+        var running = _host.RunningClients().Count > 0;
         checks.Add(Check("instance", new("No other sandbox running", "لا توجد بيئة معزولة أخرى قيد التشغيل"), !running,
             running ? new("Windows Sandbox is already open. Close it first; only one instance can run at a time.", "Windows Sandbox مفتوح بالفعل. أغلقه أولًا، إذ لا يمكن تشغيل أكثر من نسخة واحدة.") : new("Ready.", "جاهز.")));
 
@@ -80,7 +108,7 @@ public sealed class WindowsSandboxProvider(WindowsSandboxOptions options, ILogge
 
     public Task<ISandboxSession> CreateSessionAsync(SandboxSessionRequest request, CancellationToken cancellationToken)
     {
-        ISandboxSession session = new WindowsSandboxSession(request, options, loggers?.CreateLogger<WindowsSandboxSession>() ?? NullLogger<WindowsSandboxSession>.Instance);
+        ISandboxSession session = new WindowsSandboxSession(request, _options, _loggers?.CreateLogger<WindowsSandboxSession>() ?? NullLogger<WindowsSandboxSession>.Instance, _runner, _host);
         return Task.FromResult(session);
     }
 
