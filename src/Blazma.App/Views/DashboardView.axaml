@@ -10,7 +10,7 @@
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
           <TextBlock Classes="h1" Text="Blazma Sandbox" FontSize="30" />
-          <TextBlock Text="Analyze. Observe. Understand." FontSize="15" Foreground="{DynamicResource MutedBrush}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+          <TextBlock Text="{l:T Tagline}" FontSize="15" Foreground="{DynamicResource MutedBrush}" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <Button Content="{l:T TryDemo}" Command="{Binding TryDemoCommand}" ToolTip.Tip="{l:T TryDemoTip}" />
@@ -24,7 +24,7 @@
       </Grid>
 
       <!-- Drop zone -->
-      <Border x:Name="DropZone" CornerRadius="14" BorderThickness="1.5" Padding="30,38"
+      <Border x:Name="DropZone" CornerRadius="14" BorderThickness="1.5" Padding="30,28"
               BorderBrush="{DynamicResource RuleStrongBrush}" Background="{DynamicResource FieldBrush}"
               Classes.drag="{Binding IsDragOver}" DragDrop.AllowDrop="True">
         <Border.Styles>

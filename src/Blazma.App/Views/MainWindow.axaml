@@ -182,7 +182,7 @@
             <c:LogoMark Width="44" Height="44" />
             <StackPanel VerticalAlignment="Center">
               <TextBlock Classes="h2" Text="{l:T WelcomeTitle}" />
-              <TextBlock Classes="caption" Text="Analyze. Observe. Understand." FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+              <TextBlock Classes="caption" Text="{l:T Tagline}" />
             </StackPanel>
           </StackPanel>
 

@@ -15,6 +15,33 @@
       <Setter Property="FontSize" Value="11.5" />
       <Setter Property="Foreground" Value="{DynamicResource FaintBrush}" />
     </Style>
+    <Style Selector="WrapPanel.headerActions">
+      <Setter Property="Grid.Column" Value="2" />
+    </Style>
+    <Style Selector="Border.summaryCard">
+      <Setter Property="Grid.Column" Value="2" />
+    </Style>
+    <!-- Narrow windows (or the details panel open): actions move under the title, cards stack. -->
+    <ContainerQuery Name="reportHeader" Query="max-width:960">
+      <Style Selector="WrapPanel.headerActions">
+        <Setter Property="Grid.Row" Value="1" />
+        <Setter Property="Grid.Column" Value="1" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Margin" Value="0,10,0,0" />
+      </Style>
+    </ContainerQuery>
+    <ContainerQuery Name="overview" Query="max-width:820">
+      <Style Selector="Border.summaryCard">
+        <Setter Property="Grid.Row" Value="1" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+        <Setter Property="Margin" Value="0,18,0,0" />
+      </Style>
+      <Style Selector="Border.scoreCard">
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+      </Style>
+    </ContainerQuery>
   </UserControl.Styles>
 
   <Panel>
@@ -25,13 +52,13 @@
     <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding !IsLoading}">
       <DockPanel Margin="30,22,30,16">
         <!-- Header -->
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,10" Container.Name="reportHeader" Container.Sizing="Width">
           <Button Classes="ghost" Command="{Binding BackCommand}" Padding="6" Margin="0,0,10,0" VerticalAlignment="Top" ToolTip.Tip="{l:T NavHistory}">
             <Path Classes="icon" Data="M15,6 L9,12 L15,18" Width="16" Height="16" />
           </Button>
           <StackPanel Grid.Column="1" Spacing="4">
             <StackPanel Orientation="Horizontal" Spacing="12">
-              <TextBlock Classes="h1" Text="{Binding FileName}" FlowDirection="LeftToRight" />
+              <TextBlock Classes="h1" Text="{Binding FileName}" FlowDirection="LeftToRight" MaxWidth="460" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FileName}" />
               <c:RiskBadge Verdict="{Binding Verdict}" Large="True" />
               <Border Classes="badge banner demo" IsVisible="{Binding IsDemo}"><TextBlock Text="DEMO" Foreground="{DynamicResource DemoTextBrush}" /></Border>
             </StackPanel>
@@ -41,9 +68,9 @@
                 <Path Classes="icon fixed" Data="{StaticResource IconCopy}" Width="13" Height="13" />
               </Button>
             </StackPanel>
-            <TextBlock Classes="caption" Text="{Binding MetaLine}" />
+            <TextBlock Classes="caption" Text="{Binding MetaLine}" TextWrapping="Wrap" />
           </StackPanel>
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+          <WrapPanel Classes="headerActions" Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
             <Button Content="{l:T Compare}" Command="{Binding CompareCommand}" />
             <Button Content="{l:T ExportIoc}" Command="{Binding ExportIndicatorsCommand}" />
             <Button Content="{l:T MoreExports}">
@@ -67,7 +94,7 @@
                 <TextBlock Text="{l:T ExportHtml}" />
               </StackPanel>
             </Button>
-          </StackPanel>
+          </WrapPanel>
         </Grid>
 
         <StackPanel DockPanel.Dock="Top" Spacing="8">
@@ -81,8 +108,8 @@
           <TabItem Header="{l:T TabOverview}">
             <ScrollViewer>
               <StackPanel Spacing="18" Margin="0,4,8,20">
-                <Grid ColumnDefinitions="300,18,*">
-                  <Border Classes="card" Padding="20">
+                <Grid ColumnDefinitions="300,18,*" RowDefinitions="Auto,Auto" Container.Name="overview" Container.Sizing="Width">
+                  <Border Classes="card scoreCard" Padding="20">
                     <StackPanel Spacing="12" HorizontalAlignment="Center">
                       <Panel Width="190" Height="190">
                         <c:ScoreRing Value="{Binding Score}" Verdict="{Binding Verdict}" Thickness="12" />
@@ -96,13 +123,13 @@
                       <TextBlock Classes="caption" Text="{Binding Disclaimer}" TextAlignment="Center" MaxWidth="250" />
                     </StackPanel>
                   </Border>
-                  <Border Grid.Column="2" Classes="card">
+                  <Border Classes="card summaryCard">
                     <ItemsControl ItemsSource="{Binding Summary}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SummaryRow">
-                          <Grid ColumnDefinitions="190,*,Auto" Margin="0,7">
-                            <TextBlock Classes="muted" Text="{Binding Label}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                          <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,7">
+                            <TextBlock Classes="muted" Text="{Binding Label}" VerticalAlignment="Center" Width="150" TextWrapping="Wrap" Margin="0,0,12,0" />
+                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0" />
                             <c:RiskBadge Grid.Column="2" Severity="{Binding Level}" />
                           </Grid>
                         </DataTemplate>
@@ -277,7 +304,7 @@
                       <DataTemplate x:DataType="vm:DetailRow">
                         <Grid ColumnDefinitions="150,*" Margin="0,3">
                           <TextBlock Classes="caption" Text="{Binding Label}" />
-                          <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                          <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" Classes.ltr="{Binding Ltr}" />
                         </Grid>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>

@@ -17,6 +17,8 @@ var output = args.Length > 0 ? args[0] : "screenshots";
 var language = args.Length > 1 && args[1] == "ar" ? AppLanguage.Arabic : AppLanguage.English;
 var only = args.Length > 2 ? args[2] : null;
 var theme = args.Length > 3 ? Enum.Parse<ThemeVariant>(args[3]) : ThemeVariant.Dark;
+var size = (args.Length > 4 ? args[4] : "1440x900").Split('x');
+var (width, height) = (double.Parse(size[0]), double.Parse(size[1]));
 Directory.CreateDirectory(output);
 
 AppBuilder.Configure<App>()
@@ -52,7 +54,7 @@ Directory.CreateDirectory(paths.Yara);
 File.WriteAllText(Path.Combine(paths.Yara, "example.yar"), IntelligenceViewModel.ExampleYara);
 
 var vm = services.GetRequiredService<MainViewModel>();
-var window = new MainWindow { DataContext = vm, Width = 1440, Height = 900 };
+var window = new MainWindow { DataContext = vm, Width = width, Height = height };
 window.Show();
 Run(vm.InitializeAsync());
 

@@ -44,7 +44,35 @@ public sealed class Loc : INotifyPropertyChanged
 
     public static string T(string key) => Instance[key];
 
-    public static string F(string key, params object?[] args) => string.Format(CultureInfo.InvariantCulture, Instance[key], args);
+    /// <summary>True when the key exists, for values that are only sometimes translatable.</summary>
+    public bool Has(string key) => _en.ContainsKey(key);
+
+    public static string F(string key, params object?[] args) =>
+        string.Format(Instance.IsArabic ? Isolating.Instance : CultureInfo.InvariantCulture, Instance[key], args);
+
+    /// <summary>
+    /// Anchors a technical value (path, size, time, count) with left-to-right marks so it keeps its
+    /// own order inside an Arabic sentence ("4.0 KB" never becomes "KB 4.0"). Arabic values are
+    /// returned unchanged. Marks rather than isolates: the text engine does not honour isolates.
+    /// </summary>
+    public static string Isolate(string value) => value.Length == 0 || HasArabic(value) ? value : "\u200E" + value + "\u200E";
+
+    /// <summary>True when the text contains Arabic letters and so must follow the page direction.</summary>
+    public static bool HasArabic(string? text) => text is not null && text.Any(c => c is >= '\u0600' and <= '\u06FF' or >= '\u0750' and <= '\u077F' or >= '\uFB50' and <= '\uFDFF' or >= '\uFE70' and <= '\uFEFF');
+
+    private sealed class Isolating : IFormatProvider, ICustomFormatter
+    {
+        public static readonly Isolating Instance = new();
+
+        public object? GetFormat(Type? formatType) => formatType == typeof(ICustomFormatter) ? this : CultureInfo.InvariantCulture.GetFormat(formatType);
+
+        public string Format(string? format, object? arg, IFormatProvider? formatProvider) => Isolate(arg switch
+        {
+            null => "",
+            IFormattable f => f.ToString(format, CultureInfo.InvariantCulture),
+            _ => arg.ToString() ?? "",
+        });
+    }
 
     public IReadOnlyCollection<string> Keys(AppLanguage language) => (language == AppLanguage.Arabic ? _ar : _en).Keys;
 

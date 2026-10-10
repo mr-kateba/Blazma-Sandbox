@@ -57,7 +57,7 @@
                 <DataTemplate x:DataType="vm:InfoRow">
                   <Grid ColumnDefinitions="120,*" Margin="0,5">
                     <TextBlock Classes="caption" Text="{Binding Label}" VerticalAlignment="Top" />
-                    <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                    <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" Classes.ltr="{Binding Ltr}" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -127,7 +127,7 @@
                   <DataTemplate x:DataType="vm:InfoRow">
                     <Grid ColumnDefinitions="120,*" Margin="0,4">
                       <TextBlock Classes="caption" Text="{Binding Label}" />
-                      <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" />
+                      <SelectableTextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" Classes.mono="{Binding Mono}" Classes.ltr="{Binding Ltr}" />
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

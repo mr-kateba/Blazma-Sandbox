@@ -15,7 +15,11 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Blazma.App.ViewModels;
 
-public sealed record InfoRow(string Label, string Value, bool Mono = false);
+public sealed record InfoRow(string Label, string Value, bool Mono = false)
+{
+    /// <summary>Technical values (hashes, sizes, sections) read left to right even in Arabic.</summary>
+    public bool Ltr => !Loc.HasArabic(Value);
+}
 
 public sealed record CheckRow(string Label, string Detail, bool Passed);
 
