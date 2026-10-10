@@ -356,6 +356,8 @@
  "LocalAi": "ذكاء اصطناعي محلي",
  "LocalAiBody": "ملخصات وأسئلة حرة عن التقرير يجيب عنها نموذج يعمل على هذا الجهاز (Ollama أو LM Studio أو llama.cpp). معطّل افتراضيًا، ولا يُرسَل إلا التقرير بعد إخفاء البيانات الحساسة، ولا يُرسَل الملف أبدًا.",
  "LocalAiTitle": "ذكاء اصطناعي محلي",
+ "LocalAiOn": "مفعّل",
+ "LocalAiOff": "معطّل · فعّله من الإعدادات",
  "LogDebug": "Debug",
  "LogError": "Error",
  "LogInformation": "Information",

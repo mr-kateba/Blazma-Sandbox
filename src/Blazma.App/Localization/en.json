@@ -356,6 +356,8 @@
  "LocalAi": "LOCAL AI",
  "LocalAiBody": "Summaries and free-form questions about a report, answered by a model on this computer (Ollama, LM Studio or llama.cpp). Off by default; only the redacted report is sent, never the sample.",
  "LocalAiTitle": "Local AI",
+ "LocalAiOn": "On",
+ "LocalAiOff": "Off · enable in Settings",
  "LogDebug": "Debug",
  "LogError": "Error",
  "LogInformation": "Information",
