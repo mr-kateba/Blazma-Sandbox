@@ -74,4 +74,28 @@ public class TimelineAndGraphTests
         Assert.Equal(0, result.SuppressedNoiseEvents);
         Assert.Equal(2, result.Events.Count);
     }
+    [Fact]
+    public void A_long_relaunch_chain_continues_as_new_roots_and_stays_in_the_analyzed_tree()
+    {
+        var ev = new Ev();
+        var parent = 4;
+        for (var i = 0; i < 250; i++)
+        {
+            ev.Start(i * 10, 1000 + i, parent, "setup.exe", sample: i == 0);
+            parent = 1000 + i;
+        }
+        ev.File(5000, 1249, null, "setup.exe", EventAction.FileCreate, @"C:\Users\Public\last.txt");
+
+        var graph = ProcessGraph.Build(AnalysisEngine.Order(ev.Events));
+        var all = graph.Roots.SelectMany(r => r.SelfAndDescendants()).ToList();
+        Assert.Equal(250, all.Count);
+        Assert.Equal(3, graph.Roots.Count);
+        Assert.All(all, n => Assert.True(n.InAnalyzedTree));
+        Assert.True(graph.InAnalyzedTree(ev.Events.Last()));
+        // A continued root still names its real parent.
+        Assert.Equal(1000 + ProcessGraph.MaxTreeDepth - 1, graph.Roots[1].ParentPid);
+        Assert.NotNull(graph.Roots[1].ParentKey);
+        // Depth-first order is unchanged by the iterative walk.
+        Assert.Equal(Enumerable.Range(1000, ProcessGraph.MaxTreeDepth), graph.Sample!.SelfAndDescendants().Select(n => n.Pid));
+    }
 }

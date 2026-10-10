@@ -145,7 +145,8 @@ public sealed partial class ReportViewModel : PageViewModel
     public async Task LoadAsync(Guid id, int tab = 0, long? focusSequence = null)
     {
         IsLoading = true;
-        Result = await Task.Run(() => _repository.LoadAsync(id, includeEvents: true, CancellationToken.None));
+        try { Result = await Task.Run(() => _repository.LoadAsync(id, includeEvents: true, CancellationToken.None)); }
+        catch { IsLoading = false; throw; }
         if (Result is null)
         {
             IsLoading = false;

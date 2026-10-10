@@ -12,6 +12,15 @@ public sealed class ProcessGraph
 {
     private readonly Dictionary<int, List<ProcessNode>> _byPid = [];
     private readonly Dictionary<ProcessKey, ProcessNode> _byKey = [];
+    private readonly Dictionary<ProcessKey, int> _depth = [];
+
+    /// <summary>
+    /// The deepest level a process is nested at. A longer chain (a sample that keeps relaunching
+    /// itself) continues as a new root that still names its parent, so the tree stays shallow
+    /// enough to store, export and show. Without a limit, a few dozen levels already exceed what
+    /// the stored report document can hold and the analysis fails while saving.
+    /// </summary>
+    public const int MaxTreeDepth = 100;
 
     public List<ProcessNode> Roots { get; } = [];
     public ProcessNode? Sample { get; private set; }
@@ -75,15 +84,22 @@ public sealed class ProcessGraph
         };
 
         var parent = FindLive(e.ParentProcessId, e.RelativeTime);
+        var depth = 1;
         if (parent is not null && parent != node)
         {
             node.ParentKey = parent.Key;
+            depth = _depth[parent.Key] + 1;
+        }
+        if (parent is not null && parent != node && depth <= MaxTreeDepth)
+        {
             parent.Children.Add(node);
         }
         else
         {
+            depth = 1;
             Roots.Add(node);
         }
+        _depth[key] = depth;
 
         _byKey[key] = node;
         if (!_byPid.TryGetValue(e.ProcessId, out var list)) _byPid[e.ProcessId] = list = [];
@@ -120,6 +136,7 @@ public sealed class ProcessGraph
     {
         if (Sample is null) return;
         foreach (var n in Sample.SelfAndDescendants()) n.InAnalyzedTree = true;
+        MarkContinuedChains();
 
         for (var pass = 0; pass < 5; pass++)
         {
@@ -143,7 +160,23 @@ public sealed class ProcessGraph
                     if (!d.InAnalyzedTree) { d.InAnalyzedTree = true; changed = true; }
                 }
             }
+            if (MarkContinuedChains()) changed = true;
             if (!changed) break;
         }
+    }
+
+    /// <summary>A chain continued as a new root (see <see cref="MaxTreeDepth"/>) belongs to the analyzed tree when its parent does.</summary>
+    private bool MarkContinuedChains()
+    {
+        var changed = false;
+        foreach (var root in Roots) // in start order, so a continuation's parent is settled before it
+        {
+            if (root.InAnalyzedTree || root.ParentKey is not { } pk || !_byKey.TryGetValue(pk, out var parent) || !parent.InAnalyzedTree) continue;
+            foreach (var n in root.SelfAndDescendants())
+            {
+                if (!n.InAnalyzedTree) { n.InAnalyzedTree = true; changed = true; }
+            }
+        }
+        return changed;
     }
 }

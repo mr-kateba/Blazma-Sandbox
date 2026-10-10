@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Avalonia.Threading;
 using Blazma.Analysis.Engine;
 using Blazma.Analysis.Pipeline;
 using Blazma.Analysis.Rules;
@@ -25,9 +26,34 @@ public sealed class ActiveAnalysis
     /// <summary>Extend or finish the run while it is analyzing (when the provider supports it).</summary>
     public required AnalysisControl Control { get; init; }
 
+    /// <summary>Raised on the UI thread with the newest progress (intermediate updates may be skipped).</summary>
     public event EventHandler<AnalysisProgress>? Progress;
     internal void Raise(AnalysisProgress p) => Progress?.Invoke(this, p);
     public AnalysisProgress? Last { get; internal set; }
+}
+
+/// <summary>
+/// Hands progress to the UI thread keeping only the newest value. The runner reports after every
+/// signal from the sandbox (thousands a second in a busy run); posting each one would flood the
+/// dispatcher and freeze the window, so at most one delivery is queued at a time and the latest
+/// value (including the final stage) is always the one delivered.
+/// </summary>
+internal sealed class LatestProgress<T>(Action<T> deliver, Action<Action> post) : IProgress<T> where T : class
+{
+    private T? _latest;
+    private int _queued;
+
+    public void Report(T value)
+    {
+        Volatile.Write(ref _latest, value);
+        if (Interlocked.Exchange(ref _queued, 1) == 0) post(Deliver);
+    }
+
+    private void Deliver()
+    {
+        Volatile.Write(ref _queued, 0);
+        if (Interlocked.Exchange(ref _latest, null) is { } value) deliver(value);
+    }
 }
 
 /// <summary>
@@ -41,6 +67,8 @@ public sealed class AnalysisCoordinator(
     ILoggerFactory loggers,
     ISecretProtector secrets)
 {
+    private readonly ILogger _logger = loggers.CreateLogger<AnalysisCoordinator>();
+
     public ActiveAnalysis? Active { get; private set; }
     public IReadOnlyList<string> RulePackErrors { get; private set; } = [];
 
@@ -159,7 +187,8 @@ public sealed class AnalysisCoordinator(
         var channel = Channel.CreateUnbounded<AnalysisEvent>(new UnboundedChannelOptions { SingleReader = true });
         var cts = new CancellationTokenSource();
         ActiveAnalysis? active = null;
-        var progress = new Progress<AnalysisProgress>(p => { if (active is not null) { active.Last = p; active.Raise(p); } });
+        var progress = new LatestProgress<AnalysisProgress>(p => { if (active is not null) { active.Last = p; active.Raise(p); } },
+            deliver => Dispatcher.UIThread.Post(deliver, DispatcherPriority.Background));
         var request = new AnalysisRequest
         {
             SamplePath = samplePath,
@@ -172,17 +201,59 @@ public sealed class AnalysisCoordinator(
             Reputation = reputation ?? [],
             Control = new AnalysisControl(),
         };
-        var task = Task.Run(() => runner.RunAsync(request, provider, progress, channel.Writer, cts.Token));
+        _logger.LogInformation("Starting analysis of {FileName} (SHA-256 {Sha256}) with provider {Provider}: profile {Profile}, duration {Duration}, network {Network}",
+            report.Sample.FileName, report.Sample.Sha256, provider.Id, options.ProfileId, options.Duration, options.Network);
+        var task = Task.Run(() => RunAndLogAsync(runner, request, provider, progress, channel.Writer, cts.Token));
         active = new ActiveAnalysis { FileName = report.Sample.FileName, Events = channel, Completion = task, Cancellation = cts, IsDemo = provider.IsDemo, Control = request.Control };
         Active = active;
         ActiveChanged?.Invoke(this, EventArgs.Empty);
         return active;
     }
 
+    /// <summary>The outcome of every run goes to the log, so a log file tells the whole story (the runner logs each stage change).</summary>
+    private async Task<AnalysisResult> RunAndLogAsync(AnalysisRunner runner, AnalysisRequest request, ISandboxProvider provider,
+        IProgress<AnalysisProgress> progress, ChannelWriter<AnalysisEvent> events, CancellationToken ct)
+    {
+        var file = request.Static.Sample.FileName;
+        try
+        {
+            var result = await runner.RunAsync(request, provider, progress, events, ct).ConfigureAwait(false);
+            _logger.LogInformation("Analysis {AnalysisId} of {FileName} completed: score {Score}, verdict {Verdict}, {EventCount} events, monitoring interrupted: {Interrupted}",
+                result.AnalysisId, file, result.Risk.Score, result.Risk.Verdict, result.Events.Count, result.MonitoringInterrupted);
+            return result;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("Analysis of {FileName} was cancelled by the user", file);
+            throw;
+        }
+        catch (AnalysisFailedException ex)
+        {
+            _logger.LogError(ex, "Analysis of {FileName} failed: {Reason}", file, ex.Reason);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Analysis of {FileName} failed unexpectedly: {Reason}", file, ex.Message);
+            throw;
+        }
+    }
+
     /// <summary>Dropped files and memory dumps are as hostile as the sample: they get the same out-of-process static analysis.</summary>
     private sealed class StaticWorkerInspector(AnalysisCoordinator owner) : IArtifactInspector
     {
-        public async Task<StaticReport?> InspectAsync(string path, string displayName, CancellationToken cancellationToken) =>
-            await owner.AnalyzeStaticAsync(path, cancellationToken).ConfigureAwait(false);
+        public async Task<StaticReport?> InspectAsync(string path, string displayName, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await owner.AnalyzeStaticAsync(path, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // The helper's own time limit, not the user: one slow artifact must not fail the whole analysis.
+                owner._logger.LogWarning("Static analysis of the artifact {Name} timed out; it is kept without analysis", displayName);
+                return null;
+            }
+        }
     }
 }

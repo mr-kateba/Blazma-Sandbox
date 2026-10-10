@@ -36,11 +36,19 @@ public sealed class ProcessNode
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)] // each node owns its list, so filling it in place is safe
     public List<ProcessNode> Children { get; } = [];
 
+    /// <summary>
+    /// This node and everything below it, depth first in child order. Iterative: a long chain of
+    /// processes (a sample that keeps relaunching itself) must not exhaust the stack.
+    /// </summary>
     public IEnumerable<ProcessNode> SelfAndDescendants()
     {
-        yield return this;
-        foreach (var child in Children)
-            foreach (var n in child.SelfAndDescendants())
-                yield return n;
+        var stack = new Stack<ProcessNode>();
+        stack.Push(this);
+        while (stack.Count > 0)
+        {
+            var node = stack.Pop();
+            yield return node;
+            for (var i = node.Children.Count - 1; i >= 0; i--) stack.Push(node.Children[i]);
+        }
     }
 }
