@@ -26,17 +26,20 @@ public static class Fmt
 
     public static string Date(DateTimeOffset when) => when.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-    public static string Duration(TimeSpan? d) => d is null ? "—" : d.Value.TotalMinutes >= 1
+    public static string Duration(TimeSpan? d) => d is null ? "—" : Ltr(d.Value.TotalMinutes >= 1
         ? string.Create(CultureInfo.InvariantCulture, $"{(int)d.Value.TotalMinutes}m {d.Value.Seconds:00}s")
-        : string.Create(CultureInfo.InvariantCulture, $"{d.Value.TotalSeconds:0}s");
+        : string.Create(CultureInfo.InvariantCulture, $"{d.Value.TotalSeconds:0}s"));
 
-    public static string Size(long bytes) => bytes switch
+    public static string Size(long bytes) => Ltr(bytes switch
     {
         >= 1L << 30 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 30):0.0} GB"),
         >= 1L << 20 => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 20):0.0} MB"),
         >= 1L << 10 => string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0:0.0} KB"),
         _ => string.Create(CultureInfo.InvariantCulture, $"{bytes} B"),
-    };
+    });
+
+    /// <summary>Keeps "4.0 KB" and "2m 00s" in reading order when the interface is Arabic.</summary>
+    private static string Ltr(string value) => Loc.Instance.IsArabic ? Loc.Isolate(value) : value;
 
     public static string ShortHash(string hash) => hash.Length > 16 ? hash[..8] + "…" + hash[^8..] : hash;
 

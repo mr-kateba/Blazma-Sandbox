@@ -25,14 +25,14 @@
     </Grid>
 
     <!-- Counters -->
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*,*,*,1.3*" Margin="0,0,0,16">
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*,*,*,Auto" Margin="0,0,0,16">
       <Border Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T Elapsed}" /><TextBlock Classes="num" Text="{Binding Elapsed}" /></StackPanel></Border>
       <Border Grid.Column="1" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T EventsLabel}" /><TextBlock Classes="num" Text="{Binding EventCount}" /></StackPanel></Border>
       <Border Grid.Column="2" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T ProcessesLabel}" /><TextBlock Classes="num" Text="{Binding ProcessCount}" /></StackPanel></Border>
       <Border Grid.Column="3" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T ConnectionsLabel}" /><TextBlock Classes="num" Text="{Binding ConnectionCount}" /></StackPanel></Border>
-      <Border Grid.Column="4" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T SandboxStatusLabel}" /><TextBlock Text="{Binding StageText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" /></StackPanel></Border>
-      <Border Grid.Column="5" Classes="card">
-        <Grid ColumnDefinitions="64,*">
+      <Border Grid.Column="4" Classes="card" Margin="0,0,10,0"><StackPanel Spacing="2"><TextBlock Classes="section" Text="{l:T StatSandbox}" /><TextBlock Text="{Binding StageText}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,6,0,0" /></StackPanel></Border>
+      <Border Grid.Column="5" Classes="card" MinWidth="230">
+        <Grid ColumnDefinitions="64,Auto">
           <Panel Width="58" Height="58">
             <c:ScoreRing Value="{Binding LiveScore}" Verdict="{Binding LiveVerdict}" Thickness="6" />
             <TextBlock Classes="mono" Text="{Binding LiveScore}" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center" />

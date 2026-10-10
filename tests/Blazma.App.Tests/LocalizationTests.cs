@@ -97,6 +97,25 @@ public partial class LocalizationTests
         Assert.Equal(Avalonia.Media.FlowDirection.LeftToRight, L.FlowDirection);
     }
 
+    [Fact]
+    public void Arabic_sentences_keep_technical_values_in_reading_order()
+    {
+        L.SetLanguage(AppLanguage.Arabic);
+        try
+        {
+            // Sizes, paths and counts are anchored left to right; Arabic values are left alone.
+            Assert.Equal("\u200E4.0 KB\u200E", Blazma.App.Services.Fmt.Size(4096));
+            var line = Loc.F("StorageDetail", @"C:\Data\", "4.0 KB");
+            Assert.Contains("\u200EC:\\Data\\\u200E", line, StringComparison.Ordinal);
+            Assert.Equal("غير معروف", Loc.Isolate("غير معروف"));
+            Assert.True(Loc.HasArabic("ملف تنفيذي لـ Windows"));
+            Assert.False(Loc.HasArabic("14.7 MB (15,413,248 B)"));
+        }
+        finally { L.SetLanguage(AppLanguage.English); }
+        Assert.Equal("4.0 KB", Blazma.App.Services.Fmt.Size(4096));
+        Assert.Equal("YARA rules: 3 · files: 1", Loc.F("YaraSummary", 3, 1));
+    }
+
     [GeneratedRegex(@"\{l:T (\w+)\}")]
     private static partial Regex KeyRegex();
 

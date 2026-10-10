@@ -312,7 +312,7 @@ public sealed partial class ReportViewModel : PageViewModel
         ProcessDetails.Add(new(Loc.T("CommandLine"), n.CommandLine ?? "—", true));
         ProcessDetails.Add(new(Loc.T("StartTime"), Fmt.Relative(n.Start), true));
         ProcessDetails.Add(new(Loc.T("EndTime"), n.End is { } end ? Fmt.Relative(end) + (n.ExitCode is { } code ? $" (exit {code})" : string.Empty) : Loc.T("StillRunning"), true));
-        ProcessDetails.Add(new(Loc.T("IntegrityLevel"), n.IntegrityLevel ?? "—"));
+        ProcessDetails.Add(new(Loc.T("IntegrityLevel"), n.IntegrityLevel is { Length: > 0 } level && Loc.Instance.Has("Integrity" + level) ? Loc.T("Integrity" + level) : n.IntegrityLevel ?? "—"));
         ProcessDetails.Add(new(Loc.T("User"), n.User ?? "—"));
         ProcessDetails.Add(new(Loc.T("Architecture"), n.Architecture ?? "—"));
         ProcessDetails.Add(new(Loc.T("Signature"), n.Signer ?? Loc.T("NotReported")));

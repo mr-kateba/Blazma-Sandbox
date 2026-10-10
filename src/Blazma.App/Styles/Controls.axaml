@@ -382,6 +382,11 @@
     <Setter Property="Stretch" Value="Uniform" />
     <Setter Property="Stroke" Value="{DynamicResource MutedBrush}" />
   </Style>
+  <!-- Values that are entirely technical (hashes, paths, sizes) keep their own order in Arabic. -->
+  <Style Selector=":is(TextBlock).ltr">
+    <Setter Property="FlowDirection" Value="LeftToRight" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
   <!-- Icons never mirror in RTL. -->
   <Style Selector="Path.icon.fixed">
     <Setter Property="FlowDirection" Value="LeftToRight" />

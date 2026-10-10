@@ -79,7 +79,10 @@ public sealed partial class ProcessItem : ObservableObject
     [ObservableProperty] private bool _isExpanded = true;
 }
 
-public sealed record DetailRow(string Label, string Value, bool Mono = false);
+public sealed record DetailRow(string Label, string Value, bool Mono = false)
+{
+    public bool Ltr => !Loc.HasArabic(Value);
+}
 
 public sealed class FileRow(AnalysisEvent e, bool executed)
 {
