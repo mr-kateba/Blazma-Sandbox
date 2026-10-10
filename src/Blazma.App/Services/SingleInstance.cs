@@ -107,9 +107,17 @@ public sealed class SingleInstance : IDisposable
                 {
                     return;
                 }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
                 catch (Exception ex) when (ex is IOException or OperationCanceledException or UnauthorizedAccessException)
                 {
-                    // A client that misbehaved or timed out; keep serving the next one.
+                    // A client that misbehaved or timed out; keep serving the next one. A short pause
+                    // keeps a pipe that cannot be created from spinning the CPU.
+                    try { await Task.Delay(250, _stop.Token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { return; }
+                    catch (ObjectDisposedException) { return; }
                 }
             }
         });

@@ -222,7 +222,8 @@ public static class ReportIntegrity
     /// <summary>Checks a JSON report's content hash. Returns false if the content was edited.</summary>
     public static bool Verify(string json)
     {
-        using var doc = JsonDocument.Parse(json);
+        // Deep process trees nest well past the default depth of 64 (the store allows 256).
+        using var doc = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 256 });
         if (!doc.RootElement.TryGetProperty("content", out var content)) return false;
         if (!doc.RootElement.TryGetProperty("integrity", out var integrity) || !integrity.TryGetProperty("contentSha256", out var expected)) return false;
         var actual = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(content.GetRawText())));
