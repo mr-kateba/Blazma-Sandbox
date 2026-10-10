@@ -40,9 +40,10 @@ internal sealed class ScreenCapturer(EventSink sink, int intervalSeconds, int ma
             var (pixels, w, h) = FrameScaler.Downscale(frame.Pixels, frame.Width, frame.Height, maxWidth);
             sink.WriteSigned(Protocol.ScreenshotName(++_index), RawFrame.Encode(w, h, Math.Max(0, sink.NowRelativeMs), pixels));
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException or OutOfMemoryException)
+        catch (Exception ex)
         {
-            // A missed screenshot is not worth failing the run for.
+            // A missed screenshot is not worth failing the run for; this runs on a timer, where an exception would end the agent.
+            AgentLog.Limited("screenshot", "A screenshot failed", ex);
         }
         finally
         {

@@ -51,9 +51,11 @@ internal sealed class DnsRedirector(string hostsPath, Action<string> note) : IDi
         {
             if (HostsFile.Add(hostsPath, batch) > 0) DnsFlushResolverCache();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex)
         {
-            note("Could not update the hosts file for the simulated internet.");
+            // Runs on a timer, where an exception would end the agent.
+            AgentLog.Limited("hosts-file", "Updating the hosts file failed", ex);
+            if (ex is IOException or UnauthorizedAccessException) note("Could not update the hosts file for the simulated internet.");
         }
     }
 

@@ -3,6 +3,10 @@
     Runs ONLY inside the analysis sandbox. It references nothing from the host except
     Blazma.Contracts. Published self-contained for win-x64 because the sandbox has no
     .NET runtime:  dotnet publish src/Blazma.Agent -c Release -r win-x64
+    The result is a plain folder with every file at its top level, NOT a single file: a
+    single-file app has no assembly location (TraceEvent looks for its native helpers next to
+    its DLL) and extracts native libraries at startup, while the agent runs from a read-only
+    folder into which the host copies only the files at the top of the agent folder.
   -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,9 +14,7 @@
     <AssemblyName>Blazma.Agent</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
-    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</EnableCompressionInSingleFile>
+    <PublishSingleFile>false</PublishSingleFile>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <NoWarn>$(NoWarn);CA1416</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

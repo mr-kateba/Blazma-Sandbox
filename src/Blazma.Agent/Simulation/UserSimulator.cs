@@ -24,7 +24,11 @@ internal sealed class UserSimulator(Action<string> note) : IDisposable
 
     public void Start()
     {
-        _mouse = new Timer(_ => MoveMouse(), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+        _mouse = new Timer(_ =>
+        {
+            try { MoveMouse(); }
+            catch (Exception ex) { AgentLog.Limited("simulated-mouse", "Moving the mouse failed", ex); }
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
         _buttons = new Timer(_ => PressButtons(), null, TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(3));
     }
 
@@ -66,8 +70,10 @@ internal sealed class UserSimulator(Action<string> note) : IDisposable
                 if (next.Hwnd != 0) Click(next.Hwnd, next.Text, onlyOnce: false);
             }
         }
-        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        catch (Exception ex)
         {
+            // Runs on a timer, where an exception would end the agent.
+            AgentLog.Limited("simulated-buttons", "Pressing installer buttons failed", ex);
         }
         finally
         {
