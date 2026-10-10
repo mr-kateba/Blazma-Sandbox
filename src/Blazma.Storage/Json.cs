@@ -22,5 +22,9 @@ public static class BlazmaJson
         // Reports are standalone files (never embedded in HTML), so keep Arabic and paths readable.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters = { new JsonStringEnumConverter() },
+        // Process trees nest two levels per process (node, children). The default of 64 made a run
+        // whose sample spawned a chain of about 30 processes fail while saving; the graph keeps
+        // chains to ProcessGraph.MaxTreeDepth (100) levels, which fits with room to spare.
+        MaxDepth = 256,
     };
 }

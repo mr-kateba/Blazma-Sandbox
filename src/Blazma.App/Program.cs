@@ -21,8 +21,8 @@ internal static class Program
             return 0;
         App.Instance = instance.IsFirst ? instance : null;
 
-        AppDomain.CurrentDomain.UnhandledException += (_, e) => App.LogFatal(e.ExceptionObject as Exception);
-        TaskScheduler.UnobservedTaskException += (_, e) => { App.LogFatal(e.Exception); e.SetObserved(); };
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => App.LogFatal(e.ExceptionObject as Exception, "Background thread", e.IsTerminating);
+        TaskScheduler.UnobservedTaskException += (_, e) => { App.LogUnobserved(e.Exception); e.SetObserved(); };
         return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

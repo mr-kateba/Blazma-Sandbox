@@ -115,7 +115,19 @@ public sealed partial class MainViewModel : ViewModelBase
 
     public async Task RefreshSandboxStatusAsync()
     {
-        var availability = await _coordinator.Provider(WindowsSandboxProvider.ProviderId).CheckAvailabilityAsync(CancellationToken.None);
+        ProviderAvailability availability;
+        try
+        {
+            availability = await _coordinator.Provider(WindowsSandboxProvider.ProviderId).CheckAvailabilityAsync(CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // A status badge must never turn the end of an analysis (or a language switch) into an error.
+            _logger.LogWarning(ex, "Could not check the Windows Sandbox status");
+            SandboxReady = false;
+            SandboxStatus = Loc.T("SandboxNeedsSetup");
+            return;
+        }
         SandboxReady = availability.IsReady;
         SandboxStatus = availability.Readiness switch
         {
@@ -194,7 +206,17 @@ public sealed partial class MainViewModel : ViewModelBase
     public async Task StartAnalysisAsync(string path, StaticReport report, AnalysisOptions options, ISandboxProvider provider, IReadOnlyList<ReputationResult>? reputation = null)
     {
         _last = (path, report, options, provider.Id);
-        var active = _coordinator.Start(path, report, options, provider, reputation);
+        ActiveAnalysis active;
+        try
+        {
+            active = _coordinator.Start(path, report, options, provider, reputation);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _logger.LogError(ex, "The analysis of {FileName} could not start", report.Sample.FileName);
+            await Dialogs.ErrorAsync(Loc.T("AnalysisStartFailedTitle"), LiveAnalysisViewModel.FailureText(ex), ex.GetType().FullName, canRetry: false);
+            return;
+        }
         AnalysisRunning = true;
         var live = Page<LiveAnalysisViewModel>();
         live.Attach(active);

@@ -26,6 +26,7 @@ namespace Blazma.App;
 public partial class App : Application
 {
     private static Serilog.Core.Logger? _log;
+    private static string? _logsFolder;
 
     public static IServiceProvider? Services { get; private set; }
 
@@ -40,6 +41,7 @@ public partial class App : Application
         paths.EnsureCreated();
         var store = new SettingsStore(paths);
         var settings = store.Load();
+        _logsFolder = paths.Logs;
         _log = new LoggerConfiguration()
             .MinimumLevel.Is(settings.Advanced.LogLevel switch
             {
@@ -115,7 +117,7 @@ public partial class App : Application
             var main = services.GetRequiredService<MainViewModel>();
             Dispatcher.UIThread.UnhandledException += (_, e) =>
             {
-                LogFatal(e.Exception);
+                LogFatal(e.Exception, "UI thread");
                 e.Handled = true;
                 _ = main.Dialogs.ErrorAsync(Loc.T("UnexpectedTitle"), e.Exception.Message, e.Exception.GetType().FullName, canRetry: false);
             };
@@ -145,15 +147,68 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            LogFatal(ex);
+            LogFatal(ex, "Startup");
             splash.ShowError(ex.Message);
         }
     }
 
-    internal static void LogFatal(Exception? ex)
+    /// <summary>
+    /// Records an exception nothing else handled. Besides the structured log, the full exception
+    /// (type, message, stack and every inner exception) goes synchronously to its own
+    /// <c>crash-*.txt</c> next to the logs, so a crash that ends the process still leaves evidence.
+    /// When the process is ending, the log is closed so everything buffered reaches the disk.
+    /// </summary>
+    internal static void LogFatal(Exception? ex, string source, bool terminating = false)
     {
         if (ex is null) return;
-        _log?.Fatal(ex, "Unhandled exception");
+        try { _log?.Fatal(ex, "Unhandled exception ({Source}, terminating: {Terminating})", source, terminating); }
+        catch (Exception) { /* logging must never add a second failure */ }
+        WriteCrashFile(ex, source, terminating);
+        if (terminating)
+        {
+            try { _log?.Dispose(); }
+            catch (Exception) { /* the process is ending anyway */ }
+        }
+    }
+
+    /// <summary>A failed background task that nothing awaited: logged, never fatal.</summary>
+    internal static void LogUnobserved(Exception? ex)
+    {
+        if (ex is null) return;
+        try { _log?.Error(ex, "Unobserved background task failure"); }
+        catch (Exception) { /* logging must never add a second failure */ }
+    }
+
+    internal static string? WriteCrashFile(Exception ex, string source, bool terminating, string? folder = null)
+    {
+        try
+        {
+            folder ??= _logsFolder ?? new BlazmaPaths().Logs;
+            Directory.CreateDirectory(folder);
+            var now = DateTimeOffset.Now;
+            var path = Path.Combine(folder, $"crash-{now:yyyyMMdd-HHmmss-fff}-{Environment.ProcessId}.txt");
+            var text = string.Join(Environment.NewLine,
+                $"Blazma Sandbox {typeof(App).Assembly.GetName().Version?.ToString(3)}",
+                $"Time: {now:O}",
+                $"Source: {source}{(terminating ? " (process terminating)" : string.Empty)}",
+                $"OS: {Environment.OSVersion.VersionString} ({System.Runtime.InteropServices.RuntimeInformation.OSArchitecture})",
+                $".NET: {Environment.Version}",
+                string.Empty,
+                ex.ToString(),
+                string.Empty);
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.WriteThrough))
+            using (var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false)))
+            {
+                writer.Write(text);
+                writer.Flush();
+                stream.Flush(flushToDisk: true);
+            }
+            return path;
+        }
+        catch (Exception)
+        {
+            return null; // nowhere left to report to
+        }
     }
 }
 

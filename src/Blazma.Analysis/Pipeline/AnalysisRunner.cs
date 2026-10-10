@@ -369,7 +369,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
             using var s = File.OpenRead(path);
             return s.ReadByte() == 'M' && s.ReadByte() == 'Z';
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return false;
         }
