@@ -78,6 +78,7 @@ public sealed class AnalysisEngine(RuleEngine rules)
         result.Chains = CorrelationEngine.BuildChains(events, graph, persistence, network);
         result.Findings = findings;
         result.Risk = RiskEngine.Assess(findings, settings.Thresholds);
+        result.NetworkDestinations = NetworkDestinations.Build(events, graph, network);
         result.Indicators = IndicatorExtractor.Extract(result.Sample, events, graph, persistence, findings, settings.Watchlist);
         result.SystemChanges = baseline is not null && after is not null ? SnapshotDiffer.Diff(baseline, after) : null;
     }

@@ -25,6 +25,7 @@ public static class RiskEngine
         [FindingCategory.Signature] = 40,
         [FindingCategory.Reputation] = 30,
         [FindingCategory.Memory] = 30,
+        [FindingCategory.CredentialAccess] = 40,
     };
 
     public static RiskAssessment Assess(IReadOnlyList<Finding> findings, RiskThresholds thresholds)

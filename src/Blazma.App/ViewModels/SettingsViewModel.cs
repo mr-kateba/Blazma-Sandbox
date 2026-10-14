@@ -224,6 +224,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     public bool VirusTotalEnabled { get => S.Integrations.VirusTotalEnabled; set { S.Integrations.VirusTotalEnabled = value; Changed(); } }
     public bool MalwareBazaarEnabled { get => S.Integrations.MalwareBazaarEnabled; set { S.Integrations.MalwareBazaarEnabled = value; Changed(); } }
     public bool LookupAutomatically { get => S.Integrations.LookupAutomatically; set { S.Integrations.LookupAutomatically = value; Changed(); } }
+    public bool ResolveContactedDomains { get => S.Integrations.ResolveContactedDomains; set { S.Integrations.ResolveContactedDomains = value; Changed(); } }
     public bool HasVirusTotalKey => !string.IsNullOrEmpty(S.Integrations.VirusTotalApiKey);
     public bool HasMalwareBazaarKey => !string.IsNullOrEmpty(S.Integrations.MalwareBazaarApiKey);
     public bool SecretsAreWeak => !_secrets.IsStrong;

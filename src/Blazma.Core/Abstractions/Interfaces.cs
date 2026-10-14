@@ -171,6 +171,19 @@ public interface IReputationProvider
     Task<ReputationResult> LookupAsync(string sha256, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Opt-in: looks up the current addresses of domains an analysis contacted, from this
+/// computer, after the analysis. Implementations send domain names only, nothing else.
+/// </summary>
+public interface IHostDomainResolver
+{
+    /// <summary>False unless the user turned the lookup on.</summary>
+    bool IsEnabled { get; }
+
+    /// <summary>Never throws for a failed lookup: each domain gets its own result (Failed with a reason).</summary>
+    Task<IReadOnlyList<HostResolution>> ResolveAsync(IEnumerable<string> domains, CancellationToken cancellationToken);
+}
+
 /// <summary>Scans bytes with the user's YARA rules.</summary>
 public interface IYaraScanner
 {

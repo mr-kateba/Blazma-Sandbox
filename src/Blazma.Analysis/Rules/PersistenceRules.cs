@@ -11,6 +11,13 @@ public abstract class PersistenceRule : Rule
 {
     protected abstract IReadOnlySet<PersistenceTechnique> Techniques { get; }
 
+    /// <summary>
+    /// Whether an entry that starts a program installed under Program Files counts for less. Only
+    /// installers (running as administrator) can put a program there, and installed applications
+    /// routinely start with Windows, keep a service or schedule their updater.
+    /// </summary>
+    protected virtual bool ReducedForInstalledPrograms => true;
+
     public override Finding? Evaluate(RuleContext context)
     {
         // System processes acting outside the tree only count when they point at something the tree dropped.
@@ -29,8 +36,19 @@ public abstract class PersistenceRule : Rule
             EventSequences = p.EventSequences,
         }).ToList();
 
+        var processes = hits.Where(h => h.Process is not null).Select(h => h.Process!.Value);
+        var explanation = PersistenceCatalog.Explain(hits[0].Technique);
+        if (ReducedForInstalledPrograms && hits.All(h => InstallerPaths.IsInstalledProgramCommand(h.Value)))
+        {
+            var reduced = Build(evidence, new LocalizedText(
+                explanation.En + " It starts a program installed under Program Files, a folder only administrators can change. Installed applications commonly start this way, so it counts for less.",
+                explanation.Ar + " ويشغّل برنامجًا مثبّتًا داخل مجلد Program Files، وهو مجلد لا يعدّله إلا المسؤول. التطبيقات المثبّتة تبدأ بهذه الطريقة عادةً، لذا يُحتسب بوزن أقل."),
+                processes, hits.Min(h => h.Time), Severity.Low);
+            return reduced is null ? null : reduced with { Points = Math.Max(1, (int)Math.Round(Metadata.Weight / 3.0, MidpointRounding.AwayFromZero)) };
+        }
+
         var severity = hits.Any(h => h.PointsToDroppedFile) && Metadata.Severity < Severity.High ? Severity.High : Metadata.Severity;
-        return Build(evidence, PersistenceCatalog.Explain(hits[0].Technique), hits.Where(h => h.Process is not null).Select(h => h.Process!.Value), hits.Min(h => h.Time), severity);
+        return Build(evidence, explanation, processes, hits.Min(h => h.Time), severity);
     }
 }
 
@@ -99,6 +117,8 @@ public sealed class SystemHijackRule : PersistenceRule
         Weight = 30,
         AttackTechniques = ["T1547.004", "T1546.012", "T1546.010"],
     };
+
+    protected override bool ReducedForInstalledPrograms => false;
 
     protected override IReadOnlySet<PersistenceTechnique> Techniques { get; } = new HashSet<PersistenceTechnique>
     {

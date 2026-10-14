@@ -372,6 +372,103 @@
                   <TextBlock Classes="caption" Text="{l:T NetworkMetadataNote}" />
                 </Border>
                 <TextBlock Classes="caption" Text="{l:T NoNetwork}" IsVisible="{Binding HasNoNetwork}" />
+
+                <!-- Addresses the program tried to reach: one row per destination, status as shape + colour + word -->
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="h3" Text="{l:T DestTitle}" />
+                  <TextBlock Classes="caption" Text="{l:T DestHelp}" />
+                  <WrapPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+                      <Ellipse Width="11" Height="11" Fill="{DynamicResource DangerBrush}" VerticalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="{l:T DestStatusConnected}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+                      <Path Data="M6,0.5 L11.5,6 L6,11.5 L0.5,6 Z" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="{l:T DestStatusSimulated}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+                      <Path Data="M1.5,1.5 L10.5,10.5 M10.5,1.5 L1.5,10.5" Stroke="{DynamicResource WarnBrush}" StrokeThickness="2" VerticalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="{l:T DestStatusFailed}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+                      <Ellipse Width="10" Height="10" Stroke="{DynamicResource WarnBrush}" StrokeThickness="1.6" VerticalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="{l:T DestStatusAttempted}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+                      <Rectangle Width="10" Height="10" Stroke="{DynamicResource FaintBrush}" StrokeThickness="1.4" StrokeDashArray="2,1.5" VerticalAlignment="Center" />
+                      <TextBlock Classes="caption" Text="{l:T DestStatusLookupOnly}" />
+                    </StackPanel>
+                  </WrapPanel>
+                  <Border Classes="card" Padding="12" IsVisible="{Binding HasNoDestinations}">
+                    <TextBlock Classes="caption" Text="{Binding DestinationsEmptyText}" />
+                  </Border>
+                  <Border Classes="card" Padding="6" IsVisible="{Binding HasDestinations}">
+                    <StackPanel FlowDirection="LeftToRight">
+                      <Grid ColumnDefinitions="1.5*,1.5*,46,60,2.1*,1.3*,62,86,30" Margin="8,4">
+                        <TextBlock Classes="th" Text="{l:T Status}" />
+                        <TextBlock Grid.Column="1" Classes="th" Text="{l:T DestAddress}" />
+                        <TextBlock Grid.Column="2" Classes="th" Text="{l:T Port}" />
+                        <TextBlock Grid.Column="3" Classes="th" Text="{l:T Protocol}" />
+                        <TextBlock Grid.Column="4" Classes="th" Text="{l:T Domain}" />
+                        <TextBlock Grid.Column="5" Classes="th" Text="{l:T Process}" />
+                        <TextBlock Grid.Column="6" Classes="th" Text="{l:T DestCount}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="7" Classes="th" Text="{l:T DestData}" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                      <ItemsControl ItemsSource="{Binding Destinations}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:DestinationRow">
+                            <Grid ColumnDefinitions="1.5*,1.5*,46,60,2.1*,1.3*,62,86,30" RowDefinitions="Auto,Auto" Margin="8,5">
+                              <StackPanel Grid.RowSpan="2" Spacing="2" Margin="0,0,8,0">
+                                <Grid ColumnDefinitions="18,*">
+                                  <Panel Width="12" Height="12" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,3,0,0">
+                                    <Ellipse Width="11" Height="11" Fill="{DynamicResource DangerBrush}" IsVisible="{Binding IsConnected}" />
+                                    <Path Data="M6,0.5 L11.5,6 L6,11.5 L0.5,6 Z" Fill="{DynamicResource AccentBrush}" IsVisible="{Binding IsSimulated}" />
+                                    <Path Data="M1.5,1.5 L10.5,10.5 M10.5,1.5 L1.5,10.5" Stroke="{DynamicResource WarnBrush}" StrokeThickness="2" IsVisible="{Binding IsFailed}" />
+                                    <Ellipse Width="10" Height="10" Stroke="{DynamicResource WarnBrush}" StrokeThickness="1.6" IsVisible="{Binding IsAttempted}" />
+                                    <Rectangle Width="10" Height="10" Stroke="{DynamicResource FaintBrush}" StrokeThickness="1.4" StrokeDashArray="2,1.5" IsVisible="{Binding IsLookupOnly}" />
+                                  </Panel>
+                                  <TextBlock Grid.Column="1" Text="{Binding StatusText}" FontWeight="SemiBold" TextWrapping="Wrap" ToolTip.Tip="{Binding StatusText}" />
+                                </Grid>
+                                <TextBlock Classes="mono faint" Text="{Binding Time}" FontSize="11" Margin="18,0,0,0" />
+                              </StackPanel>
+                              <SelectableTextBlock Grid.Column="1" Classes="mono" Text="{Binding Address}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Address}" Margin="0,0,8,0" />
+                              <TextBlock Grid.Column="2" Classes="mono" Text="{Binding Port}" />
+                              <TextBlock Grid.Column="3" Classes="muted" Text="{Binding Protocol}" TextTrimming="CharacterEllipsis" />
+                              <SelectableTextBlock Grid.Column="4" Classes="mono" Text="{Binding Domain}" Foreground="{DynamicResource AccentTextBrush}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Domain}" Margin="0,0,8,0" />
+                              <TextBlock Grid.Column="5" Text="{Binding Process}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Process}" Margin="0,0,8,0" />
+                              <TextBlock Grid.Column="6" Classes="mono" Text="{Binding Count}" />
+                              <TextBlock Grid.Column="7" Classes="mono faint" Text="{Binding Data}" FontSize="11" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Data}" />
+                              <Button Grid.Column="8" Classes="ghost" Padding="6,2" VerticalAlignment="Top" ToolTip.Tip="{l:T Copy}"
+                                      Command="{Binding $parent[UserControl].((vm:ReportViewModel)DataContext).CopyValueCommand}" CommandParameter="{Binding CopyText}">
+                                <Path Classes="icon fixed" Data="{StaticResource IconCopy}" Width="12" Height="12" />
+                              </Button>
+                              <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="7" Spacing="2" Margin="0,2,0,0">
+                                <TextBlock Classes="caption" Text="{Binding StatusDetail}" IsVisible="{Binding HasStatusDetail}" FontSize="11" />
+                                <TextBlock Classes="caption" Text="{Binding ResolvedLater}" IsVisible="{Binding HasResolvedLater}" FontSize="11" />
+                              </StackPanel>
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                  <StackPanel Spacing="6" IsVisible="{Binding HasHostResolutions}">
+                    <TextBlock Classes="section" Text="{l:T HostLookupTitle}" />
+                    <TextBlock Classes="caption" Text="{l:T HostLookupNote}" Foreground="{DynamicResource WarnBrush}" />
+                    <Border Classes="card" Padding="6">
+                      <ItemsControl ItemsSource="{Binding HostResolutions}" FlowDirection="LeftToRight">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:HostResolutionRow">
+                            <Grid ColumnDefinitions="2*,3*" Margin="8,4">
+                              <SelectableTextBlock Classes="mono" Text="{Binding Domain}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Domain}" Margin="0,0,8,0" />
+                              <SelectableTextBlock Grid.Column="1" Classes="mono" Text="{Binding Result}" TextWrapping="Wrap" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </Border>
+                  </StackPanel>
+                </StackPanel>
                 <Grid ColumnDefinitions="*,16,*">
                   <StackPanel Spacing="8">
                     <TextBlock Classes="section" Text="{l:T ProcessDomainMap}" />
@@ -416,13 +513,13 @@
                       <ItemsControl ItemsSource="{Binding Dns}" FlowDirection="LeftToRight">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:DnsRow">
-                            <Grid ColumnDefinitions="88,*,130" Margin="8,4">
+                            <Grid ColumnDefinitions="80,*,110" Margin="8,4">
                               <TextBlock Classes="mono faint" Text="{Binding Time}" />
-                              <StackPanel Grid.Column="1">
-                                <TextBlock Classes="mono" Text="{Binding Domain}" />
-                                <TextBlock Classes="caption" Text="{Binding Result}" />
+                              <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                <TextBlock Classes="mono" Text="{Binding Domain}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Domain}" />
+                                <TextBlock Classes="caption" Text="{Binding Result}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Result}" />
                               </StackPanel>
-                              <TextBlock Grid.Column="2" Text="{Binding Process}" Classes="muted" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="2" Text="{Binding Process}" Classes="muted" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Process}" />
                             </Grid>
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>

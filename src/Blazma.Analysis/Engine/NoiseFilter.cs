@@ -1,5 +1,6 @@
 using Blazma.Analysis.Text;
 using Blazma.Core.Events;
+using Blazma.Core.Processes;
 
 namespace Blazma.Analysis.Engine;
 
@@ -8,11 +9,44 @@ namespace Blazma.Analysis.Engine;
 /// constantly. Events outside the sample's process tree are treated as background noise,
 /// except system-level effects in sensitive locations (persistence keys, service and task
 /// stores), which are kept whoever performed them because system processes often act on
-/// a sample's behalf.
+/// a sample's behalf. Processes that never act for another program (Defender, Windows Update,
+/// Edge's updater, the shell's hosts, telemetry, licensing, the agent itself) are dropped
+/// entirely when they are outside the tree.
 /// </summary>
 public static class NoiseFilter
 {
     public sealed record Result(IReadOnlyList<AnalysisEvent> Kept, int Suppressed);
+
+    /// <summary>
+    /// Windows Sandbox background programs. Deliberately absent: services.exe, svchost.exe,
+    /// taskhostw.exe, WmiPrvSE.exe, dllhost.exe, msiexec.exe and explorer.exe, which do work that
+    /// other programs ask for (services, tasks, WMI, COM, installs, shell launches).
+    /// </summary>
+    private static readonly HashSet<string> BackgroundProcesses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Microsoft Defender and Windows Security
+        "MsMpEng.exe", "MpCmdRun.exe", "NisSrv.exe", "MpDefenderCoreService.exe", "MsSense.exe", "smartscreen.exe",
+        "SecurityHealthService.exe", "SecurityHealthSystray.exe", "SecurityHealthHost.exe", "SgrmBroker.exe",
+        // Windows Update and servicing
+        "wuauclt.exe", "usoclient.exe", "MoUsoCoreWorker.exe", "WaaSMedicAgent.exe", "SIHClient.exe", "TiWorker.exe", "TrustedInstaller.exe", "UsoCoreWorker.exe",
+        // Edge and its updater, OneDrive
+        "MicrosoftEdgeUpdate.exe", "msedgeupdate.exe", "MicrosoftEdgeUpdateCore.exe", "elevation_service.exe", "OneDrive.exe", "OneDriveSetup.exe", "FileCoAuth.exe",
+        // Shell, search and input hosts
+        "SearchHost.exe", "SearchApp.exe", "SearchIndexer.exe", "SearchProtocolHost.exe", "SearchFilterHost.exe", "StartMenuExperienceHost.exe",
+        "RuntimeBroker.exe", "ShellExperienceHost.exe", "TextInputHost.exe", "ctfmon.exe", "LockApp.exe", "Widgets.exe", "WidgetService.exe",
+        "PhoneExperienceHost.exe", "backgroundTaskHost.exe", "UserOOBEBroker.exe", "dasHost.exe", "fontdrvhost.exe", "dwm.exe", "audiodg.exe",
+        // Telemetry, compatibility, licensing, error reporting
+        "CompatTelRunner.exe", "DeviceCensus.exe", "sppsvc.exe", "SppExtComObj.Exe", "wermgr.exe", "WerFault.exe",
+        // Windows Sandbox container service, console hosts outside the tree, the agent and its packet capture
+        "CExecSvc.exe", "conhost.exe", "Blazma.Agent.exe", "pktmon.exe",
+    };
+
+    /// <summary>Install folders of the same background programs (their helpers have many names).</summary>
+    private static readonly string[] BackgroundFolders =
+    [
+        @"\Microsoft\Windows Defender\", @"\Windows Defender\", @"\Microsoft\EdgeUpdate\", @"\Microsoft\Edge\Application\", @"\Microsoft\EdgeWebView\",
+        @"\Windows\SoftwareDistribution\", @"\Windows\SystemApps\",
+    ];
 
     public static Result Apply(IReadOnlyList<AnalysisEvent> events, ProcessGraph graph, bool suppressBackground, IReadOnlyCollection<string> allowlist)
     {
@@ -32,7 +66,7 @@ public static class NoiseFilter
                 continue;
             }
 
-            if (canScope && !KeepEvenOutsideTree(e) && node?.InAnalyzedTree != true)
+            if (canScope && node?.InAnalyzedTree != true && (!KeepEvenOutsideTree(e) || IsKnownBackground(node, e)))
             {
                 suppressed++;
                 continue;
@@ -41,6 +75,17 @@ public static class NoiseFilter
             kept.Add(e);
         }
         return new Result(kept, suppressed);
+    }
+
+    /// <summary>A Windows Sandbox background program or the agent: never acts for the sample, so none of its activity is evidence.</summary>
+    public static bool IsKnownBackground(ProcessNode? node, AnalysisEvent e)
+    {
+        if (e.Category == EventCategory.System) return false;
+        var name = node?.Name is { Length: > 0 } n ? n : e.ProcessName;
+        if (!string.IsNullOrEmpty(name) && BackgroundProcesses.Contains(name)) return true;
+        if (node?.ImagePath is { } image && BackgroundFolders.Any(f => image.Contains(f, StringComparison.OrdinalIgnoreCase))) return true;
+        // The agent's launcher: cmd.exe running blazma-agent.cmd.
+        return node?.CommandLine?.Contains("blazma-agent", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static bool KeepEvenOutsideTree(AnalysisEvent e)

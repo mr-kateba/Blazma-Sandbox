@@ -36,6 +36,9 @@ public enum FindingCategory
 
     /// <summary>Unpacked or injected code found in process memory.</summary>
     Memory,
+
+    /// <summary>Reaching for stored passwords, hashes or browser sessions.</summary>
+    CredentialAccess,
 }
 
 /// <summary>One piece of proof for a finding, pointing back to the events it rests on.</summary>

@@ -57,12 +57,18 @@ public sealed class DemoScenario
         b.At(4150).Connect(updater, "198.51.100.7", 4443);
         b.At(3450).Http(ps, "api.contoso-update.example", "POST", "/v2/register?id=7d2c-11ef", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ContosoUpdate/2.1", "host=DESKTOP-DEMO&user=demo&av=Defender");
         b.At(4120).Tls(updater, "cdn.contoso-update.example");
+        // A hard-coded server with no name lookup: the attempts fail (nothing answers) but are still recorded, retries folded into one count.
+        b.At(4400).Attempt(updater, "192.0.2.77", 8443, "TCP", ConnectStatus.Attempted);
+        b.At(4410).Attempt(updater, "192.0.2.77", 8443, "TCP", ConnectStatus.Failed, "0xC000023C");
+        b.At(4420).Attempt(updater, "2001:db8:4b1::25", 443, "TCP", ConnectStatus.Failed, "0xC000023D");
+        b.At(4500).Attempt(ps, "198.51.100.200", 53, "UDP", ConnectStatus.Attempted);
         b.At(4300).Note("Simulated user pressed \"next\"");
         b.At(4600).Exit(ps, 0);
         b.At(5200).File(updater, EventAction.FileWrite, $@"{User}\AppData\Roaming\ContosoUpdate\config.dat");
         b.At(6100).Registry(updater, EventAction.RegistryValueSet, @"HKCU\Software\ContosoUpdate", "LastCheck", "2026-10-07T10:00:00Z");
         b.At(7200).Exit(sample, 0);
         b.At(9000).Dns(updater, "telemetry.contoso-update.example", null);
+        b.At(9500).Attempt(updater, "192.0.2.77", 8443, "TCP", ConnectStatus.Failed, "0xC000023C", attempts: 6); // the agent's end-of-run total
 
         b.Background(backgroundNoise, 60_000);
 
@@ -242,6 +248,21 @@ public sealed class DemoScenario
                 [DetailKeys.RemotePort] = port.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 [DetailKeys.Protocol] = "TCP",
             });
+
+        /// <summary>A connection attempt seen by the socket layer, which reports attempts that fail as well.</summary>
+        public void Attempt((int Pid, ProcessKey Key, string Name) p, string ip, int port, string protocol, string status, string? errorCode = null, int attempts = 0)
+        {
+            var d = new Dictionary<string, string>
+            {
+                [DetailKeys.RemoteAddress] = ip,
+                [DetailKeys.RemotePort] = port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                [DetailKeys.Protocol] = protocol,
+                [DetailKeys.Status] = status,
+            };
+            if (errorCode is not null) d[DetailKeys.ErrorCode] = errorCode;
+            if (attempts > 0) d[DetailKeys.Attempts] = attempts.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Add(EventAction.NetworkConnect, p.Pid, 0, p.Key, p.Name, ip, d);
+        }
 
         /// <summary>Activity from Windows itself, outside the sample's tree. Blazma should filter it as noise.</summary>
         public void Background(int count, int spanMs)

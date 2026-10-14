@@ -96,7 +96,10 @@ public class SigmaGeneratorTests
         Assert.Contains("api.contoso-update.example", ((YamlSequenceNode)Selection(dns)["QueryName"]).Children.Select(c => ((YamlScalarNode)c).Value));
 
         var net = Rule(docs, "network_connection", d => Str(d, "level") == "high");
-        Assert.Equal("198.51.100.7", Str(Selection(net), "DestinationIp"));
+        // Addresses the dropped updater only tried to reach (they failed) count as well as the one it connected to.
+        var ips = ((YamlSequenceNode)Selection(net)["DestinationIp"]).Children.Select(c => ((YamlScalarNode)c).Value).ToList();
+        Assert.Contains("198.51.100.7", ips);
+        Assert.Contains("192.0.2.77", ips);
         Assert.Equal("true", Str(Selection(net), "Initiated"));
     }
 

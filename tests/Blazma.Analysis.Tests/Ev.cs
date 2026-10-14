@@ -36,6 +36,10 @@ internal sealed class Ev
         Add(ms, EventAction.DnsQuery, pid, 0, key, name, domain, d);
     }
 
+    /// <summary>Any event with the given details (network attempts, simulated-internet records).</summary>
+    public void Raw(int ms, EventAction action, int pid, ProcessKey? key, string name, string? target, Dictionary<string, string> details) =>
+        Add(ms, action, pid, 0, key, name, target, details);
+
     private void Add(int ms, EventAction action, int pid, int ppid, ProcessKey? key, string name, string? target, Dictionary<string, string> details) =>
         Events.Add(new AnalysisEvent
         {

@@ -81,6 +81,12 @@ public partial class App : Application
                 new MalwareBazaarReputationProvider(http, () => current.Current.Integrations, secrets),
             ]);
         });
+        // Opt-in, off by default: after an analysis, the contacted domains (names only) are looked up over DNS-over-HTTPS.
+        services.AddSingleton<IHostDomainResolver>(sp =>
+        {
+            var current = sp.GetRequiredService<SettingsService>();
+            return new DnsOverHttpsResolver(IntegrationHttp.CreateClient(), () => current.Current.Integrations);
+        });
         services.AddSingleton(sp =>
         {
             var current = sp.GetRequiredService<SettingsService>();

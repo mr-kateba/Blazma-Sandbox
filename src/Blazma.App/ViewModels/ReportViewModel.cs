@@ -178,7 +178,8 @@ public sealed partial class ReportViewModel : PageViewModel
         // Overview
         Summary.Clear();
         var persist = r.Persistence.Count(p => p.ByAnalyzedTree || p.PointsToDroppedFile);
-        var external = r.Events.Count(e => e.Action == EventAction.NetworkConnect && NetworkMap.IsExternal(e));
+        // Destinations, not events: retries and attempts that failed are one address each.
+        var external = r.Events.Where(e => e.Action == EventAction.NetworkConnect && NetworkMap.IsExternal(e)).Select(NetworkMap.Endpoint).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         var dns = r.Events.Count(e => e.Action == EventAction.DnsQuery);
         var procs = r.AllProcesses.Count(p => p.InAnalyzedTree);
         var scripts = r.AllProcesses.Count(p => p.InAnalyzedTree && p.Name.ToLowerInvariant() is "powershell.exe" or "cmd.exe" or "wscript.exe" or "cscript.exe" or "mshta.exe" or "pwsh.exe");
@@ -242,6 +243,8 @@ public sealed partial class ReportViewModel : PageViewModel
                 domains.Add(new NetworkTreeNode(c, Loc.T("DirectIp"), [], 1));
             NetworkTree.Add(new NetworkTreeNode(byProcess.Key, null, domains, 0));
         }
+
+        BuildDestinations();
 
         Persistence.Clear();
         foreach (var p in r.Persistence.OrderByDescending(p => p.ByAnalyzedTree || p.PointsToDroppedFile).ThenBy(p => p.Time)) Persistence.Add(new PersistenceItem(p));

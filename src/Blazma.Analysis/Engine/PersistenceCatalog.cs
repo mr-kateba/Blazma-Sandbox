@@ -142,10 +142,8 @@ public static class PersistenceDetector
             if (PersistenceCatalog.Classify(e) is not { } match) continue;
             var node = graph.Resolve(e);
             var byTree = node?.InAnalyzedTree == true;
-            var key = (match.Technique, match.Target.ToLowerInvariant());
-            var pointsToDrop = match.Value is not null && graph.DroppedFiles.Keys.Any(p =>
-                match.Value.Contains(p, StringComparison.OrdinalIgnoreCase) ||
-                match.Value.Contains(PathRules.FileName(p), StringComparison.OrdinalIgnoreCase));
+            var key = Key(match.Technique, match.Target);
+            var pointsToDrop = PointsToDrop(match.Value, graph);
 
             if (results.TryGetValue(key, out var existing))
             {
@@ -158,13 +156,6 @@ public static class PersistenceDetector
                 continue;
             }
 
-            var severity = match.Technique switch
-            {
-                PersistenceTechnique.WinlogonHelper or PersistenceTechnique.ImageFileExecutionOptions or PersistenceTechnique.AppInitDlls => Severity.Critical,
-                _ when pointsToDrop => Severity.High,
-                _ => byTree ? Severity.Medium : Severity.Low,
-            };
-
             results[key] = new PersistenceDetection
             {
                 Technique = match.Technique,
@@ -173,15 +164,86 @@ public static class PersistenceDetector
                 Target = match.Target,
                 Value = match.Value,
                 Time = e.RelativeTime,
-                Severity = severity,
+                Severity = SeverityOf(match.Technique, pointsToDrop, byTree),
                 Explanation = PersistenceCatalog.Explain(match.Technique),
                 EventSequences = [e.Sequence],
                 PointsToDroppedFile = pointsToDrop,
                 ByAnalyzedTree = byTree,
             };
         }
+
+        AttributeRegistrations(results, graph);
         return results.Values.OrderBy(p => p.Time).ToList();
     }
+
+    /// <summary>
+    /// Tasks and services are written by the Task Scheduler and services.exe, not by the program
+    /// that asked for them, so the write alone never points at the sample. A schtasks /create,
+    /// sc create, New-Service or Register-ScheduledTask command in the tree does: it names the task
+    /// or service and gives the command it runs.
+    /// </summary>
+    private static void AttributeRegistrations(Dictionary<(PersistenceTechnique, string), PersistenceDetection> results, ProcessGraph graph)
+    {
+        foreach (var node in graph.Nodes.Values.Where(n => n.InAnalyzedTree).OrderBy(n => n.Start))
+        {
+            foreach (var r in CommandLines.Registrations(node))
+            {
+                if (r.Technique is not { } technique || string.IsNullOrWhiteSpace(r.Name)) continue;
+                var key = Key(technique, r.Name);
+                var command = r.Command.Length > 0 ? r.Command : null;
+                if (results.TryGetValue(key, out var existing))
+                {
+                    var value = existing.Value ?? command;
+                    var pointsToDrop = existing.PointsToDroppedFile || PointsToDrop(value, graph);
+                    results[key] = existing with
+                    {
+                        ProcessName = node.Name,
+                        Process = node.Key,
+                        Value = value,
+                        ByAnalyzedTree = true,
+                        PointsToDroppedFile = pointsToDrop,
+                        Severity = SeverityOf(technique, pointsToDrop, true),
+                        Time = existing.Time < node.Start ? existing.Time : node.Start,
+                        EventSequences = [node.StartEventSequence, .. existing.EventSequences],
+                    };
+                    continue;
+                }
+                var drop = PointsToDrop(command, graph);
+                results[key] = new PersistenceDetection
+                {
+                    Technique = technique,
+                    ProcessName = node.Name,
+                    Process = node.Key,
+                    Target = r.Name.TrimStart('\\'),
+                    Value = command,
+                    Time = node.Start,
+                    Severity = SeverityOf(technique, drop, true),
+                    Explanation = PersistenceCatalog.Explain(technique),
+                    EventSequences = [node.StartEventSequence],
+                    PointsToDroppedFile = drop,
+                    ByAnalyzedTree = true,
+                };
+            }
+        }
+    }
+
+    /// <summary>One entry per task whatever the source: the scheduler event and the TaskCache key carry the folder, the Tasks file only the name.</summary>
+    private static (PersistenceTechnique, string) Key(PersistenceTechnique technique, string target)
+    {
+        var name = target.Trim().TrimStart('\\');
+        if (technique == PersistenceTechnique.ScheduledTask) name = PathRules.FileName(name);
+        return (technique, name.ToLowerInvariant());
+    }
+
+    private static bool PointsToDrop(string? value, ProcessGraph graph) =>
+        value is not null && graph.DroppedFiles.Keys.Any(p => CommandLines.References(value, p));
+
+    private static Severity SeverityOf(PersistenceTechnique technique, bool pointsToDrop, bool byTree) => technique switch
+    {
+        PersistenceTechnique.WinlogonHelper or PersistenceTechnique.ImageFileExecutionOptions or PersistenceTechnique.AppInitDlls => Severity.Critical,
+        _ when pointsToDrop => Severity.High,
+        _ => byTree ? Severity.Medium : Severity.Low,
+    };
 }
 
 /// <summary>Public access to technique names for reports and the UI.</summary>

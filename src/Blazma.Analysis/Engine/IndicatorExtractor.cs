@@ -56,7 +56,13 @@ public static class IndicatorExtractor
         foreach (var g in tree.Where(e => e.Action == EventAction.DnsQuery).GroupBy(e => e.Detail(DetailKeys.QueryName) ?? e.Target ?? string.Empty, StringComparer.OrdinalIgnoreCase))
             Add(IndicatorType.Domain, g.Key, "dns", g.Select(e => e.Sequence));
 
-        foreach (var g in tree.Where(e => e.Category == EventCategory.Network && NetworkMap.IsExternal(e)).GroupBy(e => e.Detail(DetailKeys.RemoteAddress) ?? e.Target ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+        // Names the programs reached through the simulated internet (HTTP Host, TLS server name): the lookup itself may not have been seen.
+        foreach (var g in tree.Where(e => e.Action is EventAction.HttpRequest or EventAction.TlsHandshake).GroupBy(e => NetworkDestinations.ContactedName(e) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            Add(IndicatorType.Domain, g.Key, "network", g.Select(e => e.Sequence));
+
+        // Every external address the programs connected to or only tried to reach (attempts count: a hard-coded server that is down is still an indicator).
+        foreach (var g in tree.Where(e => e.Category == EventCategory.Network && NetworkMap.IsExternal(e))
+                     .GroupBy(e => NetworkMap.Normalize(e.Detail(DetailKeys.RemoteAddress) ?? e.Target) ?? string.Empty, StringComparer.OrdinalIgnoreCase))
             Add(IndicatorType.IpAddress, g.Key, "network", g.Select(e => e.Sequence));
 
         foreach (var (path, e) in graph.DroppedFiles.Where(kv => PathRules.IsExecutablePath(kv.Key)))

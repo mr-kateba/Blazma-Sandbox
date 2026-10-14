@@ -7,6 +7,7 @@ using Blazma.Core.Events;
 using Blazma.Core.Findings;
 using Blazma.Core.Processes;
 using Blazma.Storage;
+using Engine = Blazma.Analysis.Engine;
 
 namespace Blazma.Reporting;
 
@@ -154,6 +155,30 @@ public sealed class JsonReportExporter : IReportExporter
                 pointsToDroppedFile = p.PointsToDroppedFile,
                 events = p.EventSequences,
             }),
+            networkDestinations = a.NetworkDestinations.Select(d => new
+            {
+                address = d.Address,
+                port = d.Port,
+                protocol = d.Protocol,
+                domain = r.Apply(d.Domain),
+                domainSource = d.DomainSource,
+                processes = d.Processes.Select(r.Apply),
+                status = d.Status.ToString(),
+                errorCode = d.ErrorCode,
+                error = d.Status == DestinationStatus.Failed ? Engine.NetworkDestinations.DescribeError(d.ErrorCode).Get(lang) : null,
+                attempts = d.Count,
+                firstSeenMs = d.FirstSeen.TotalMilliseconds,
+                bytesSent = d.BytesSent,
+                bytesReceived = d.BytesReceived,
+                external = d.External,
+                directIp = d.DirectIp,
+                events = d.EventSequences,
+            }),
+            hostResolutions = a.HostResolutions.Count == 0 ? null : new
+            {
+                note = "Resolved from this computer after the analysis; the sample might have received different addresses.",
+                results = a.HostResolutions.Select(h => new { domain = r.Apply(h.Domain), status = h.Status.ToString(), addresses = h.Addresses, resolver = h.Resolver, resolvedAt = h.ResolvedAt, error = h.Error }),
+            },
             indicators = o.IncludeIndicators ? a.Indicators.Select(i => new { type = i.Type.ToString(), value = r.Apply(i.Value), status = i.Status.ToString(), i.Source, events = i.EventSequences }) : null,
             systemChanges = a.SystemChanges is null ? null : new
             {

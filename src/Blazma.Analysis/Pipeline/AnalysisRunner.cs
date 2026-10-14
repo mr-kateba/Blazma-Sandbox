@@ -33,6 +33,9 @@ public sealed record AnalysisRequest
 
     /// <summary>Lets the UI extend or finish the run while it is analyzing.</summary>
     public AnalysisControl? Control { get; init; }
+
+    /// <summary>Opt-in: looks up the contacted domains' current addresses from this computer once the analysis is over.</summary>
+    public IHostDomainResolver? HostResolver { get; init; }
 }
 
 /// <summary>
@@ -268,6 +271,7 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
 
             await AttachArtifactsAsync(result, request, screenshots, collected, cancellationToken).ConfigureAwait(false);
             engine.Process(result, events, baseline, after, request.EngineSettings);
+            await ResolveContactedDomainsAsync(result, request, provider, cancellationToken).ConfigureAwait(false);
             result.CompletedAt = time.GetUtcNow();
             result.FinalStage = AnalysisStage.Completed;
             await repository.SaveAsync(result, CancellationToken.None).ConfigureAwait(false);
@@ -307,6 +311,26 @@ public sealed class AnalysisRunner(AnalysisEngine engine, IAnalysisRepository re
                     _logger.LogError(ex, "Analysis {AnalysisId}: environment cleanup failed", result.AnalysisId);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// The opt-in lookup of contacted domains, from the host, after the sandbox is gone: only the
+    /// names are sent. Never for demo data, and a failure is noted in the log, never fatal.
+    /// </summary>
+    private async Task ResolveContactedDomainsAsync(AnalysisResult result, AnalysisRequest request, ISandboxProvider provider, CancellationToken ct)
+    {
+        if (request.HostResolver is not { IsEnabled: true } resolver || provider.IsDemo) return;
+        var domains = NetworkDestinations.ContactedDomains(result.NetworkDestinations);
+        if (domains.Count == 0) return;
+        try
+        {
+            result.HostResolutions = await resolver.ResolveAsync(domains, ct).ConfigureAwait(false);
+            _logger.LogInformation("Analysis {AnalysisId}: looked up {Count} contacted domains from this computer", result.AnalysisId, result.HostResolutions.Count);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "Analysis {AnalysisId}: looking up the contacted domains failed", result.AnalysisId);
         }
     }
 

@@ -40,6 +40,8 @@ internal sealed class FakeInternet : IDisposable
 
     public IReadOnlyCollection<int> ListeningPorts => _ports.Keys.ToList();
 
+    public bool IsListening(int port) => _ports.ContainsKey(port);
+
     /// <summary>Starts listeners. A port already in use is skipped; the rest still work.</summary>
     public void Start(IEnumerable<int> httpPorts, IEnumerable<int> tlsPorts, IEnumerable<int> rawPorts)
     {

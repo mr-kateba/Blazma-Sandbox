@@ -1,3 +1,4 @@
+using Blazma.Analysis.Engine;
 using Blazma.Core.Findings;
 using Blazma.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -28,17 +29,24 @@ public sealed class RuleEngine
         new ScriptEngineRule(),
         new ObfuscatedCommandRule(),
         new ProxyExecutionRule(),
+        new LolbinDownloadRule(),
+        new CredentialAccessRule(),
         new ShadowCopyDeletionRule(),
         new DroppedExecutableRule(),
         new DroppedFileExecutedRule(),
         new MassFileModificationRule(),
         new SelfDeletionRule(),
         new SecurityTamperingRule(),
+        new UacBypassRule(),
+        new RansomNoteRule(),
+        new MasqueradingRule(),
         new NetworkRedirectionRule(),
         new ExternalConnectionRule(),
         new DroppedProcessNetworkRule(),
         new UnusualPortRule(),
         new DnsActivityRule(),
+        new DirectIpContactRule(),
+        new RepeatedUnansweredContactRule(),
         new UnsignedSampleRule(),
         new PackedSampleRule(),
         new InjectionCapabilityRule(),
@@ -97,6 +105,7 @@ public sealed class RuleEngine
                 _logger.LogError(ex, "Rule {RuleId} failed and was skipped", rule.Metadata.Id);
             }
         }
-        return findings.OrderByDescending(f => f.Severity).ThenByDescending(f => f.Points).ToList();
+        // Signed or recognised installers: behaviour every installer shows counts for less, unless something stealthy happened too.
+        return InstallerContext.From(context).Apply(findings.OrderByDescending(f => f.Severity).ThenByDescending(f => f.Points).ToList(), overrides);
     }
 }

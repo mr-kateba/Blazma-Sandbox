@@ -65,7 +65,8 @@ public sealed class AnalysisCoordinator(
     IAnalysisRepository repository,
     BlazmaPaths paths,
     ILoggerFactory loggers,
-    ISecretProtector secrets)
+    ISecretProtector secrets,
+    IHostDomainResolver hostResolver)
 {
     private readonly ILogger _logger = loggers.CreateLogger<AnalysisCoordinator>();
 
@@ -200,6 +201,7 @@ public sealed class AnalysisCoordinator(
             Inspector = new StaticWorkerInspector(this),
             Reputation = reputation ?? [],
             Control = new AnalysisControl(),
+            HostResolver = hostResolver,
         };
         _logger.LogInformation("Starting analysis of {FileName} (SHA-256 {Sha256}) with provider {Provider}: profile {Profile}, duration {Duration}, network {Network}",
             report.Sample.FileName, report.Sample.Sha256, provider.Id, options.ProfileId, options.Duration, options.Network);
