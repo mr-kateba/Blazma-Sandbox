@@ -38,4 +38,29 @@ public static class DetailKeys
 
     /// <summary>"true" when the event was answered by the simulated internet, not a real server.</summary>
     public const string Simulated = "Simulated";
+
+    /// <summary>
+    /// Outcome of a <see cref="EventAction.NetworkConnect"/>: one of <see cref="ConnectStatus"/>. Absent on
+    /// events from older agents, which only reported connections that succeeded.
+    /// </summary>
+    public const string Status = "Status";
+
+    /// <summary>Windows status code of a failed connection attempt or lookup, as hexadecimal (e.g. "0xC000023C").</summary>
+    public const string ErrorCode = "ErrorCode";
+
+    /// <summary>How many times the process tried to reach the same address and port (retries are counted, not repeated).</summary>
+    public const string Attempts = "Attempts";
+}
+
+/// <summary>Values of <see cref="DetailKeys.Status"/> on network connection events.</summary>
+public static class ConnectStatus
+{
+    /// <summary>The connection was established.</summary>
+    public const string Connected = "Connected";
+
+    /// <summary>The program asked Windows to connect (or send); whether it worked is not known yet.</summary>
+    public const string Attempted = "Attempted";
+
+    /// <summary>Windows reported that the attempt failed (no network, no route, refused, timed out or blocked).</summary>
+    public const string Failed = "Failed";
 }

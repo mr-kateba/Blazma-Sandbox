@@ -270,6 +270,9 @@
             </StackPanel>
           </Border>
           <Border Classes="card">
+            <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetResolveDomains}" FontWeight="SemiBold" /><TextBlock Classes="caption" Text="{l:T SetResolveDomainsHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding ResolveContactedDomains}" OnContent="" OffContent="" /></Grid>
+          </Border>
+          <Border Classes="card">
             <StackPanel>
               <Grid Classes="setting" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{l:T SetLookupAuto}" /><TextBlock Classes="caption" Text="{l:T SetLookupAutoHelp}" TextWrapping="Wrap" /></StackPanel><ToggleSwitch Grid.Column="1" IsChecked="{Binding LookupAutomatically}" OnContent="" OffContent="" /></Grid>
               <TextBlock Classes="caption" Text="{l:T SecretsWeak}" Foreground="{DynamicResource WarnBrush}" IsVisible="{Binding SecretsAreWeak}" TextWrapping="Wrap" />

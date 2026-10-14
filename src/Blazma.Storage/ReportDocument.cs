@@ -18,6 +18,8 @@ internal sealed class ReportDocument
     public List<PersistenceDetection> Persistence { get; set; } = [];
     public List<Indicator> Indicators { get; set; } = [];
     public SnapshotDiff? SystemChanges { get; set; }
+    public List<NetworkDestination> NetworkDestinations { get; set; } = [];
+    public List<HostResolution> HostResolutions { get; set; } = [];
     public List<ScreenshotInfo> Screenshots { get; set; } = [];
     public List<DroppedFileInfo> DroppedFiles { get; set; } = [];
     public List<MemoryArtifact> MemoryArtifacts { get; set; } = [];

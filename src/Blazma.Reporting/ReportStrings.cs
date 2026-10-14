@@ -58,6 +58,16 @@ internal sealed class ReportStrings
     public required string CompileTime { get; init; }
     public required string CompileTimeNote { get; init; }
     public required string ShownOf { get; init; }
+    public required string Destinations { get; init; }
+    public required string DestinationsNote { get; init; }
+    public required string Address { get; init; }
+    public required string Port { get; init; }
+    public required string Protocol { get; init; }
+    public required string Domain { get; init; }
+    public required string Count { get; init; }
+    public required string Data { get; init; }
+    public required string ResolvedAfter { get; init; }
+    public required string ResolvedAfterNote { get; init; }
 
     public static ReportStrings For(string language) => language.StartsWith("ar", StringComparison.OrdinalIgnoreCase) ? Arabic : English;
 
@@ -77,6 +87,11 @@ internal sealed class ReportStrings
         LocalFirst = "Produced locally by Blazma Sandbox. Nothing in this report was uploaded anywhere.",
         Interrupted = "Monitoring was interrupted before the analysis ended. Results may be incomplete.",
         Sections = "Sections", CompileTime = "Compile timestamp", CompileTimeNote = "can be forged", ShownOf = "Showing {0} of {1} events.",
+        Destinations = "Addresses the program tried to reach",
+        DestinationsNote = "Every destination is listed once, with all attempts counted, whether or not it answered. With networking off, attempts fail and often only the looked-up names are seen; with the simulated internet, names are answered inside the sandbox and nothing leaves it.",
+        Address = "IP address", Port = "Port", Protocol = "Protocol", Domain = "Domain", Count = "Attempts", Data = "Sent / received",
+        ResolvedAfter = "Current addresses of the contacted domains",
+        ResolvedAfterNote = "Resolved from this computer after the analysis; the sample might have received different addresses.",
     };
 
     public static readonly ReportStrings Arabic = new()
@@ -95,6 +110,58 @@ internal sealed class ReportStrings
         LocalFirst = "أُنشئ هذا التقرير محليًا بواسطة Blazma Sandbox، ولم يُرفع أي شيء منه إلى أي مكان.",
         Interrupted = "توقفت المراقبة قبل انتهاء التحليل، لذا قد تكون النتائج ناقصة.",
         Sections = "الأقسام", CompileTime = "تاريخ الترجمة", CompileTimeNote = "قابل للتزوير", ShownOf = "يُعرض {0} من أصل {1} حدث.",
+        Destinations = "العناوين التي حاول البرنامج الوصول إليها",
+        DestinationsNote = "تُذكر كل وجهة مرة واحدة مع احتساب جميع المحاولات، سواء أجابت أم لم تُجب. عند تعطيل الشبكة تفشل المحاولات، وكثيرًا ما لا يظهر إلا أسماء النطاقات المستعلَم عنها؛ ومع الإنترنت الوهمي تُجاب الأسماء داخل البيئة المعزولة ولا يخرج منها شيء.",
+        Address = "عنوان IP", Port = "المنفذ", Protocol = "البروتوكول", Domain = "النطاق", Count = "المحاولات", Data = "المُرسَل / المُستقبَل",
+        ResolvedAfter = "العناوين الحالية للنطاقات التي تواصل معها",
+        ResolvedAfterNote = "حُلّت هذه العناوين من هذا الجهاز بعد انتهاء التحليل، وقد يكون البرنامج قد تلقّى عناوين مختلفة.",
+    };
+}
+
+/// <summary>How a destination ended, as a shape and a word: the meaning never depends on colour alone.</summary>
+public static class DestinationText
+{
+    public static string Shape(Core.Analysis.DestinationStatus status) => status switch
+    {
+        Core.Analysis.DestinationStatus.Connected => "●",
+        Core.Analysis.DestinationStatus.Simulated => "◆",
+        Core.Analysis.DestinationStatus.Failed => "✕",
+        Core.Analysis.DestinationStatus.Attempted => "○",
+        _ => "◌",
+    };
+
+    /// <summary>Plain-text markers for outputs whose fonts have no geometric shapes (the PDF).</summary>
+    public static string Marker(Core.Analysis.DestinationStatus status) => status switch
+    {
+        Core.Analysis.DestinationStatus.Connected => "(+)",
+        Core.Analysis.DestinationStatus.Simulated => "(~)",
+        Core.Analysis.DestinationStatus.Failed => "(x)",
+        Core.Analysis.DestinationStatus.Attempted => "(?)",
+        _ => "(.)",
+    };
+
+    public static string Of(Core.Analysis.DestinationStatus status, string language)
+    {
+        var ar = language.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+        return status switch
+        {
+            Core.Analysis.DestinationStatus.Connected => ar ? "اتصل" : "Connected",
+            Core.Analysis.DestinationStatus.Simulated => ar ? "أجاب الإنترنت الوهمي" : "Simulated internet",
+            Core.Analysis.DestinationStatus.Failed => ar ? "فشل أو حُظر" : "Failed or blocked",
+            Core.Analysis.DestinationStatus.Attempted => ar ? "محاولة دون رد" : "Attempted, no answer",
+            _ => ar ? "استعلام عن الاسم فقط" : "Name looked up only",
+        };
+    }
+
+    /// <summary>"↑1.2 KB ↓300 B", or empty when nothing was counted.</summary>
+    public static string Bytes(Core.Analysis.NetworkDestination d) =>
+        d.BytesSent == 0 && d.BytesReceived == 0 ? string.Empty : $"↑{Size(d.BytesSent)} ↓{Size(d.BytesReceived)}";
+
+    private static string Size(long bytes) => bytes switch
+    {
+        < 1024 => bytes.ToString(System.Globalization.CultureInfo.InvariantCulture) + " B",
+        < 1024 * 1024 => (bytes / 1024.0).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " KB",
+        _ => (bytes / (1024.0 * 1024)).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + " MB",
     };
 }
 

@@ -525,6 +525,8 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
             foreach (var e in errors) await stderr.WriteLineAsync(L("Rule pack: ", "حزمة قواعد: ") + e);
         }
         var runner = new AnalysisRunner(new AnalysisEngine(new RuleEngine(rules)), c.Repository, TimeProvider.System);
+        // Opt-in in Settings (off by default): the contacted domains' names are looked up over DNS-over-HTTPS afterwards.
+        using var dohHttp = c.Settings.Integrations.ResolveContactedDomains ? IntegrationHttp.CreateClient() : null;
         var request = new AnalysisRequest
         {
             SamplePath = path,
@@ -535,6 +537,7 @@ public sealed class CliApp(TextWriter stdout, TextWriter stderr)
             ArtifactsRoot = c.Paths.Artifacts,
             Inspector = new Inspector(this, StaticOptions(c)),
             Reputation = reputation,
+            HostResolver = dohHttp is null ? null : new DnsOverHttpsResolver(dohHttp, () => c.Settings.Integrations),
         };
 
         var lastStage = (AnalysisStage?)null;

@@ -138,6 +138,7 @@ internal static class AgentHost
             using var dns = config.NetworkMode == "simulated" ? new DnsRedirector(HostsFile.DefaultPath, Note) : null;
             using var fakeNet = config.NetworkMode == "simulated" ? new FakeInternet(r => RecordSimulated(sink, monitor, r)) : null;
             if (dns is not null) monitor.DnsLookup += dns.OnLookup;
+            if (fakeNet is not null) monitor.IsSimulatedPort = fakeNet.IsListening;
 
             var dropped = config.CollectDroppedFiles ? new DroppedFileCollector(sink, config.MaxDroppedFiles, config.MaxDroppedFileBytes) : null;
             if (dropped is not null) monitor.TreeFileWritten += dropped.Observe;

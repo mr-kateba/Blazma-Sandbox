@@ -33,6 +33,12 @@ public sealed class AnalysisResult
     public IReadOnlyList<Indicator> Indicators { get; set; } = [];
     public SnapshotDiff? SystemChanges { get; set; }
 
+    /// <summary>Every place the analyzed programs tried to reach, one row per destination (attempts folded together).</summary>
+    public IReadOnlyList<NetworkDestination> NetworkDestinations { get; set; } = [];
+
+    /// <summary>Opt-in: current addresses of the contacted domains, looked up from this computer after the analysis.</summary>
+    public IReadOnlyList<HostResolution> HostResolutions { get; set; } = [];
+
     public IReadOnlyList<ScreenshotInfo> Screenshots { get; set; } = [];
     public IReadOnlyList<DroppedFileInfo> DroppedFiles { get; set; } = [];
     public IReadOnlyList<MemoryArtifact> MemoryArtifacts { get; set; } = [];

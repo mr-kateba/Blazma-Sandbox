@@ -158,7 +158,26 @@ public sealed class HtmlReportExporter : IReportExporter
         var dns = a.Events.Where(e => e.Action == EventAction.DnsQuery).GroupBy(e => e.Detail(DetailKeys.QueryName) ?? e.Target ?? "?").Take(100).ToList();
         var conns = a.Events.Where(e => e.Action == EventAction.NetworkConnect).Take(200).ToList();
         sb.Append($"<section><h2>{E(t.Network)}</h2>");
-        if (dns.Count == 0 && conns.Count == 0) sb.Append($"<p class=\"muted\">{E(t.Nothing)}</p>");
+        if (dns.Count == 0 && conns.Count == 0 && a.NetworkDestinations.Count == 0) sb.Append($"<p class=\"muted\">{E(t.Nothing)}</p>");
+        if (a.NetworkDestinations.Count > 0)
+        {
+            sb.Append($"<h3>{E(t.Destinations)}</h3><p class=\"muted\">{E(t.DestinationsNote)}</p>");
+            sb.Append($"<table><tr><th>{E(t.Address)}</th><th>{E(t.Port)}</th><th>{E(t.Protocol)}</th><th>{E(t.Domain)}</th><th>{E(t.Process)}</th><th>{E(t.Status)}</th><th>{E(t.Count)}</th><th>{E(t.Data)}</th><th>{E(t.Time)}</th></tr>");
+            foreach (var dest in a.NetworkDestinations.Take(200))
+            {
+                var status = $"{DestinationText.Shape(dest.Status)} {DestinationText.Of(dest.Status, lang)}";
+                if (dest.Status == DestinationStatus.Failed && dest.ErrorCode is not null) status += " · " + Engine.NetworkDestinations.DescribeError(dest.ErrorCode).Get(lang);
+                sb.Append($"<tr><td class=\"mono ltr\">{E(dest.Address ?? "—")}</td><td class=\"mono\">{dest.Port?.ToString(CultureInfo.InvariantCulture) ?? "—"}</td><td>{E(dest.Protocol)}</td><td class=\"mono ltr\">{E(dest.Domain ?? "—")}</td><td>{E(string.Join(", ", dest.Processes))}</td><td><span class=\"badge {DestinationClass(dest.Status)}\">{E(status)}</span></td><td class=\"mono\">{dest.Count.ToString(CultureInfo.InvariantCulture)}</td><td class=\"mono ltr\">{E(DestinationText.Bytes(dest))}</td><td class=\"mono\">{Ms(dest.FirstSeen)}</td></tr>");
+            }
+            sb.Append("</table>");
+        }
+        if (a.HostResolutions.Count > 0)
+        {
+            sb.Append($"<h3>{E(t.ResolvedAfter)}</h3><p class=\"muted\">{E(t.ResolvedAfterNote)}</p><table><tr><th>{E(t.Domain)}</th><th>{E(t.Address)}</th></tr>");
+            foreach (var h in a.HostResolutions)
+                sb.Append($"<tr><td class=\"mono ltr\">{E(h.Domain)}</td><td class=\"mono ltr\">{E(h.Addresses.Count > 0 ? string.Join(", ", h.Addresses) : h.Error ?? h.Status.ToString())}</td></tr>");
+            sb.Append("</table>");
+        }
         if (dns.Count > 0)
         {
             sb.Append($"<h3>{E(t.Dns)}</h3><table><tr><th>{E(t.Time)}</th><th>{E(t.Process)}</th><th>Domain</th><th>Result</th></tr>");
@@ -284,6 +303,14 @@ public sealed class HtmlReportExporter : IReportExporter
         }
         sb.Append("</li>");
     }
+
+    private static string DestinationClass(DestinationStatus s) => s switch
+    {
+        DestinationStatus.Connected => "high",
+        DestinationStatus.Failed or DestinationStatus.Attempted => "med",
+        DestinationStatus.Simulated => "low",
+        _ => "info",
+    };
 
     private static string Ms(TimeSpan t) => t < TimeSpan.Zero ? "-" : $"{(int)t.TotalMinutes:00}:{t.Seconds:00}.{t.Milliseconds:000}";
 

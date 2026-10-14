@@ -249,6 +249,12 @@ public sealed class IntegrationSettings
 
     /// <summary>Look the hash up automatically when a file is opened. Off: only when the user presses the button.</summary>
     public bool LookupAutomatically { get; set; }
+
+    /// <summary>
+    /// After an analysis, look up the current addresses of the domains it contacted, from this
+    /// computer over DNS-over-HTTPS (Cloudflare). Only domain names are sent. Off by default.
+    /// </summary>
+    public bool ResolveContactedDomains { get; set; }
 }
 
 public enum VmDisplay { Window, Headless }

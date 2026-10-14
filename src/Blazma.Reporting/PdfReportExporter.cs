@@ -225,9 +225,25 @@ public sealed class PdfReportExporter : IReportExporter
                     .Select(e => $"{e.Detail(DetailKeys.RemoteAddress) ?? e.Target}:{e.Detail(DetailKeys.RemotePort)}  ({e.ProcessName})").Distinct().Take(MaxRows).ToList();
                 var http = a.Events.Where(e => e.Action == EventAction.HttpRequest)
                     .Select(e => $"{e.Detail(DetailKeys.HttpMethod)} {e.Detail(DetailKeys.HttpHost)}{e.Detail(DetailKeys.HttpPath)}").Distinct().Take(MaxRows).ToList();
-                if (dns.Count + conns.Count + http.Count > 0)
+                var destinations = a.NetworkDestinations.Take(MaxRows).Select(d =>
+                    $"{DestinationText.Marker(d.Status)} {DestinationText.Of(d.Status, lang)} · {Ltr(S(d.Address ?? d.Domain ?? "?") + (d.Port is { } p ? ":" + p.ToString(CultureInfo.InvariantCulture) : ""))} · {d.Protocol}"
+                    + (d.Address is not null && d.Domain is not null ? " · " + Ltr(S(d.Domain)) : "")
+                    + $" · {S(string.Join(", ", d.Processes))} · ×{d.Count.ToString(CultureInfo.InvariantCulture)}"
+                    + (DestinationText.Bytes(d) is { Length: > 0 } bytes ? " · " + bytes : "")).ToList();
+                var resolved = a.HostResolutions.Take(MaxRows).Select(h => Ltr(S(h.Domain) + " → " + (h.Addresses.Count > 0 ? string.Join(", ", h.Addresses) : h.Error ?? h.Status.ToString()))).ToList();
+                if (dns.Count + conns.Count + http.Count + destinations.Count > 0)
                     Section(col, t.Network, c =>
                     {
+                        if (destinations.Count > 0)
+                        {
+                            Lines(c, t.Destinations, destinations);
+                            c.Item().Text(t.DestinationsNote).FontSize(7.5f).FontColor(Muted);
+                        }
+                        if (resolved.Count > 0)
+                        {
+                            Lines(c, t.ResolvedAfter, resolved);
+                            c.Item().Text(t.ResolvedAfterNote).FontSize(7.5f).FontColor(Muted);
+                        }
                         Lines(c, t.Dns, dns.Select(x => Ltr(S(x))));
                         Lines(c, t.Connections, conns.Select(x => Ltr(S(x))));
                         Lines(c, ar ? "طلبات الويب (إنترنت وهمي)" : "Web requests (simulated internet)", http.Select(x => Ltr(S(x))));
