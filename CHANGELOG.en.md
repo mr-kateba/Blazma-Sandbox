@@ -6,6 +6,18 @@ All notable changes to this project are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-10-14
+
+### Added
+- "Addresses the program tried to reach" table in the Network tab: IP address, port, domain, process, attempt count and outcome.
+- The agent records every connection attempt, not only successful ones, so addresses appear with the internet off or simulated.
+- Opt-in lookup of the contacted domains' real addresses after an analysis over DNS-over-HTTPS (domain names only).
+- New rules: credential theft, downloads through built-in Windows tools, UAC bypass, ransom notes, programs disguised as Windows components, direct IP contact, repeated unanswered attempts.
+
+### Changed
+- Signed or recognised installers have their ordinary installer behaviour weighed down, with the reason shown; any stealthy behaviour cancels the reduction.
+- The interface adapts to small windows, history columns stay aligned, and technical values keep their order inside Arabic text.
+
 ## [0.1.2] - 2026-10-10
 
 ### Fixed
