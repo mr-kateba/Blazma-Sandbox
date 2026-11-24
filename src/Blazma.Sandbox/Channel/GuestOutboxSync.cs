@@ -121,7 +121,11 @@ public sealed class GuestOutboxSync
         if (!Directory.Exists(incomingFolder)) return 0;
         try
         {
-            foreach (var path in Directory.EnumerateFileSystemEntries(incomingFolder).Take(10_000).ToList())
+            // same order as Select: by name, the done marker last (directory order differs between file systems)
+            var entries = Directory.EnumerateFileSystemEntries(incomingFolder).Take(10_000)
+                .OrderBy(p => Path.GetFileName(p) == Protocol.DoneFile ? 1 : 0)
+                .ThenBy(p => Path.GetFileName(p), StringComparer.Ordinal).ToList();
+            foreach (var path in entries)
             {
                 var name = Path.GetFileName(path);
                 if (TryImport(path, name)) imported++;
